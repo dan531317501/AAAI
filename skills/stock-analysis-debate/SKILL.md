@@ -21,13 +21,21 @@ Data is fetched from **yfinance** (OHLCV, news, fundamentals, financial statemen
 4. **Phase 7 is the final phase (NOT a sub-agent). It MUST produce TWO outputs in ONE message batch: (A) Write `analysis_report.md` via the Write tool, and (B) the final decision text. If either is missing, the analysis is incomplete. Do NOT output the decision text without also calling Write.**
 5. **The workflow is complete ONLY when the report file has been written to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md` AND confirmed to the user.**
 
+6. **CN market skips Phase 1.5 and Segment Analyst entirely.** No `segments.yaml`, no segment data. Run 4 analysts.
+7. **If `segments_fetch_failed.flag` exists**, treat as CN: skip Phase 1.5 and Segment Analyst, run 4 analysts. Note the missing segment view in the final report.
+
 ## Workflow
 
 1. **Phase 1: Data Collection** — Bash: `fetch_data.py`
    - Foreground, synchronous; wait for it to return before proceeding.
 
-2. **Phase 2: Analyst Reports** — 4 Agent calls
-   - Parallel: launch ALL 4 in a SINGLE message, foreground (no `run_in_background`).
+1.5. **Phase 1.5: Segment Setup** (HK/US only) — Bash: `prepare_segments.py --gen-yaml`
+   - Skipped for CN market. Skipped if `segments_fetch_failed.flag` exists.
+   - Foreground, synchronous.
+
+2. **Phase 2: Analyst Reports** — 4 or 5 Agent calls
+   - Parallel: launch all in a SINGLE message, foreground (no `run_in_background`).
+   - 5th agent (Segment Analyst) runs ONLY for HK/US with `multi_segment: true` in `segments.yaml`.
 
 3. **Phase 3: Bull vs Bear Debate** — 4 Agent calls
    - Sequential: one at a time (2 rounds × Bull/Bear).
@@ -74,7 +82,39 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 | `insider.txt` | Insider transactions | yfinance |
 | `summary.json` | Metadata summary | — |
 
-**After data is fetched**, immediately proceed to Phase 2. Do not stop.
+**Additional outputs (HK/US only):**
+
+| File | Content | Source |
+|------|---------|--------|
+| `segments_financials.json` | 长桥原始分部数据（季度+财年） | 长桥 API1+API2（Phase 1 抓取） |
+| `segments_financials.csv` | 预处理紧凑分部CSV | prepare_segments.py (Phase 1.5) |
+| `news_meta.txt` | 新闻抓取/去重/去噪审计 | fetch_data.py |
+| `segments_missing.flag` | 清单缺失标记（触发Phase 1.5生成） | fetch_data.py |
+| `segments_fetch_failed.flag` | 长桥抓取失败标记（降级） | fetch_data.py |
+
+**Ticker-level (no date, reused across runs):**
+
+| File | Content | Source |
+|------|---------|--------|
+| `data/{TICKER}/segments.yaml` | 业务线清单（跨次复用） | prepare_segments.py --gen-yaml |
+
+**After data is fetched**, immediately proceed to Phase 1.5 if applicable, otherwise go to Phase 2. Do not stop.
+
+## Phase 1.5: Segment Setup (HK/US only)
+
+**Skip conditions**: CN market, OR `segments_fetch_failed.flag` exists in the date dir.
+
+1. Check `skills/stock-analysis-debate/tools/data/{TICKER}/segments.yaml` (ticker-level, no date).
+   - If exists: read it, then run prepare_segments.py WITHOUT `--gen-yaml` to produce the day's `segments_financials.csv`:
+     ```bash
+     python skills/stock-analysis-debate/tools/prepare_segments.py {TICKER} {DATE} --output-dir skills/stock-analysis-debate/tools/data
+     ```
+   - If missing: run with `--gen-yaml` (generates both `segments.yaml` and the day's CSV):
+     ```bash
+     python skills/stock-analysis-debate/tools/prepare_segments.py {TICKER} {DATE} --output-dir skills/stock-analysis-debate/tools/data --gen-yaml
+     ```
+2. Read `segments.yaml`. Record `multi_segment` for Phase 2 branching.
+3. Proceed immediately to Phase 2.
 
 ## Phase 2: Analyst Reports (Parallel, Single Message)
 
@@ -91,6 +131,12 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 **Social Media Analyst** — Prompt: `skills/stock-analysis-debate/prompts/social_media_analyst.md` — Data: `news.txt`
 
 **Fundamentals Analyst** — Prompt: `skills/stock-analysis-debate/prompts/fundamentals_analyst.md` — Data: `fundamentals.txt`, `balance_sheet.csv`, `cashflow.csv`, `income_stmt.csv`
+
+### Conditional 5th Analyst (HK/US + multi_segment only):
+
+**Segment Analyst** — Prompt: `skills/stock-analysis-debate/prompts/segment_analyst.md` — Data: `segments_financials.csv`, News Analyst's segment-hit summary (from `phase2_analyst_reports.md`).
+
+Launch Segment Analyst IN PARALLEL with the other 4 only when `segments.yaml` has `multi_segment: true`. Otherwise run 4 analysts as before.
 
 **After all 4 agents return**: Extract their full report texts from the agent responses (not the data files). Save each analyst's complete output to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/phase2_analyst_reports.md` using the Write tool. Then IMMEDIATELY proceed to Phase 3. Do NOT ask the user.
 
@@ -140,7 +186,7 @@ Debate history file: `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/de
 ### Step 3a: Bull Researcher (Round 1)
 - **Before**: Read `phase2_analyst_reports.md` to get the 4 analyst reports. Since this is Round 1, the debate history file is empty — no history to read yet.
 - **Prompt**: `skills/stock-analysis-debate/prompts/bull_researcher.md`
-- **Context in prompt**: Paste ALL 4 analyst reports verbatim. Set `history` to empty. Set `current_response` to empty (no bear argument yet).
+- **Context in prompt**: Paste ALL 4 analyst reports verbatim (plus the Segment Analyst report if Phase 2 produced 5 reports). Set `history` to empty. Set `current_response` to empty (no bear argument yet). If a Segment Analyst report exists, include instrument-segment context: "This is a N-segment group; primary driver: <segment>."
 - **After it returns**: Write the bull's full output to the debate history file. Immediately go to 3b.
 
 ### Step 3b: Bear Researcher (Round 1)
@@ -187,7 +233,7 @@ Run 2 rounds of 3 roles each. **Apply the Debate History File Protocol for every
 
 Risk debate history file: `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/risk_debate_history.md`
 
-**Context shared across all 6 calls**: Paste the Trader's full plan verbatim (from `trader_plan.md`). Paste ALL 4 analyst reports verbatim (from `phase2_analyst_reports.md`).
+**Context shared across all 6 calls**: Paste the Trader's full plan verbatim (from `trader_plan.md`). Paste ALL 4 analyst reports verbatim (from `phase2_analyst_reports.md`). If a Segment Analyst report exists, paste it verbatim with the 4 analyst reports.
 
 ### Round 1
 
