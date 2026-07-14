@@ -98,3 +98,67 @@ def test_filter_noise_source_blacklist():
     result = filter_noise(articles)
     assert len(result) == 1
     assert result[0]["provider"] == "新浪财经"
+
+
+from news_filter import is_high_signal
+
+
+def test_high_signal_earnings():
+    assert is_high_signal("阿里巴巴发布财报 云业务同比增长30%") is True
+
+
+def test_high_signal_price_war():
+    assert is_high_signal("阿里与美团打价格战 补贴升级") is True
+
+
+def test_high_signal_rating():
+    assert is_high_signal("国信证券维持阿里巴巴优于大市评级") is True
+
+
+def test_high_signal_generic_news_is_false():
+    assert is_high_signal("阿里参加某行业论坛") is False
+
+
+from news_filter import split_recent_and_history
+
+
+def test_split_recent_keeps_all_within_7days():
+    # 基准日 2026-07-14，7天内（含7-08起）全留
+    articles = [
+        {"title": "阿里参加论坛", "date": "2026-07-14 09:00", "provider": ""},
+        {"title": "阿里参加沙龙", "date": "2026-07-08 09:00", "provider": ""},
+    ]
+    recent, history = split_recent_and_history(articles, "2026-07-14", recent_days=7)
+    assert len(recent) == 2
+    assert len(history) == 0
+
+
+def test_split_history_keeps_only_high_signal():
+    # 8-30天：高信号留，非高信号丢
+    articles = [
+        {"title": "阿里云财报同比增长30%", "date": "2026-07-01 09:00", "provider": ""},
+        {"title": "阿里参加论坛", "date": "2026-07-01 10:00", "provider": ""},
+    ]
+    recent, history = split_recent_and_history(articles, "2026-07-14", recent_days=7)
+    assert len(recent) == 0
+    assert len(history) == 1
+    assert "财报" in history[0]["title"]
+
+
+def test_split_boundary_exactly_7_days():
+    # 2026-07-07 距 2026-07-14 = 7天，算 recent（<=7）
+    articles = [
+        {"title": "边界新闻", "date": "2026-07-07 09:00", "provider": ""},
+    ]
+    recent, history = split_recent_and_history(articles, "2026-07-14", recent_days=7)
+    assert len(recent) == 1
+
+
+def test_split_beyond_30_days_dropped():
+    # 超过30天的直接丢弃
+    articles = [
+        {"title": "阿里云财报同比增长30%", "date": "2026-06-10 09:00", "provider": ""},
+    ]
+    recent, history = split_recent_and_history(articles, "2026-07-14", recent_days=7, lookback_days=30)
+    assert len(recent) == 0
+    assert len(history) == 0

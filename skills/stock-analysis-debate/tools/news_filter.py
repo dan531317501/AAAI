@@ -89,3 +89,67 @@ def filter_noise(articles: list) -> list:
         if not is_noise(art.get("title", ""))
         and not _is_noise_provider(art.get("provider", ""))
     ]
+
+
+# 8-30天窗口保留用的高信号词（命中其一即保留）
+_HIGH_SIGNAL_KEYWORDS = [
+    "财报", "业绩", "营收", "净利润", "毛利率",
+    "并购", "收购", "重组", "并入",
+    "评级", "上调", "下调", "维持", "目标价",
+    "价格战", "补贴", "百亿补贴",
+    "合作", "战略合作", "官宣",
+    "监管", "处罚", "立案", "约谈",
+    "回购", "增持", "减持", "增发",
+    "分部", "分拆", "独立", "拆分",
+    "同比增长", "同比下滑", "同比下跌", "亏损", "盈利",
+    "领投", "融资",
+]
+
+
+def is_high_signal(title: str) -> bool:
+    """标题命中高信号词则返回 True（用于8-30天窗口粗筛）。"""
+    if not title:
+        return False
+    for kw in _HIGH_SIGNAL_KEYWORDS:
+        if kw in title:
+            return True
+    return False
+
+
+from datetime import datetime, timedelta
+
+
+def _parse_article_date(date_str: str) -> datetime:
+    """解析 'YYYY-MM-DD HH:MM' 或 'YYYY-MM-DD'，失败返回 None。"""
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(date_str.strip(), fmt)
+        except (ValueError, AttributeError):
+            continue
+    return None
+
+
+def split_recent_and_history(articles: list, curr_date: str,
+                             recent_days: int = 7, lookback_days: int = 30):
+    """按日期分层：recent_days 内全留(recent)，recent+1~lookback 天只留高信号(history)，
+    超出 lookback 的丢弃。返回 (recent_list, history_list)。
+    """
+    curr_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+    recent_cutoff = curr_dt - timedelta(days=recent_days)
+    history_cutoff = curr_dt - timedelta(days=lookback_days)
+
+    recent, history = [], []
+    for art in articles:
+        d = _parse_article_date(art.get("date", ""))
+        if d is None:
+            # 无法解析日期，保守归入 recent 不丢
+            recent.append(art)
+            continue
+        if d < history_cutoff:
+            continue  # 超出 lookback 丢弃
+        if d >= recent_cutoff:
+            recent.append(art)
+        else:
+            if is_high_signal(art.get("title", "")):
+                history.append(art)
+    return recent, history
