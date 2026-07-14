@@ -117,3 +117,56 @@ def fetch_revenue_sankey(ticker: str) -> dict:
     except Exception as e:
         print(f"  [longbridge API2] error: {e}", flush=True)
         return {}
+
+
+# 常见分部名 -> 别名（用于新闻业务线匹配）
+_SEGMENT_ALIASES = {
+    "云智能集团": ["阿里云", "云计算", "通义", "飞天", "AI"],
+    "商业": ["淘宝", "天猫", "电商", "88VIP", "淘天"],
+    "本地生活集团": ["饿了么", "高德", "本地生活", "外卖"],
+    "菜鸟集团": ["菜鸟", "物流", "跨境物流"],
+    "国际数字商业集团": ["国际电商", "速卖通", "Lazada", "国际商业"],
+    "大文娱集团": ["优酷", "阿里影业", "大文娱", "灵犀互娱"],
+    "游戏": ["腾讯游戏", "王者荣耀", "和平精英"],
+    "金融科技": ["微信支付", "财付通", "金融科技"],
+}
+
+
+def derive_segments_yaml(quarters: list) -> dict:
+    """从最近季度提取分部名，生成 segments.yaml 结构。无数据返回 None。"""
+    if not quarters:
+        return None
+    latest = max(quarters, key=lambda q: q.get("date", ""))
+    segs = latest.get("segments", [])
+    if not segs:
+        return None
+
+    real_segs = [s for s in segs if s.get("segment", "") not in ("所有其他", "其他")]
+    other = [s for s in segs if s.get("segment", "") in ("所有其他", "其他")]
+    other_pct = 0.0
+    if other:
+        try:
+            other_pct = float(other[0].get("percent", "0") or "0")
+        except ValueError:
+            other_pct = 0.0
+
+    multi = len(real_segs) > 1 and other_pct < 90.0
+
+    seg_list = []
+    for s in real_segs + other:
+        name = s.get("segment", "")
+        seg_list.append({
+            "name": name,
+            "aliases": _SEGMENT_ALIASES.get(name, []),
+            "brief": "",
+        })
+
+    basis = f"长桥分部数据：{len(real_segs)}个业务分部"
+    if other:
+        basis += f"，所有其他占比{other_pct}%"
+    return {
+        "multi_segment": multi,
+        "judgment_basis": basis,
+        "data_source": "longbridge",
+        "segments": seg_list,
+    }

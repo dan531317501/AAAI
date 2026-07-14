@@ -1,4 +1,4 @@
-from longbridge_fetcher import build_counter_id, parse_business_historical, parse_revenue_sankey
+from longbridge_fetcher import build_counter_id, parse_business_historical, parse_revenue_sankey, derive_segments_yaml
 
 
 # 模拟长桥 API1 返回（精简）
@@ -97,3 +97,42 @@ def test_parse_api2_returns_fiscal_year_segments():
 def test_parse_api2_empty():
     assert parse_revenue_sankey({"data": {"list": []}}) == []
     assert parse_revenue_sankey(None) == []
+
+
+def test_derive_multi_segment_true():
+    quarters = [
+        {"date": "20250331", "report_period": "2025.Q4", "total_revenue": "32154000000",
+         "segments": [
+             {"segment": "商业", "revenue": "27241000000", "percent": "84.72", "yoy": ""},
+             {"segment": "云智能集团", "revenue": "1243000000", "percent": "3.87", "yoy": "20"},
+         ]},
+    ]
+    out = derive_segments_yaml(quarters)
+    assert out["multi_segment"] is True
+    assert out["data_source"] == "longbridge"
+    names = [s["name"] for s in out["segments"]]
+    assert "商业" in names and "云智能集团" in names
+
+
+def test_derive_single_other_dominant_is_not_multi():
+    # 只有"所有其他"且占比95% -> multi_segment False
+    quarters = [
+        {"date": "20250331", "report_period": "2025.Q4", "total_revenue": "1000",
+         "segments": [{"segment": "所有其他", "revenue": "950", "percent": "95", "yoy": ""}]},
+    ]
+    out = derive_segments_yaml(quarters)
+    assert out["multi_segment"] is False
+
+
+def test_derive_aliases_for_known_segment():
+    quarters = [
+        {"date": "20250331", "report_period": "2025.Q4", "total_revenue": "1000",
+         "segments": [{"segment": "云智能集团", "revenue": "100", "percent": "10", "yoy": ""}]},
+    ]
+    out = derive_segments_yaml(quarters)
+    seg = [s for s in out["segments"] if s["name"] == "云智能集团"][0]
+    assert "阿里云" in seg["aliases"]
+
+
+def test_derive_empty_returns_none():
+    assert derive_segments_yaml([]) is None
