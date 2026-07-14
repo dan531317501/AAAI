@@ -58,3 +58,43 @@ def test_dedup_keeps_different_titles():
 
 def test_dedup_empty_list():
     assert dedup_by_title([]) == []
+
+
+from news_filter import is_noise, filter_noise
+
+
+def test_is_noise_geopolitics_unrelated():
+    assert is_noise("霍尔木兹海峡局势升温") is True
+    assert is_noise("哈梅内伊葬礼上不该出现的一幕") is True
+
+
+def test_is_noise_chicken_soup():
+    assert is_noise("周文强：人人都想成为马云") is True
+    assert is_noise("国旗冉冉升起是我心中最美的风景") is True
+
+
+def test_is_noise_keeps_real_signal():
+    assert is_noise("阿里云同比增长30% 成增长引擎") is False
+    assert is_noise("阿里巴巴领投爱诗科技C轮") is False
+    assert is_noise("菜鸟供应链定位独立公司") is False
+
+
+def test_filter_noise_removes_blacklisted():
+    articles = [
+        {"title": "阿里云增长30%", "date": "2026-07-14 09:00", "provider": ""},
+        {"title": "周文强：人人都想成为马云", "date": "2026-07-14 10:00", "provider": ""},
+        {"title": "霍尔木兹海峡新进展", "date": "2026-07-14 11:00", "provider": ""},
+    ]
+    result = filter_noise(articles)
+    assert len(result) == 1
+    assert result[0]["title"] == "阿里云增长30%"
+
+
+def test_filter_noise_source_blacklist():
+    articles = [
+        {"title": "阿里云增长30%", "date": "2026-07-14 09:00", "provider": "某情感号"},
+        {"title": "阿里云增长40%", "date": "2026-07-14 10:00", "provider": "新浪财经"},
+    ]
+    result = filter_noise(articles)
+    assert len(result) == 1
+    assert result[0]["provider"] == "新浪财经"

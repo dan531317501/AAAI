@@ -45,3 +45,47 @@ def dedup_by_title(articles: list) -> list:
     # 保持输入顺序输出
     return [art for art in articles if normalize_title(art.get("title", "")) in seen
             and seen[normalize_title(art.get("title", ""))] is art]
+
+
+# 明显与公司股价无关的关键词。保守：只放确定性的噪声。
+_NOISE_KEYWORDS = [
+    # 地缘冲突（与个股无关的纯地缘新闻）
+    "霍尔木兹", "哈梅内伊", "葬礼",
+    # 励志/鸡汤/自媒体人格化
+    "周文强", "人人都想成为", "国旗冉冉升起", "繁星点点",
+    # 民族共同体/党建/研修类无关
+    "中华民族共同体", "工商联组织", "赴浙大",
+    # 地名/港口等无关
+    "阿联酋港务", "迪拜拟建新港口",
+]
+
+# 来源黑名单：明显非财经来源（情感、社会类自媒体）
+_NOISE_PROVIDERS = ["某情感号", "某社会号"]
+
+
+def is_noise(title: str) -> bool:
+    """标题命中噪声关键词则返回 True。保守过滤。"""
+    if not title:
+        return False
+    for kw in _NOISE_KEYWORDS:
+        if kw in title:
+            return True
+    return False
+
+
+def _is_noise_provider(provider: str) -> bool:
+    if not provider:
+        return False
+    for p in _NOISE_PROVIDERS:
+        if p in provider:
+            return True
+    return False
+
+
+def filter_noise(articles: list) -> list:
+    """剔除命中关键词黑名单或来源黑名单的新闻。"""
+    return [
+        art for art in articles
+        if not is_noise(art.get("title", ""))
+        and not _is_noise_provider(art.get("provider", ""))
+    ]
