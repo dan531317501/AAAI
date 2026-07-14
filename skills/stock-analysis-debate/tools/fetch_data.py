@@ -1,0 +1,853 @@
+#!/usr/bin/env python3
+"""
+Stock data fetcher for TradingAgents skill.
+Fetches all required data for a given ticker and date via yfinance + stockstats.
+
+Usage:
+    python fetch_data.py <TICKER> <DATE> [--output-dir <dir>]
+
+Example:
+    python fetch_data.py AAPL 2024-01-10
+    python fetch_data.py 600519.SH 2024-06-15 --output-dir /tmp/analysis
+
+Output:
+    {output_dir}/{TICKER}/{DATE}/
+        ohlcv.csv           # OHLCV price data (30 days)
+        indicators.txt      # All technical indicators
+        news.txt            # Company-specific news
+        global_news.txt     # Macro/global news
+        fundamentals.txt    # Company fundamentals overview
+        balance_sheet.csv   # Balance sheet
+        cashflow.csv        # Cash flow statement
+        income_stmt.csv     # Income statement
+        insider.txt         # Insider transactions
+        summary.json        # Metadata summary
+"""
+
+import argparse
+import json
+import os
+import sys
+from datetime import datetime, timedelta
+
+import pandas as pd
+import yfinance as yf
+from stockstats import wrap
+
+# Look-back windows
+PRICE_LOOKBACK_DAYS = 60  # Enough for indicators to be meaningful
+NEWS_LOOKBACK_DAYS = 30
+FUNDAMENTALS_LOOKBACK_DAYS = 365
+
+# Supported technical indicators (matching the original catalog)
+INDICATORS = [
+    "close_50_sma",
+    "close_200_sma",
+    "close_10_ema",
+    "macd",
+    "macds",
+    "macdh",
+    "rsi",
+    "boll",
+    "boll_ub",
+    "boll_lb",
+    "atr",
+    "vwma",
+    "mfi",
+]
+
+
+def detect_market(ticker: str) -> str:
+    """Detect market from ticker suffix.
+
+    Note: HK stock codes use 5 digits, typically with leading zeros
+    (e.g., 00700.HK, 02097.HK). Leading zeros are meaningful and MUST
+    be preserved for ALL APIs (yfinance, Sina Finance).
+    """
+    upper = ticker.upper()
+    if ".HK" in upper:
+        return "HK"
+    if ".SH" in upper or ".SS" in upper or ".SZ" in upper:
+        return "CN"
+    if upper.replace(".", "").isdigit():
+        if len(upper.split(".")[0]) == 6:
+            return "CN"
+        return "HK"
+    return "US"
+
+
+def normalize_ticker(ticker: str) -> str:
+    """Normalize ticker for yfinance.
+
+    Note on HK stocks: yfinance is inconsistent with HK ticker formats.
+    Some stocks require leading zeros (00700.HK, 00005.HK), others
+    require stripped codes (3690.HK not 03690.HK). resolve_ticker()
+    handles this by testing both formats before fetching data.
+    """
+    upper = ticker.upper()
+    # Convert .SH (Chinese convention for Shanghai) to .SS (yfinance format)
+    if ".SH" in upper:
+        return upper.replace(".SH", ".SS")
+    # .SS and .SZ are already correct yfinance formats
+    return upper
+
+
+def resolve_hk_ticker(ticker: str) -> str:
+    """Resolve the correct yfinance ticker for HK stocks by testing both formats.
+
+    yfinance's HK ticker database is inconsistent:
+    - 00700.HK ✅ but 700.HK ❌ (Tencent)
+    - 3690.HK ✅ but 03690.HK ❌ (Meituan)
+    - 00005.HK ✅ but 5.HK ❌ (HSBC)
+
+    This function tests the original ticker first. If yfinance returns no data
+    (info has <= 1 key), it tries the zero-stripped variant.
+    Returns the working ticker, or the original if resolution fails.
+    """
+    if ".HK" not in ticker.upper():
+        return normalize_ticker(ticker)
+
+    # Test original ticker first
+    try:
+        t = yf.Ticker(ticker)
+        info = t.info
+        if info and len(info) > 1:
+            return ticker
+    except Exception:
+        pass
+
+    # Fallback: try without leading zeros
+    # e.g., "03690.HK" -> "3690.HK"
+    upper = ticker.upper()
+    code = upper.split(".")[0]
+    stripped = code.lstrip("0")
+    if stripped != code:
+        fallback = f"{stripped}.HK"
+        try:
+            t2 = yf.Ticker(fallback)
+            info2 = t2.info
+            if info2 and len(info2) > 1:
+                return fallback
+        except Exception:
+            pass
+
+    # If neither works, return original (let downstream handle the error)
+    return ticker
+
+
+def retry(func, max_retries=5, delay=10):
+    """Retry wrapper for yfinance calls."""
+    import time
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            print(f"  Retry {attempt + 1}/{max_retries} after error: {e}", file=sys.stderr)
+            time.sleep(delay)
+
+
+def fetch_ohlcv(ticker: str, start_date: str, end_date: str) -> str:
+    """Fetch OHLCV data and return as CSV string."""
+    symbol = normalize_ticker(ticker)
+    stock = yf.Ticker(symbol)
+    data = retry(lambda: stock.history(start=start_date, end=end_date))
+
+    if data.empty:
+        return f"# No OHLCV data found for {ticker}\n"
+
+    if data.index.tz is not None:
+        data.index = data.index.tz_localize(None)
+
+    for col in ["Open", "High", "Low", "Close", "Adj Close"]:
+        if col in data.columns:
+            data[col] = data[col].round(2)
+
+    market = detect_market(ticker)
+    currency = {"US": "USD", "HK": "HKD", "CN": "CNY"}.get(market, "USD")
+
+    header = (
+        f"# Stock data for {symbol} from {start_date} to {end_date}\n"
+        f"# Market: {market}\n"
+        f"# Currency: {currency}\n"
+        f"# Total records: {len(data)}\n\n"
+    )
+    return header + data.to_csv()
+
+
+def fetch_indicators(ticker: str, curr_date: str, lookback_days: int = 30) -> str:
+    """Fetch technical indicators via stockstats."""
+    symbol = normalize_ticker(ticker)
+    curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+    start_date = (curr_date_dt - timedelta(days=PRICE_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+
+    # Fetch OHLCV for stockstats
+    stock = yf.Ticker(symbol)
+    data = retry(lambda: stock.history(start=start_date, end=curr_date))
+
+    if data.empty:
+        return "# No price data available for indicators\n"
+
+    if data.index.tz is not None:
+        data.index = data.index.tz_localize(None)
+
+    # Prepare data for stockstats
+    df = data.reset_index()
+    df.columns = [c.lower().replace(" ", "_") for c in df.columns]
+    column_map = {
+        "date": "Date", "open": "Open", "high": "High",
+        "low": "Low", "close": "Close", "volume": "Volume",
+    }
+    # Handle Adj Close column
+    for col in df.columns:
+        if "adj" in col.lower() and "close" in col.lower():
+            column_map[col] = "Adj Close"
+            break
+
+    df_renamed = df.rename(columns=column_map)
+    df_renamed["Date"] = pd.to_datetime(df_renamed["Date"])
+
+    try:
+        stock_df = wrap(df_renamed)
+    except Exception as e:
+        return f"# Error computing indicators: {e}\n"
+
+    # Build result for the lookback window
+    start_window = curr_date_dt - timedelta(days=lookback_days)
+    result_lines = [f"## Technical Indicators for {symbol} ({start_window.strftime('%Y-%m-%d')} to {curr_date})\n"]
+
+    for indicator in INDICATORS:
+        result_lines.append(f"\n### {indicator}")
+        try:
+            stock_df[indicator]  # trigger computation
+            indicator_data = stock_df[["Date", indicator]].dropna(subset=[indicator])
+            indicator_data = indicator_data[indicator_data["Date"] >= pd.Timestamp(start_window)]
+
+            if indicator_data.empty:
+                result_lines.append("  No data available for this period.")
+                continue
+
+            for _, row in indicator_data.iterrows():
+                date_str = row["Date"].strftime("%Y-%m-%d") if hasattr(row["Date"], "strftime") else str(row["Date"])
+                val = row[indicator]
+                val_str = f"{val:.4f}" if isinstance(val, float) and not pd.isna(val) else str(val)
+                result_lines.append(f"  {date_str}: {val_str}")
+        except Exception as e:
+            result_lines.append(f"  Error: {e}")
+
+    return "\n".join(result_lines)
+
+
+def fetch_news(ticker: str, start_date: str, end_date: str) -> str:
+    """Fetch company-specific news via yfinance."""
+    symbol = normalize_ticker(ticker)
+    try:
+        stock = yf.Ticker(symbol)
+        news = retry(lambda: stock.get_news(count=20))
+
+        if not news:
+            return f"# No news found for {ticker}\n"
+
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+
+        lines = [f"## {ticker} News ({start_date} to {end_date})\n"]
+        count = 0
+
+        for article in news:
+            content = article.get("content", article)
+            title = content.get("title", article.get("title", "No title"))
+            summary = content.get("summary", article.get("summary", ""))
+            provider = content.get("provider", {}).get("displayName", article.get("publisher", "Unknown"))
+            url_obj = content.get("canonicalUrl") or content.get("clickThroughUrl") or {}
+            link = url_obj.get("url", article.get("link", ""))
+            pub_date_str = content.get("pubDate", "")
+
+            # Filter by date
+            if pub_date_str:
+                try:
+                    pub_date = datetime.fromisoformat(pub_date_str.replace("Z", "+00:00"))
+                    pub_date_naive = pub_date.replace(tzinfo=None)
+                    if not (start_dt <= pub_date_naive <= end_dt + timedelta(days=1)):
+                        continue
+                except (ValueError, AttributeError):
+                    pass
+
+            lines.append(f"### {title} (source: {provider})")
+            if summary:
+                lines.append(f"{summary}")
+            if link:
+                lines.append(f"Link: {link}")
+            lines.append("")
+            count += 1
+
+        if count == 0:
+            return f"# No news found for {ticker} in date range\n"
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"# Error fetching news for {ticker}: {e}\n"
+
+
+def fetch_global_news(curr_date: str, lookback_days: int = 7, limit: int = 10) -> str:
+    """Fetch global macro news via yfinance Search."""
+    search_queries = [
+        "stock market economy",
+        "Federal Reserve interest rates",
+        "inflation economic outlook",
+        "global markets trading",
+    ]
+
+    all_news = []
+    seen_titles = set()
+
+    try:
+        for query in search_queries:
+            search = retry(lambda q=query: yf.Search(query=q, news_count=limit, enable_fuzzy_query=True))
+            if search.news:
+                for article in search.news:
+                    content = article.get("content", article)
+                    title = content.get("title", article.get("title", ""))
+                    if title and title not in seen_titles:
+                        seen_titles.add(title)
+                        all_news.append(article)
+            if len(all_news) >= limit:
+                break
+
+        if not all_news:
+            return f"# No global news found for {curr_date}\n"
+
+        curr_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+        start_date = (curr_dt - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+
+        lines = [f"## Global Market News ({start_date} to {curr_date})\n"]
+
+        for article in all_news[:limit]:
+            content = article.get("content", article)
+            title = content.get("title", article.get("title", "No title"))
+            provider = content.get("provider", {}).get("displayName", article.get("publisher", "Unknown"))
+            url_obj = content.get("canonicalUrl") or content.get("clickThroughUrl") or {}
+            link = url_obj.get("url", article.get("link", ""))
+            summary = content.get("summary", article.get("summary", ""))
+
+            lines.append(f"### {title} (source: {provider})")
+            if summary:
+                lines.append(f"{summary}")
+            if link:
+                lines.append(f"Link: {link}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"# Error fetching global news: {e}\n"
+
+
+def fetch_fundamentals(ticker: str) -> str:
+    """Fetch company fundamentals from yfinance."""
+    symbol = normalize_ticker(ticker)
+    try:
+        stock = yf.Ticker(symbol)
+        info = retry(lambda: stock.info)
+
+        if not info:
+            return f"# No fundamentals data found for {ticker}\n"
+
+        fields = [
+            ("Name", "longName"),
+            ("Sector", "sector"),
+            ("Industry", "industry"),
+            ("Market Cap", "marketCap"),
+            ("PE Ratio (TTM)", "trailingPE"),
+            ("Forward PE", "forwardPE"),
+            ("PEG Ratio", "pegRatio"),
+            ("Price to Book", "priceToBook"),
+            ("EPS (TTM)", "trailingEps"),
+            ("Forward EPS", "forwardEps"),
+            ("Dividend Yield", "dividendYield"),
+            ("Beta", "beta"),
+            ("52 Week High", "fiftyTwoWeekHigh"),
+            ("52 Week Low", "fiftyTwoWeekLow"),
+            ("50 Day Average", "fiftyDayAverage"),
+            ("200 Day Average", "twoHundredDayAverage"),
+            ("Revenue (TTM)", "totalRevenue"),
+            ("Gross Profit", "grossProfits"),
+            ("EBITDA", "ebitda"),
+            ("Net Income", "netIncomeToCommon"),
+            ("Profit Margin", "profitMargins"),
+            ("Operating Margin", "operatingMargins"),
+            ("Return on Equity", "returnOnEquity"),
+            ("Return on Assets", "returnOnAssets"),
+            ("Debt to Equity", "debtToEquity"),
+            ("Current Ratio", "currentRatio"),
+            ("Book Value", "bookValue"),
+            ("Free Cash Flow", "freeCashflow"),
+        ]
+
+        lines = [f"# Company Fundamentals for {symbol}\n"]
+        for label, key in fields:
+            value = info.get(key)
+            if value is not None:
+                lines.append(f"{label}: {value}")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"# Error fetching fundamentals for {ticker}: {e}\n"
+
+
+def fetch_financial_stmt(ticker: str, stmt_type: str, freq: str = "quarterly", curr_date: str = None) -> str:
+    """
+    Fetch financial statement (balance_sheet, cashflow, income_stmt) from yfinance.
+    Filters data to avoid look-ahead bias using curr_date.
+    """
+    symbol = normalize_ticker(ticker)
+    try:
+        stock = yf.Ticker(symbol)
+
+        if freq.lower() == "quarterly":
+            attr_map = {
+                "balance_sheet": "quarterly_balance_sheet",
+                "cashflow": "quarterly_cashflow",
+                "income_stmt": "quarterly_income_stmt",
+            }
+        else:
+            attr_map = {
+                "balance_sheet": "balance_sheet",
+                "cashflow": "cashflow",
+                "income_stmt": "income_stmt",
+            }
+
+        attr = attr_map.get(stmt_type)
+        if attr is None:
+            return f"# Unknown statement type: {stmt_type}\n"
+
+        data = retry(lambda: getattr(stock, attr))
+
+        if data is None or (hasattr(data, "empty") and data.empty):
+            return f"# No {stmt_type} data found for {ticker}\n"
+
+        # Filter by date to avoid look-ahead bias
+        if curr_date and not data.empty:
+            curr_dt = pd.Timestamp(curr_date)
+            valid_cols = [c for c in data.columns if pd.Timestamp(c) <= curr_dt]
+            data = data[valid_cols]
+
+        if data.empty:
+            return f"# No {stmt_type} data available before {curr_date}\n"
+
+        stmt_names = {
+            "balance_sheet": "Balance Sheet",
+            "cashflow": "Cash Flow",
+            "income_stmt": "Income Statement",
+        }
+
+        header = f"# {stmt_names.get(stmt_type, stmt_type)} for {symbol} ({freq})\n"
+        return header + data.to_csv()
+
+    except Exception as e:
+        return f"# Error fetching {stmt_type} for {ticker}: {e}\n"
+
+
+def fetch_insider_transactions(ticker: str) -> str:
+    """Fetch insider transactions from yfinance."""
+    symbol = normalize_ticker(ticker)
+    try:
+        stock = yf.Ticker(symbol)
+        data = retry(lambda: stock.insider_transactions)
+
+        if data is None or data.empty:
+            return f"# No insider transactions data found for {ticker}\n"
+
+        header = f"# Insider Transactions for {symbol}\n"
+        return header + data.to_csv()
+
+    except Exception as e:
+        return f"# Error fetching insider transactions for {ticker}: {e}\n"
+
+
+def fetch_cn_news(ticker: str, start_date: str, end_date: str) -> str:
+    """Fetch A-share market news + official announcements via Sina Finance & Eastmoney.
+
+    Primary source: Sina Finance (新浪财经) for market-level news —
+    media coverage, analyst commentary, industry trends mentioning the company.
+    Secondary source: Eastmoney (东方财富) for official company filings —
+    dividend notices, shareholder meetings, regulatory announcements.
+
+    Note: A-share codes are always 6 digits, no leading zeros.
+    HK stock codes may have leading zeros. yfinance's HK ticker database
+    is inconsistent — resolve_hk_ticker() handles both formats automatically.
+    """
+    try:
+        import requests
+    except ImportError:
+        return f"# Error: requests library not available for CN news\n"
+
+    # Extract 6-digit code
+    code = ticker.split(".")[0]
+    if len(code) != 6 or not code.isdigit():
+        return f"# Not a valid A-share code: {ticker}\n"
+
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+
+    lines = [f"## {ticker} News ({start_date} to {end_date})\n"]
+    total_count = 0
+
+    # --- Source 1: Sina Finance (market news) ---
+    try:
+        # Determine Sina prefix: sh=Shanghai (6xxxxx), sz=Shenzhen (0xxxxx/3xxxxx)
+        first_digit = code[0]
+        is_shanghai = first_digit == "6"
+        prefix = f"sh{code}" if is_shanghai else f"sz{code}"
+
+        url = f"https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllNewsStock/symbol/{prefix}.phtml"
+        resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        resp.encoding = "gb2312"
+
+        # Extract news: DATE&nbsp;TIME&nbsp;&nbsp;<a target='_blank' href='URL'>TITLE</a>
+        # Note: &nbsp; is NOT matched by \s, so use (?:&nbsp;|\s)*
+        import re
+        items = re.findall(
+            r"(\d{4}-\d{2}-\d{2})&nbsp;(\d{2}:\d{2})(?:&nbsp;|\s)*<a[^>]*href='([^']*)'[^>]*>([^<]+)</a>",
+            resp.text,
+        )
+
+        lines.append("### Market News (source: Sina Finance 新浪财经)\n")
+        sina_count = 0
+
+        for date_str, time_str, link, title in items:
+            title = title.strip()
+            if len(title) < 8:
+                continue
+            try:
+                d = datetime.strptime(date_str, "%Y-%m-%d")
+                if not (start_dt <= d <= end_dt + timedelta(days=1)):
+                    continue
+            except ValueError:
+                continue
+
+            lines.append(f"**{title}**")
+            lines.append(f"  Date: {date_str} {time_str}")
+            if link:
+                lines.append(f"  Link: {link}")
+            lines.append("")
+            sina_count += 1
+
+        lines.append(f"  ({sina_count} articles)\n")
+        total_count += sina_count
+    except Exception as e:
+        lines.append(f"### Market News (source: Sina Finance)")
+        lines.append(f"  Error: {e}\n")
+
+    # --- Source 2: Eastmoney (official announcements) ---
+    try:
+        url_em = "https://np-anotice-stock.eastmoney.com/api/security/ann"
+        params = {
+            "page_size": 20,
+            "page_index": 1,
+            "ann_type": "A",
+            "client_source": "web",
+            "stock_list": code,
+        }
+        resp_em = requests.get(url_em, params=params, timeout=15)
+        resp_em.raise_for_status()
+        data_em = resp_em.json()
+
+        em_items = data_em.get("data", {}).get("list", [])
+
+        lines.append("### Official Announcements (source: Eastmoney 东方财富)\n")
+        em_count = 0
+
+        for item in em_items:
+            notice_date_str = item.get("notice_date", "")
+            title = item.get("title", "No title")
+            if notice_date_str:
+                try:
+                    notice_date = datetime.strptime(notice_date_str.split(" ")[0], "%Y-%m-%d")
+                    if not (start_dt <= notice_date <= end_dt + timedelta(days=1)):
+                        continue
+                except ValueError:
+                    pass
+
+            ann_id = item.get("art_code", "")
+            lines.append(f"**{title}**")
+            lines.append(f"  Date: {notice_date_str}")
+            if ann_id:
+                lines.append(f"  Link: https://data.eastmoney.com/notices/detail/{code}/{ann_id}.html")
+            lines.append("")
+            em_count += 1
+
+        lines.append(f"  ({em_count} announcements)\n")
+        total_count += em_count
+    except Exception as e:
+        lines.append(f"### Official Announcements (source: Eastmoney)")
+        lines.append(f"  Error: {e}\n")
+
+    if total_count == 0:
+        return f"# No news or announcements found for {ticker} in date range\n"
+    return "\n".join(lines)
+
+
+def fetch_hk_news(ticker: str, start_date: str, end_date: str) -> str:
+    """Fetch HK stock market news via Sina Finance.
+
+    HK stocks don't have good coverage on yfinance get_news().
+    Sina Finance provides HK stock news pages with market-level articles.
+
+    HK stock codes (e.g., 00700.HK, 02097.HK) MUST preserve leading zeros
+    for ALL APIs — yfinance needs '00700.HK', Sina needs 'hk00700'.
+    Verified 2026-07-13: '700.HK' and 'hk700' both fail to return correct
+    stock data/stock-specific news.
+    """
+
+    # Keep original 5-digit code with leading zeros
+    # e.g., "00700.HK" -> code="00700"
+    code = ticker.split(".")[0]
+
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+
+    lines = [f"## {ticker} News ({start_date} to {end_date})\n"]
+    total_count = 0
+
+    try:
+        import requests
+    except ImportError:
+        return f"# Error: requests library not available for HK news\n"
+
+    # Sina Finance: hk + original 5-digit code with leading zeros (e.g., hk00700)
+    # Verified: both yfinance AND Sina require leading zeros for HK stocks.
+    try:
+        prefix = f"hk{code}"
+        url = f"https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllNewsStock/symbol/{prefix}.phtml"
+        resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        resp.encoding = "gb2312"
+
+        import re
+        items = re.findall(
+            r"(\d{4}-\d{2}-\d{2})&nbsp;(\d{2}:\d{2})(?:&nbsp;|\s)*<a[^>]*href='([^']*)'[^>]*>([^<]+)</a>",
+            resp.text,
+        )
+
+        lines.append("### Market News (source: Sina Finance 新浪财经)\n")
+        count = 0
+        for date_str, time_str, link, title in items:
+            title = title.strip()
+            if len(title) < 8:
+                continue
+            try:
+                d = datetime.strptime(date_str, "%Y-%m-%d")
+                if not (start_dt <= d <= end_dt + timedelta(days=1)):
+                    continue
+            except ValueError:
+                continue
+
+            lines.append(f"**{title}**")
+            lines.append(f"  Date: {date_str} {time_str}")
+            if link:
+                lines.append(f"  Link: {link}")
+            lines.append("")
+            count += 1
+
+        lines.append(f"  ({count} articles)\n")
+        total_count += count
+    except Exception as e:
+        lines.append(f"### Market News (source: Sina Finance)")
+        lines.append(f"  Error: {e}\n")
+
+    if total_count == 0:
+        return f"# No news found for {ticker} in date range\n"
+    return "\n".join(lines)
+
+
+def fetch_cn_global_news(curr_date: str, lookback_days: int = 7) -> str:
+    """Fetch Chinese macro/economic news via Baidu economic calendar.
+
+    Provides Chinese economic data releases and policy events relevant
+    to A-share market analysis.
+    """
+    lines = []
+
+    try:
+        import akshare as ak
+
+        df = ak.news_economic_baidu(date=curr_date)
+        if not df.empty:
+            # Filter for China-related events
+            cn_events = df[df["地区"] == "中国"]
+            lines.append(f"## Chinese Economic Calendar ({curr_date})\n")
+            lines.append(f"Source: Baidu Economic Calendar (百度经济日历)\n")
+            for _, row in cn_events.iterrows():
+                event = row.get("事件", "")
+                actual = row.get("公布", "")
+                expected = row.get("预期", "")
+                previous = row.get("前值", "")
+                time_str = row.get("时间", "")
+                lines.append(f"- {time_str} | {event}: 实际={actual}, 预期={expected}, 前值={previous}")
+            lines.append("")
+    except Exception as e:
+        lines.append(f"# Note: CN economic calendar unavailable: {e}\n")
+
+    # Also try to get market index news
+    try:
+        import akshare as ak
+        cctv_news = ak.news_cctv(date=curr_date)
+        if not cctv_news.empty:
+            lines.append(f"## CCTV News Headlines ({curr_date})\n")
+            for _, row in cctv_news.head(5).iterrows():
+                lines.append(f"- {row.get('title', '')}")
+            lines.append("")
+    except Exception:
+        pass  # CCTV news is optional
+
+    if len(lines) == 0:
+        return f"# No Chinese macro news available for {curr_date}\n"
+
+    return "\n".join(lines)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Fetch stock data for TradingAgents analysis")
+    parser.add_argument("ticker", help="Ticker symbol (e.g., AAPL, 600519.SH, 00700.HK)")
+    parser.add_argument("date", help="Analysis date in YYYY-MM-DD format")
+    parser.add_argument("--output-dir", default=None, help="Output directory (default: ./data)")
+    args = parser.parse_args()
+
+    ticker = args.ticker.strip().upper()
+    curr_date = args.date.strip()
+
+    # Validate date format
+    try:
+        curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+    except ValueError:
+        print(f"Error: date must be in YYYY-MM-DD format, got: {curr_date}", file=sys.stderr)
+        sys.exit(1)
+
+    # Setup output directory
+    output_dir = args.output_dir or os.path.join(os.path.dirname(__file__), "..", "data")
+    ticker_dir = os.path.join(output_dir, ticker.replace(".", "_"), curr_date)
+    os.makedirs(ticker_dir, exist_ok=True)
+
+    print(f"Fetching data for {ticker} on {curr_date}...")
+    print(f"Output directory: {ticker_dir}")
+
+    # Calculate date ranges
+    price_start = (curr_date_dt - timedelta(days=PRICE_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+    news_start = (curr_date_dt - timedelta(days=NEWS_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+
+    results = {
+        "ticker": ticker,
+        "date": curr_date,
+        "market": detect_market(ticker),
+        "output_dir": ticker_dir,
+        "files": {},
+    }
+
+    market = results["market"]
+
+    # Resolve yfinance ticker for HK stocks (yfinance is inconsistent:
+    # 00700.HK works but 03690.HK doesn't; 3690.HK works but 700.HK doesn't)
+    if market == "HK":
+        yf_ticker = resolve_hk_ticker(ticker)
+        if yf_ticker != ticker:
+            print(f"  Note: resolved HK ticker {ticker} -> {yf_ticker} for yfinance")
+    else:
+        yf_ticker = ticker
+
+    # 1. OHLCV
+    print("  [1/8] Fetching OHLCV data...")
+    ohlcv = fetch_ohlcv(yf_ticker, price_start, curr_date)
+    path = os.path.join(ticker_dir, "ohlcv.csv")
+    with open(path, "w") as f:
+        f.write(ohlcv)
+    results["files"]["ohlcv"] = path
+
+    # 2. Technical indicators
+    print("  [2/8] Computing technical indicators...")
+    indicators = fetch_indicators(yf_ticker, curr_date)
+    path = os.path.join(ticker_dir, "indicators.txt")
+    with open(path, "w") as f:
+        f.write(indicators)
+    results["files"]["indicators"] = path
+
+    # 3. News (route by market)
+    print("  [3/8] Fetching company news...")
+    if market == "CN":
+        news = fetch_cn_news(ticker, news_start, curr_date)
+    elif market == "HK":
+        news = fetch_hk_news(ticker, news_start, curr_date)
+    else:
+        news = fetch_news(ticker, news_start, curr_date)
+    path = os.path.join(ticker_dir, "news.txt")
+    with open(path, "w") as f:
+        f.write(news)
+    results["files"]["news"] = path
+
+    # 4. Global news (route by market)
+    print("  [4/8] Fetching global news...")
+    global_news_parts = []
+    if market == "CN":
+        cn_macro = fetch_cn_global_news(curr_date)
+        global_news_parts.append(cn_macro)
+    # Always include yfinance global news (useful context for all markets)
+    yf_global = fetch_global_news(curr_date)
+    global_news_parts.append(yf_global)
+    global_news = "\n\n".join(global_news_parts)
+    path = os.path.join(ticker_dir, "global_news.txt")
+    with open(path, "w") as f:
+        f.write(global_news)
+    results["files"]["global_news"] = path
+
+    # 5. Fundamentals
+    print("  [5/8] Fetching fundamentals...")
+    fundamentals = fetch_fundamentals(yf_ticker)
+    path = os.path.join(ticker_dir, "fundamentals.txt")
+    with open(path, "w") as f:
+        f.write(fundamentals)
+    results["files"]["fundamentals"] = path
+
+    # 6. Balance sheet
+    print("  [6/8] Fetching balance sheet...")
+    balance_sheet = fetch_financial_stmt(yf_ticker, "balance_sheet", "quarterly", curr_date)
+    path = os.path.join(ticker_dir, "balance_sheet.csv")
+    with open(path, "w") as f:
+        f.write(balance_sheet)
+    results["files"]["balance_sheet"] = path
+
+    # 7. Cash flow
+    print("  [7/8] Fetching cash flow...")
+    cashflow = fetch_financial_stmt(yf_ticker, "cashflow", "quarterly", curr_date)
+    path = os.path.join(ticker_dir, "cashflow.csv")
+    with open(path, "w") as f:
+        f.write(cashflow)
+    results["files"]["cashflow"] = path
+
+    # 8. Income statement
+    print("  [8/8] Fetching income statement...")
+    income_stmt = fetch_financial_stmt(yf_ticker, "income_stmt", "quarterly", curr_date)
+    path = os.path.join(ticker_dir, "income_stmt.csv")
+    with open(path, "w") as f:
+        f.write(income_stmt)
+    results["files"]["income_stmt"] = path
+
+    # 9. Insider transactions (best-effort)
+    print("  [9/9] Fetching insider transactions...")
+    insider = fetch_insider_transactions(yf_ticker)
+    path = os.path.join(ticker_dir, "insider.txt")
+    with open(path, "w") as f:
+        f.write(insider)
+    results["files"]["insider"] = path
+
+    # Write summary
+    summary_path = os.path.join(ticker_dir, "summary.json")
+    with open(summary_path, "w") as f:
+        json.dump(results, f, indent=2, default=str)
+
+    print(f"\nData fetched successfully. Summary: {summary_path}")
+    print(f"All files in: {ticker_dir}")
+
+
+if __name__ == "__main__":
+    main()
