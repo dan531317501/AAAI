@@ -92,7 +92,8 @@ def filter_noise(articles: list) -> list:
 
 
 # 8-30天窗口保留用的高信号词（命中其一即保留）
-_HIGH_SIGNAL_KEYWORDS = [
+# 中文 + 英文双语关键词，确保港股 yfinance 英文标题也能被保留
+_CN_HIGH_SIGNAL_KEYWORDS = [
     "财报", "业绩", "营收", "净利润", "毛利率",
     "并购", "收购", "重组", "并入",
     "评级", "上调", "下调", "维持", "目标价",
@@ -105,13 +106,59 @@ _HIGH_SIGNAL_KEYWORDS = [
     "领投", "融资",
 ]
 
+_EN_HIGH_SIGNAL_KEYWORDS = [
+    # 公司名/代码（英文财经媒体中提到公司名本身就是强信号）
+    "meituan", "3690",
+    # 财务/业绩
+    "earnings", "revenue", "profit", "margin", "EBITDA",
+    # 并购/交易
+    "acquisition", "merger", "buyout", "takeover", "deal",
+    # 评级/目标价
+    "upgrade", "downgrade", "target price", "rating", "initiates",
+    "overweight", "underweight", "outperform", "underperform",
+    # 竞争/补贴
+    "price war", "subsidy", "discount",
+    # 合作/战略
+    "partnership", "strategic", "alliance",
+    # 监管/处罚
+    "regulatory", "fine", "investigation", "probe", "crackdown",
+    # 回购/分红/持股
+    "buyback", "repurchase", "dividend", "stake", "holding",
+    # 分拆/上市
+    "spin-off", "split", "IPO", "listing",
+    # 增长/衰退
+    "growth", "decline", "loss", "impairment", "write-down",
+    # 展望/预警
+    "guidance", "outlook", "forecast", "warns",
+    # 管理层变动
+    "board", "CEO", "CFO", "management", "reshuffle",
+    # 价格变动（常见英文财经标题用词）
+    "surge", "jump", "soar", "rally", "climb",
+    "fall", "fell", "slide", "plunge", "tumble", "sink",
+    "sell-off", "selloff", "rout",
+    "rebound", "recovery", "bounce",
+    # 估值
+    "cheap", "expensive", "undervalued", "overvalued", "pricey",
+    # 风险/压力
+    "concern", "worry", "risk", "pressure", "struggle",
+    # 科技/AI相关（中概股常见催化剂）
+    "AI", "artificial intelligence", "tech", "technology",
+    "autonomous", "drone", "robot",
+]
+
 
 def is_high_signal(title: str) -> bool:
-    """标题命中高信号词则返回 True（用于8-30天窗口粗筛）。"""
+    """标题命中高信号词则返回 True（用于8-30天窗口粗筛）。
+    支持中文和英文双语关键词，不区分大小写匹配英文。
+    """
     if not title:
         return False
-    for kw in _HIGH_SIGNAL_KEYWORDS:
+    for kw in _CN_HIGH_SIGNAL_KEYWORDS:
         if kw in title:
+            return True
+    title_lower = title.lower()
+    for kw in _EN_HIGH_SIGNAL_KEYWORDS:
+        if kw.lower() in title_lower:
             return True
     return False
 

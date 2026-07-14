@@ -98,46 +98,32 @@ def normalize_ticker(ticker: str) -> str:
 
 
 def resolve_hk_ticker(ticker: str) -> str:
-    """Resolve the correct yfinance ticker for HK stocks by testing both formats.
+    """Resolve the correct yfinance ticker for HK stocks by testing all variants.
 
     yfinance's HK ticker database is inconsistent:
     - 00700.HK ✅ but 700.HK ❌ (Tencent)
     - 3690.HK ✅ but 03690.HK ❌ (Meituan)
     - 00005.HK ✅ but 5.HK ❌ (HSBC)
 
-    This function tests the original ticker first. If yfinance returns no data
-    (info has <= 1 key), it tries the zero-stripped variant.
-    Returns the working ticker, or the original if resolution fails.
+    Iterates all intermediate zero-stripped variants (via _hk_ticker_variants),
+    tests each with info, and returns the variant with the richest info response.
     """
     if ".HK" not in ticker.upper():
         return normalize_ticker(ticker)
 
-    # Test original ticker first
-    try:
-        t = yf.Ticker(ticker)
-        info = t.info
-        if info and len(info) > 1:
-            return ticker
-    except Exception:
-        pass
-
-    # Fallback: try without leading zeros
-    # e.g., "03690.HK" -> "3690.HK"
-    upper = ticker.upper()
-    code = upper.split(".")[0]
-    stripped = code.lstrip("0")
-    if stripped != code:
-        fallback = f"{stripped}.HK"
+    best_ticker = ticker
+    best_keys = 0
+    for variant in _hk_ticker_variants(ticker):
         try:
-            t2 = yf.Ticker(fallback)
-            info2 = t2.info
-            if info2 and len(info2) > 1:
-                return fallback
+            t = yf.Ticker(variant)
+            info = t.info
+            if info and len(info) > best_keys:
+                best_keys = len(info)
+                best_ticker = variant
         except Exception:
-            pass
+            continue
 
-    # If neither works, return original (let downstream handle the error)
-    return ticker
+    return best_ticker
 
 
 def retry(func, max_retries=5, delay=10):
@@ -153,14 +139,75 @@ def retry(func, max_retries=5, delay=10):
             time.sleep(delay)
 
 
-def fetch_ohlcv(ticker: str, start_date: str, end_date: str) -> str:
+def _hk_ticker_variants(ticker: str) -> list:
+    """生成港股 ticker 逐次去掉一个前置零的变体列表。
+
+    yfinance 各 API 端点对港股 ticker 格式敏感：
+    例 00005.HK info 正常但 get_news() 返回 0 条，0005.HK 则正常。
+    生成所有中间格式，用于自动重试。
+
+    03690 -> [03690.HK, 3690.HK]
+    00700 -> [00700.HK, 0700.HK, 700.HK]
+    00005 -> [00005.HK, 0005.HK, 005.HK, 05.HK, 5.HK]
+    """
+    code = ticker.upper().split(".")[0]
+    variants = []
+    for i in range(len(code)):
+        vc = code[i:]
+        if not vc:
+            continue
+        variants.append(f"{vc}.HK")
+        if vc[0] != "0":
+            break
+    return variants
+
+
+def _yf_hk_call(ticker: str, call_fn):
+    """对港股 ticker 的 yfinance API 调用进行前置零切割重试。
+
+    依次尝试 ticker 变体，返回第一个非空结果。
+    避免因 yfinance 端点对 ticker 格式不一致导致 LLM 重复调用。
+
+    Args:
+        ticker: 港股 ticker（如 00005.HK）
+        call_fn: callable，接受 ticker 变体字符串，返回 API 结果
+    """
+    for variant in _hk_ticker_variants(ticker):
+        try:
+            result = call_fn(variant)
+            if result is None:
+                continue
+            if isinstance(result, dict) and len(result) <= 1:
+                continue
+            if hasattr(result, "empty") and result.empty:
+                continue
+            if isinstance(result, (list, tuple)) and len(result) == 0:
+                continue
+            return result
+        except Exception:
+            continue
+    return None
+
+
+def fetch_ohlcv(ticker: str, start_date: str, end_date: str,
+                 market: str = None) -> str:
     """Fetch OHLCV data and return as CSV string."""
     symbol = normalize_ticker(ticker)
-    stock = yf.Ticker(symbol)
-    data = retry(lambda: stock.history(start=start_date, end=end_date))
+    if market is None:
+        market = detect_market(ticker)
 
-    if data.empty:
-        return f"# No OHLCV data found for {ticker}\n"
+    if market == "HK":
+        data = _yf_hk_call(
+            ticker,
+            lambda v: retry(lambda: yf.Ticker(v).history(start=start_date, end=end_date)),
+        )
+        if data is None or data.empty:
+            return f"# No OHLCV data found for {ticker}\n"
+    else:
+        stock = yf.Ticker(symbol)
+        data = retry(lambda: stock.history(start=start_date, end=end_date))
+        if data.empty:
+            return f"# No OHLCV data found for {ticker}\n"
 
     if data.index.tz is not None:
         data.index = data.index.tz_localize(None)
@@ -169,7 +216,6 @@ def fetch_ohlcv(ticker: str, start_date: str, end_date: str) -> str:
         if col in data.columns:
             data[col] = data[col].round(2)
 
-    market = detect_market(ticker)
     currency = {"US": "USD", "HK": "HKD", "CN": "CNY"}.get(market, "USD")
 
     header = (
@@ -181,18 +227,28 @@ def fetch_ohlcv(ticker: str, start_date: str, end_date: str) -> str:
     return header + data.to_csv()
 
 
-def fetch_indicators(ticker: str, curr_date: str, lookback_days: int = 30) -> str:
+def fetch_indicators(ticker: str, curr_date: str, lookback_days: int = 30,
+                      market: str = None) -> str:
     """Fetch technical indicators via stockstats."""
     symbol = normalize_ticker(ticker)
+    if market is None:
+        market = detect_market(ticker)
     curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
     start_date = (curr_date_dt - timedelta(days=PRICE_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
 
     # Fetch OHLCV for stockstats
-    stock = yf.Ticker(symbol)
-    data = retry(lambda: stock.history(start=start_date, end=curr_date))
-
-    if data.empty:
-        return "# No price data available for indicators\n"
+    if market == "HK":
+        data = _yf_hk_call(
+            ticker,
+            lambda v: retry(lambda: yf.Ticker(v).history(start=start_date, end=curr_date)),
+        )
+        if data is None or data.empty:
+            return "# No price data available for indicators\n"
+    else:
+        stock = yf.Ticker(symbol)
+        data = retry(lambda: stock.history(start=start_date, end=curr_date))
+        if data.empty:
+            return "# No price data available for indicators\n"
 
     if data.index.tz is not None:
         data.index = data.index.tz_localize(None)
@@ -349,12 +405,17 @@ def fetch_global_news(curr_date: str, lookback_days: int = 7, limit: int = 10) -
         return f"# Error fetching global news: {e}\n"
 
 
-def fetch_fundamentals(ticker: str) -> str:
+def fetch_fundamentals(ticker: str, market: str = None) -> str:
     """Fetch company fundamentals from yfinance."""
     symbol = normalize_ticker(ticker)
+    if market is None:
+        market = detect_market(ticker)
     try:
-        stock = yf.Ticker(symbol)
-        info = retry(lambda: stock.info)
+        if market == "HK":
+            info = _yf_hk_call(ticker, lambda v: retry(lambda: yf.Ticker(v).info))
+        else:
+            stock = yf.Ticker(symbol)
+            info = retry(lambda: stock.info)
 
         if not info:
             return f"# No fundamentals data found for {ticker}\n"
@@ -402,15 +463,16 @@ def fetch_fundamentals(ticker: str) -> str:
         return f"# Error fetching fundamentals for {ticker}: {e}\n"
 
 
-def fetch_financial_stmt(ticker: str, stmt_type: str, freq: str = "quarterly", curr_date: str = None) -> str:
+def fetch_financial_stmt(ticker: str, stmt_type: str, freq: str = "quarterly",
+                          curr_date: str = None, market: str = None) -> str:
     """
     Fetch financial statement (balance_sheet, cashflow, income_stmt) from yfinance.
     Filters data to avoid look-ahead bias using curr_date.
     """
     symbol = normalize_ticker(ticker)
+    if market is None:
+        market = detect_market(ticker)
     try:
-        stock = yf.Ticker(symbol)
-
         if freq.lower() == "quarterly":
             attr_map = {
                 "balance_sheet": "quarterly_balance_sheet",
@@ -428,7 +490,14 @@ def fetch_financial_stmt(ticker: str, stmt_type: str, freq: str = "quarterly", c
         if attr is None:
             return f"# Unknown statement type: {stmt_type}\n"
 
-        data = retry(lambda: getattr(stock, attr))
+        if market == "HK":
+            data = _yf_hk_call(
+                ticker,
+                lambda v: retry(lambda: getattr(yf.Ticker(v), attr)),
+            )
+        else:
+            stock = yf.Ticker(symbol)
+            data = retry(lambda: getattr(stock, attr))
 
         if data is None or (hasattr(data, "empty") and data.empty):
             return f"# No {stmt_type} data found for {ticker}\n"
@@ -722,12 +791,30 @@ def _sina_fetch_all_pages(prefix: str, start_dt, end_dt, max_pages: int = 20) ->
 
 
 def fetch_hk_news_raw(ticker: str, start_date: str, end_date: str) -> list:
-    """抓取 HK 新浪新闻原始列表（未过滤）。"""
+    """抓取 HK 新闻原始列表。优先 yfinance（质量高），不足时降级到新浪财经。
+
+    yfinance 对港股的新闻覆盖质量远优于新浪财经（新浪噪声多，大量不相关文章）。
+    当 yfinance 返回 >= 5 条新闻时直接使用 yfinance 结果；否则降级使用新浪财经。
+    HK 市场的 yfinance 调用已内置前置零切割重试（_yf_news_to_list）。
+    """
     code = ticker.split(".")[0]
     start_dt = datetime.strptime(start_date, "%Y-%m-%d")
     end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+
+    # 优先使用 yfinance（质量高、噪声少），自动去前置零重试
+    yf_items = _yf_news_to_list(ticker, start_date, end_date, market="HK")
+    if len(yf_items) >= 5:
+        print(f"  [hk news] using yfinance with {len(yf_items)} articles")
+        return yf_items
+    if yf_items:
+        print(f"  [hk news] yfinance returned only {len(yf_items)} articles, supplementing with Sina")
+    else:
+        print(f"  [hk news] yfinance returned 0 articles, falling back to Sina")
+
+    # 降级：使用新浪财经（合并 yfinance 结果以补充）
     prefix = f"hk{code}"
-    return _sina_fetch_all_pages(prefix, start_dt, end_dt)
+    sina_items = _sina_fetch_all_pages(prefix, start_dt, end_dt)
+    return yf_items + sina_items
 
 
 def fetch_cn_news_raw(ticker: str, start_date: str, end_date: str) -> list:
@@ -770,13 +857,22 @@ def fetch_cn_news_raw(ticker: str, start_date: str, end_date: str) -> list:
     return items
 
 
-def _yf_news_to_list(ticker: str, start_date: str, end_date: str) -> list:
-    """US: yfinance get_news 转成统一 article list。"""
-    symbol = normalize_ticker(ticker)
+def _yf_news_to_list(ticker: str, start_date: str, end_date: str,
+                      market: str = None) -> list:
+    """yfinance get_news 转成统一 article list（美股/港股通用，HK 自动去前置零重试）。"""
+    if market is None:
+        market = detect_market(ticker)
     out = []
     try:
-        stock = yf.Ticker(symbol)
-        news = retry(lambda: stock.get_news(count=60))
+        if market == "HK":
+            news = _yf_hk_call(
+                ticker,
+                lambda v: retry(lambda: yf.Ticker(v).get_news(count=30)),
+            )
+        else:
+            symbol = normalize_ticker(ticker)
+            stock = yf.Ticker(symbol)
+            news = retry(lambda: stock.get_news(count=30))
         if not news:
             return out
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
@@ -805,14 +901,31 @@ def _yf_news_to_list(ticker: str, start_date: str, end_date: str) -> list:
 
 
 def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
-                           out_path: str, meta_path: str, lookback_days: int = 30) -> int:
-    """对原始新闻跑 filter_noise -> split -> dedup，写 news.txt + news_meta.txt。返回最终保留条数。"""
+                           out_path: str, meta_path: str, lookback_days: int = 30,
+                           market: str = "US") -> int:
+    """对原始新闻跑去噪+去重，写 news.txt + news_meta.txt。返回最终保留条数。
+
+    HK/US 市场（yfinance 新闻，质量高）：只做 filter_noise + dedup_by_title，
+    不做分层过滤（split_recent_and_history），保留全部新闻。
+
+    CN 市场（新浪财经新闻，噪声多）：filter_noise -> split_recent_and_history
+    (近7天全留，8-30天仅留高信号) -> dedup_by_title。
+    """
     raw_count = len(raw_items)
     after_noise = filter_noise(raw_items)
     noise_count = raw_count - len(after_noise)
-    recent, history = split_recent_and_history(after_noise, curr_date,
-                                               recent_days=7, lookback_days=lookback_days)
-    combined = recent + history
+
+    if market in ("HK", "US"):
+        # yfinance 新闻质量高，跳过 split_recent_and_history
+        recent = after_noise[:]  # 全部视为 recent
+        history = []
+        combined = after_noise
+    else:
+        # CN 市场（新浪），做分层过滤
+        recent, history = split_recent_and_history(after_noise, curr_date,
+                                                   recent_days=7, lookback_days=lookback_days)
+        combined = recent + history
+
     after_dedup = dedup_by_title(combined)
     dedup_count = len(combined) - len(after_dedup)
 
@@ -830,13 +943,21 @@ def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
 
     meta = [
         f"# News Processing Audit ({news_start} to {curr_date})\n",
+        f"market: {market}",
         f"raw_fetched: {raw_count}",
         f"after_noise_filter: {len(after_noise)} (removed {noise_count})",
-        f"recent_7d_kept: {len(recent)}",
-        f"history_8_30d_kept: {len(history)}",
+    ]
+    if market == "CN":
+        meta.extend([
+            f"recent_7d_kept: {len(recent)}",
+            f"history_8_30d_kept: {len(history)}",
+        ])
+    else:
+        meta.append(f"split_skipped: HK/US yfinance news, full retention")
+    meta.extend([
         f"after_dedup: {len(after_dedup)} (removed {dedup_count})",
         f"final_kept: {len(after_dedup)}",
-    ]
+    ])
     with open(meta_path, "w") as f:
         f.write("\n".join(meta))
     return len(after_dedup)
@@ -938,7 +1059,7 @@ def main():
 
     # 1. OHLCV
     print("  [1/8] Fetching OHLCV data...")
-    ohlcv = fetch_ohlcv(yf_ticker, price_start, curr_date)
+    ohlcv = fetch_ohlcv(yf_ticker, price_start, curr_date, market=market)
     path = os.path.join(ticker_dir, "ohlcv.csv")
     with open(path, "w") as f:
         f.write(ohlcv)
@@ -946,7 +1067,7 @@ def main():
 
     # 2. Technical indicators
     print("  [2/8] Computing technical indicators...")
-    indicators = fetch_indicators(yf_ticker, curr_date)
+    indicators = fetch_indicators(yf_ticker, curr_date, market=market)
     path = os.path.join(ticker_dir, "indicators.txt")
     with open(path, "w") as f:
         f.write(indicators)
@@ -961,9 +1082,9 @@ def main():
     elif market == "HK":
         raw = fetch_hk_news_raw(ticker, news_start, curr_date)
     else:
-        raw = _yf_news_to_list(yf_ticker, news_start, curr_date)
+        raw = _yf_news_to_list(yf_ticker, news_start, curr_date, market=market)
     process_and_write_news(raw, curr_date, news_start, news_path, meta_path,
-                           lookback_days=NEWS_LOOKBACK_DAYS)
+                           lookback_days=NEWS_LOOKBACK_DAYS, market=market)
     results["files"]["news"] = news_path
 
     # 4. Global news (route by market)
@@ -983,7 +1104,7 @@ def main():
 
     # 5. Fundamentals
     print("  [5/8] Fetching fundamentals...")
-    fundamentals = fetch_fundamentals(yf_ticker)
+    fundamentals = fetch_fundamentals(yf_ticker, market=market)
     path = os.path.join(ticker_dir, "fundamentals.txt")
     with open(path, "w") as f:
         f.write(fundamentals)
@@ -991,7 +1112,8 @@ def main():
 
     # 6. Balance sheet
     print("  [6/8] Fetching balance sheet...")
-    balance_sheet = fetch_financial_stmt(yf_ticker, "balance_sheet", "quarterly", curr_date)
+    balance_sheet = fetch_financial_stmt(yf_ticker, "balance_sheet", "quarterly",
+                                          curr_date, market=market)
     path = os.path.join(ticker_dir, "balance_sheet.csv")
     with open(path, "w") as f:
         f.write(balance_sheet)
@@ -999,7 +1121,8 @@ def main():
 
     # 7. Cash flow
     print("  [7/8] Fetching cash flow...")
-    cashflow = fetch_financial_stmt(yf_ticker, "cashflow", "quarterly", curr_date)
+    cashflow = fetch_financial_stmt(yf_ticker, "cashflow", "quarterly",
+                                     curr_date, market=market)
     path = os.path.join(ticker_dir, "cashflow.csv")
     with open(path, "w") as f:
         f.write(cashflow)
@@ -1007,7 +1130,8 @@ def main():
 
     # 8. Income statement
     print("  [8/8] Fetching income statement...")
-    income_stmt = fetch_financial_stmt(yf_ticker, "income_stmt", "quarterly", curr_date)
+    income_stmt = fetch_financial_stmt(yf_ticker, "income_stmt", "quarterly",
+                                        curr_date, market=market)
     path = os.path.join(ticker_dir, "income_stmt.csv")
     with open(path, "w") as f:
         f.write(income_stmt)
