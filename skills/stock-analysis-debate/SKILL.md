@@ -17,9 +17,9 @@ Data is fetched from **yfinance** (OHLCV, news, fundamentals, financial statemen
 
 1. **NEVER ask the user for permission to proceed between phases.** After each phase completes, immediately continue to the next phase. The user asked for a complete analysis — deliver it in one continuous run.
 2. **After Phase 2 agents complete, extract their results by reading the output files, then CONTINUE to Phase 3 without stopping.**
-3. **Phases 3-6 run agents sequentially — each depends on the previous one's output. After each agent returns, immediately launch the next one. Do NOT pause for user confirmation. Phase 7 is NOT an Agent call — it is synthesized directly in the main session.**
-4. **After Phase 7 completes, Phase 8 (report file) is MANDATORY. Write the final report to disk using the Write tool.**
-5. **The workflow is complete ONLY when the report file has been written to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md`.** Confirm this to the user.
+3. **Phases 3-6 run agents sequentially — each depends on the previous one's output. After each agent returns, immediately launch the next one. Do NOT pause for user confirmation.**
+4. **Phase 7 is the final phase (NOT a sub-agent). It MUST produce TWO outputs in ONE message batch: (A) Write `analysis_report.md` via the Write tool, and (B) the final decision text. If either is missing, the analysis is incomplete. Do NOT output the decision text without also calling Write.**
+5. **The workflow is complete ONLY when the report file has been written to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md` AND confirmed to the user.**
 
 ## Workflow
 
@@ -41,11 +41,10 @@ Data is fetched from **yfinance** (OHLCV, news, fundamentals, financial statemen
 6. **Phase 6: Risk Debate** — 6 Agent calls
    - Sequential: one at a time (3 roles × 2 rounds).
 
-7. **Phase 7: Portfolio Manager** — Final Decision
+7. **Phase 7: Portfolio Manager + Final Report** — Main session synthesis + MANDATORY Write
    - NOT an Agent call; synthesized directly in the main session.
-
-8. **Phase 8: Write Report File** — Write tool → `analysis_report.md`
-   - Mandatory; the workflow is complete only when the report file is written.
+   - **MUST produce TWO outputs in ONE batch: Write tool (analysis_report.md) + decision text.**
+   - Workflow is complete ONLY when both are done.
 
 ## Phase 1: Data Collection
 
@@ -232,40 +231,48 @@ Risk debate history file: `skills/stock-analysis-debate/tools/data/{TICKER}/{DAT
 
 After Phase 6, the risk debate history file contains all 6 complete, verbatim arguments.
 
-## Phase 7: Portfolio Manager — Final Decision (in main session, NO sub-agent)
+## Phase 7: Portfolio Manager — Final Decision + Report File (main session)
 
-**This phase is executed directly in the main session, NOT as a sub-agent.**
-The main session has orchestrated every phase and holds the most complete context. Launching a sub-agent for pure synthesis adds unnecessary context transfer overhead and risks information loss.
+**This phase runs in the main session, NOT as a sub-agent.** The main session has orchestrated every phase and holds the most complete context.
 
-1. Read the output structure template from `skills/stock-analysis-debate/prompts/portfolio_manager.md` — this defines the required sections (Rating scale, Executive Summary, Investment Thesis), not the analysis logic itself.
-2. Read ALL 5 intermediate files to refresh the key findings:
-   - `phase2_analyst_reports.md` — 4 analyst reports
-   - `debate_history.md` — Bull vs Bear debate (Phase 3)
-   - `research_plan.md` — Research Manager's plan (Phase 4)
-   - `trader_plan.md` — Trader's proposal (Phase 5)
-   - `risk_debate_history.md` — Risk assessment debate (Phase 6)
-3. **Synthesize directly in the main session.** You have the full conversation history of all phases, the verbatim file contents, and the instrument context. Produce:
-   - **Rating**: One of Buy / Overweight / Hold / Underweight / Sell
-   - **Executive Summary**: Entry strategy, position sizing, risk levels, time horizon
-   - **Investment Thesis**: Detailed reasoning anchored in specific evidence drawn from the files above
-4. **Output the final decision directly** (the user sees it). Then immediately go to Phase 8.
+**The phase produces TWO outputs. They MUST be called in the SAME tool call batch. Never split them across messages.**
 
-## Phase 8: Write Final Report (MANDATORY)
+---
 
-**This phase MUST be executed. The analysis is incomplete without the report file.**
+### Step 1: Gather
 
-Use the Write tool to save the complete report to:
-`skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md`
+Read these files to refresh the complete analysis record:
 
-The file must contain ALL of the following sections with actual content (not placeholder labels):
+1. `skills/stock-analysis-debate/prompts/portfolio_manager.md` — output structure template (Rating scale, Executive Summary, Investment Thesis)
+2. `phase2_analyst_reports.md` — 4 analyst reports
+3. `debate_history.md` — Bull vs Bear debate (Phase 3)
+4. `research_plan.md` — Research Manager's plan (Phase 4)
+5. `trader_plan.md` — Trader's proposal (Phase 5)
+6. `risk_debate_history.md` — Risk assessment debate (Phase 6)
 
-```markdown
+### Step 2: Synthesize
+
+Produce the Portfolio Manager's final decision in the main session:
+
+- **Rating**: Buy / Overweight / Hold / Underweight / Sell
+- **Executive Summary**: Entry strategy, position sizing, risk levels, time horizon
+- **Investment Thesis**: Reasoning anchored in specific evidence from the files above
+
+### Step 3: Write Report + Output Decision
+
+**This is the mandatory deliverable. The analysis is incomplete until the file is on disk.**
+
+In a SINGLE tool call batch, do:
+
+**Output A — Write tool**: Call Write to create `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md` with ALL sections populated:
+
+```
 # Stock Analysis Report: {TICKER} ({DATE})
 
 ## 1. Analyst Research
 ### Market Analysis
 {paste the market analyst's full report}
-### News Analysis  
+### News Analysis
 {paste the news analyst's full report}
 ### Sentiment Analysis
 {paste the social media analyst's full report}
@@ -285,12 +292,18 @@ The file must contain ALL of the following sections with actual content (not pla
 {paste the full risk debate history}
 
 ## 6. Final Decision
-{paste the portfolio manager's output}
+{paste the portfolio manager's output (Step 2 above)}
 ```
 
-**After writing the file**, confirm to the user: "分析报告已保存至 skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md"
+**Output B — Text**: A concise summary of the rating, price target, and key rationale so the user sees the result immediately.
 
-**If any analyst agent failed or returned no content, note it in the report but do NOT stop — continue with whatever results are available.**
+After both outputs complete, confirm: "分析报告已保存至 skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md"
+
+---
+
+**Guardrail**: If you catch yourself about to output the decision text without also calling Write on `analysis_report.md`, STOP. You are about to make the #1 deliverable mistake. Add the Write call, then send both together. A text-only output is not a deliverable — it disappears when context scrolls. The file is the permanent record.
+
+**If any analyst agent failed or returned no content**, note it in the report but do NOT stop.
 
 ## Market-Specific Handling
 
@@ -312,7 +325,7 @@ The file must contain ALL of the following sections with actual content (not pla
 ## Common Mistakes
 
 - **Stopping between phases to ask the user**: This is the #1 failure mode. The user asked for a complete analysis. Run all phases back-to-back. If the user says "继续", you have ALREADY made this mistake — immediately proceed to the next unfinished phase.
-- **Not writing the report file in Phase 8**: Always write `analysis_report.md` to disk. Always. This is the deliverable.
+- **Outputting Phase 7 text without calling Write on `analysis_report.md` in the SAME batch**: This is the #1 deliverable mistake. The Write call and the decision text MUST be part of the same tool call batch. If you output the decision text alone, the analysis is incomplete — it disappears when context scrolls. The `.md` file is the permanent record. If you catch yourself about to do this, STOP, add the Write call, send both together.
 - **Modifying prompts**: The prompt files contain the EXACT prompts from the original code. Do NOT paraphrase or improve them. Read the file and pass its content verbatim.
 - **Defaulting to Hold**: If both sides have valid points, pick the stronger argument. Hold is only for genuinely neutral situations.
 - **Forgetting to include instrument context**: Every debate/judgment agent needs to know the market (US/CN/HK), currency, and ticker format.
