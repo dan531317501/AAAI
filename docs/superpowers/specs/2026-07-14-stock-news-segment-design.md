@@ -89,7 +89,7 @@ GET https://mr.lbkrs.com/api/forward/v3/stock-info/revenue-sankey
 返回 `data.list[]`，按财年，含分部节点（`nodes[]`：`name`/`value`/`yoy`/`level`）。
 
 **counter_id 规则**（已验证）：
-- HK：`ST/HK/{code去前导零}` → `ST/HK/89988`（注意去前导零，与 yfinance/Sina 保留前导零相反）。
+- HK：`ST/HK/{code去前导零}` → `ST/HK/9988`（`"09988".lstrip("0")`="9988"；去前导零，与 yfinance/Sina 保留前导零相反。长桥同时接受 9988 与 89988，实测返回数据一致）。
 - US：`ST/US/{ticker}` → `ST/US/AAPL`。
 - 请求头需带 `User-Agent: Mozilla/5.0`，否则可能被拒。
 
