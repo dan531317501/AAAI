@@ -34,6 +34,11 @@ import pandas as pd
 import yfinance as yf
 from stockstats import wrap
 
+from news_filter import filter_noise, split_recent_and_history, dedup_by_title
+from longbridge_fetcher import (build_counter_id, fetch_business_historical,
+                                fetch_revenue_sankey, parse_business_historical,
+                                parse_revenue_sankey)
+
 # Look-back windows
 PRICE_LOOKBACK_DAYS = 60  # Enough for indicators to be meaningful
 NEWS_LOOKBACK_DAYS = 30
@@ -662,6 +667,181 @@ def fetch_hk_news(ticker: str, start_date: str, end_date: str) -> str:
     return "\n".join(lines)
 
 
+def _sina_fetch_all_pages(prefix: str, start_dt, end_dt, max_pages: int = 20) -> list:
+    """翻页抓取新浪 vCB_AllNewsStock，返回原始 article list。
+
+    prefix: 如 hk00700 / sh600519
+    终止：抓到日期早于 start_dt，或连续两页无新增，或达 max_pages。
+    """
+    import re
+    import requests
+    all_items = []
+    empty_streak = 0
+    for page in range(1, max_pages + 1):
+        url = f"http://vip.stock.finance.sina.com.cn/corp/view/vCB_AllNewsStock.php?symbol={prefix}&Page={page}"
+        try:
+            resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+            resp.encoding = "gb2312"
+        except Exception as e:
+            print(f"  [sina page {page}] error: {e}", flush=True)
+            break
+
+        items = re.findall(
+            r"(\d{4}-\d{2}-\d{2})&nbsp;(\d{2}:\d{2})(?:&nbsp;|\s)*<a[^>]*href='([^']*)'[^>]*>([^<]+)</a>",
+            resp.text,
+        )
+        if not items:
+            empty_streak += 1
+            if empty_streak >= 2:
+                break
+            continue
+        empty_streak = 0
+
+        oldest_this_page = None
+        for date_str, time_str, link, title in items:
+            title = title.strip()
+            if len(title) < 8:
+                continue
+            try:
+                d = datetime.strptime(date_str, "%Y-%m-%d")
+            except ValueError:
+                continue
+            if oldest_this_page is None or d < oldest_this_page:
+                oldest_this_page = d
+            all_items.append({
+                "title": title,
+                "date": f"{date_str} {time_str}",
+                "provider": "Sina Finance",
+                "link": link,
+                "summary": "",
+            })
+
+        if oldest_this_page and oldest_this_page < start_dt:
+            break
+    return all_items
+
+
+def fetch_hk_news_raw(ticker: str, start_date: str, end_date: str) -> list:
+    """抓取 HK 新浪新闻原始列表（未过滤）。"""
+    code = ticker.split(".")[0]
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    prefix = f"hk{code}"
+    return _sina_fetch_all_pages(prefix, start_dt, end_dt)
+
+
+def fetch_cn_news_raw(ticker: str, start_date: str, end_date: str) -> list:
+    """抓取 CN 新浪市场新闻 + 东方财富公告，返回原始 list。"""
+    import re
+    import requests
+    code = ticker.split(".")[0]
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    items = []
+
+    first_digit = code[0]
+    prefix = f"sh{code}" if first_digit == "6" else f"sz{code}"
+    items.extend(_sina_fetch_all_pages(prefix, start_dt, end_dt))
+
+    try:
+        url_em = "https://np-anotice-stock.eastmoney.com/api/security/ann"
+        params = {"page_size": 20, "page_index": 1, "ann_type": "A",
+                  "client_source": "web", "stock_list": code}
+        resp_em = requests.get(url_em, params=params, timeout=15)
+        resp_em.raise_for_status()
+        for item in resp_em.json().get("data", {}).get("list", []):
+            nd = item.get("notice_date", "")
+            title = item.get("title", "No title")
+            try:
+                nd_dt = datetime.strptime(nd.split(" ")[0], "%Y-%m-%d")
+                if not (start_dt <= nd_dt <= end_dt + timedelta(days=1)):
+                    continue
+            except (ValueError, AttributeError):
+                pass
+            items.append({
+                "title": title,
+                "date": nd,
+                "provider": "Eastmoney",
+                "link": f"https://data.eastmoney.com/notices/detail/{code}/{item.get('art_code','')}.html",
+                "summary": "",
+            })
+    except Exception as e:
+        print(f"  [eastmoney] error: {e}", flush=True)
+    return items
+
+
+def _yf_news_to_list(ticker: str, start_date: str, end_date: str) -> list:
+    """US: yfinance get_news 转成统一 article list。"""
+    symbol = normalize_ticker(ticker)
+    out = []
+    try:
+        stock = yf.Ticker(symbol)
+        news = retry(lambda: stock.get_news(count=60))
+        if not news:
+            return out
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        for article in news:
+            content = article.get("content", article)
+            title = content.get("title", "")
+            pub_date_str = content.get("pubDate", "")
+            provider = content.get("provider", {}).get("displayName", "")
+            url_obj = content.get("canonicalUrl") or content.get("clickThroughUrl") or {}
+            link = url_obj.get("url", "")
+            date_field = ""
+            if pub_date_str:
+                try:
+                    pd = datetime.fromisoformat(pub_date_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                    if not (start_dt <= pd <= end_dt + timedelta(days=1)):
+                        continue
+                    date_field = pd.strftime("%Y-%m-%d %H:%M")
+                except (ValueError, AttributeError):
+                    date_field = pub_date_str
+            out.append({"title": title, "date": date_field, "provider": provider,
+                        "link": link, "summary": content.get("summary", "")})
+    except Exception as e:
+        print(f"  [yf news] error: {e}", flush=True)
+    return out
+
+
+def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
+                           out_path: str, meta_path: str, lookback_days: int = 30) -> int:
+    """对原始新闻跑 filter_noise -> split -> dedup，写 news.txt + news_meta.txt。返回最终保留条数。"""
+    raw_count = len(raw_items)
+    after_noise = filter_noise(raw_items)
+    noise_count = raw_count - len(after_noise)
+    recent, history = split_recent_and_history(after_noise, curr_date,
+                                               recent_days=7, lookback_days=lookback_days)
+    combined = recent + history
+    after_dedup = dedup_by_title(combined)
+    dedup_count = len(combined) - len(after_dedup)
+
+    lines = [f"## News ({news_start} to {curr_date})\n"]
+    for art in after_dedup:
+        lines.append(f"**{art.get('title','')}**")
+        lines.append(f"  Date: {art.get('date','')}")
+        if art.get("provider"):
+            lines.append(f"  Source: {art.get('provider')}")
+        if art.get("link"):
+            lines.append(f"  Link: {art.get('link')}")
+        lines.append("")
+    with open(out_path, "w") as f:
+        f.write("\n".join(lines))
+
+    meta = [
+        f"# News Processing Audit ({news_start} to {curr_date})\n",
+        f"raw_fetched: {raw_count}",
+        f"after_noise_filter: {len(after_noise)} (removed {noise_count})",
+        f"recent_7d_kept: {len(recent)}",
+        f"history_8_30d_kept: {len(history)}",
+        f"after_dedup: {len(after_dedup)} (removed {dedup_count})",
+        f"final_kept: {len(after_dedup)}",
+    ]
+    with open(meta_path, "w") as f:
+        f.write("\n".join(meta))
+    return len(after_dedup)
+
+
 def fetch_cn_global_news(curr_date: str, lookback_days: int = 7) -> str:
     """Fetch Chinese macro/economic news via Baidu economic calendar.
 
@@ -772,18 +952,19 @@ def main():
         f.write(indicators)
     results["files"]["indicators"] = path
 
-    # 3. News (route by market)
+    # 3. News (route by market, 翻页+过滤流水)
     print("  [3/8] Fetching company news...")
+    news_path = os.path.join(ticker_dir, "news.txt")
+    meta_path = os.path.join(ticker_dir, "news_meta.txt")
     if market == "CN":
-        news = fetch_cn_news(ticker, news_start, curr_date)
+        raw = fetch_cn_news_raw(ticker, news_start, curr_date)
     elif market == "HK":
-        news = fetch_hk_news(ticker, news_start, curr_date)
+        raw = fetch_hk_news_raw(ticker, news_start, curr_date)
     else:
-        news = fetch_news(ticker, news_start, curr_date)
-    path = os.path.join(ticker_dir, "news.txt")
-    with open(path, "w") as f:
-        f.write(news)
-    results["files"]["news"] = path
+        raw = _yf_news_to_list(yf_ticker, news_start, curr_date)
+    process_and_write_news(raw, curr_date, news_start, news_path, meta_path,
+                           lookback_days=NEWS_LOOKBACK_DAYS)
+    results["files"]["news"] = news_path
 
     # 4. Global news (route by market)
     print("  [4/8] Fetching global news...")
@@ -839,6 +1020,31 @@ def main():
     with open(path, "w") as f:
         f.write(insider)
     results["files"]["insider"] = path
+
+    # 10. Segments (仅 HK/US)
+    print("  [10] Fetching business segments...")
+    if market in ("HK", "US"):
+        seg_path = os.path.join(ticker_dir, "segments_financials.json")
+        bh_raw = fetch_business_historical(ticker)
+        bh_parsed = parse_business_historical(bh_raw)
+        rs_raw = fetch_revenue_sankey(ticker)
+        rs_parsed = parse_revenue_sankey(rs_raw)
+        seg_data = {"business_historical": bh_parsed, "revenue_sankey": rs_parsed}
+        with open(seg_path, "w") as f:
+            json.dump(seg_data, f, ensure_ascii=False, indent=2)
+        results["files"]["segments_financials"] = seg_path
+
+        ticker_root = os.path.join(output_dir, ticker.replace(".", "_"))
+        yaml_path = os.path.join(ticker_root, "segments.yaml")
+        if not os.path.exists(yaml_path):
+            if not bh_parsed and not rs_parsed:
+                open(os.path.join(ticker_dir, "segments_fetch_failed.flag"), "w").close()
+                print("    longbridge returned no segment data -> segments_fetch_failed.flag", flush=True)
+            else:
+                open(os.path.join(ticker_dir, "segments_missing.flag"), "w").close()
+                print("    segments.yaml missing -> segments_missing.flag", flush=True)
+    else:
+        print("  [10] Skipped (CN market, no segment analysis)", flush=True)
 
     # Write summary
     summary_path = os.path.join(ticker_dir, "summary.json")
