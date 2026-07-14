@@ -136,3 +136,39 @@ def test_derive_aliases_for_known_segment():
 
 def test_derive_empty_returns_none():
     assert derive_segments_yaml([]) is None
+
+
+def test_derive_excludes_accounting_pseudo_segments():
+    # 未分摊/分部间抵消是会计调整项，不应进清单，不计入 real_segs
+    quarters = [
+        {"date": "20250331", "report_period": "2025.Q4", "total_revenue": "1000",
+         "segments": [
+             {"segment": "云智能集团", "revenue": "500", "percent": "50", "yoy": "20"},
+             {"segment": "未分摊", "revenue": "100", "percent": "10", "yoy": ""},
+             {"segment": "分部间抵消", "revenue": "-50", "percent": "-5", "yoy": ""},
+             {"segment": "所有其他", "revenue": "450", "percent": "45", "yoy": ""},
+         ]},
+    ]
+    out = derive_segments_yaml(quarters)
+    names = [s["name"] for s in out["segments"]]
+    assert names == ["云智能集团"]  # 只剩真实业务分部
+    assert "未分摊" not in names
+    assert "分部间抵消" not in names
+    assert "所有其他" not in names
+    assert out["multi_segment"] is False  # real_segs 只有1个
+
+
+def test_derive_english_segment_name_aliases():
+    # 长桥最新季度可能返回英文分部名，aliases 应能匹配
+    quarters = [
+        {"date": "20250331", "report_period": "2025.Q4", "total_revenue": "1000",
+         "segments": [
+             {"segment": "Alibaba China E-commerce Group", "revenue": "600", "percent": "60", "yoy": "10"},
+             {"segment": "云智能集团", "revenue": "400", "percent": "40", "yoy": "30"},
+         ]},
+    ]
+    out = derive_segments_yaml(quarters)
+    assert out["multi_segment"] is True
+    ecom = [s for s in out["segments"] if s["name"] == "Alibaba China E-commerce Group"][0]
+    assert "淘宝" in ecom["aliases"]
+    assert "天猫" in ecom["aliases"]

@@ -119,14 +119,21 @@ def fetch_revenue_sankey(ticker: str) -> dict:
         return {}
 
 
-# 常见分部名 -> 别名（用于新闻业务线匹配）
+# 非真实业务分部：会计调整项与汇总桶，不参与 multi_segment 判断，也不进清单
+_NON_BUSINESS_SEGMENTS = {"所有其他", "其他", "未分摊", "分部间抵消", "抵消"}
+
+# 常见分部名 -> 别名（用于新闻业务线匹配）。同时收录长桥返回的中英文名。
 _SEGMENT_ALIASES = {
+    # 阿里
     "云智能集团": ["阿里云", "云计算", "通义", "飞天", "AI"],
     "商业": ["淘宝", "天猫", "电商", "88VIP", "淘天"],
+    "Alibaba China E-commerce Group": ["淘宝", "天猫", "电商", "88VIP", "淘天", "中国电商"],
     "本地生活集团": ["饿了么", "高德", "本地生活", "外卖"],
     "菜鸟集团": ["菜鸟", "物流", "跨境物流"],
     "国际数字商业集团": ["国际电商", "速卖通", "Lazada", "国际商业"],
+    "阿里国际数字商业集团（AIDC）": ["国际电商", "速卖通", "Lazada", "AIDC", "国际商业"],
     "大文娱集团": ["优酷", "阿里影业", "大文娱", "灵犀互娱"],
+    # 腾讯
     "游戏": ["腾讯游戏", "王者荣耀", "和平精英"],
     "金融科技": ["微信支付", "财付通", "金融科技"],
 }
@@ -141,19 +148,23 @@ def derive_segments_yaml(quarters: list) -> dict:
     if not segs:
         return None
 
-    real_segs = [s for s in segs if s.get("segment", "") not in ("所有其他", "其他")]
-    other = [s for s in segs if s.get("segment", "") in ("所有其他", "其他")]
+    def _is_non_business(name: str) -> bool:
+        return name in _NON_BUSINESS_SEGMENTS
+
+    real_segs = [s for s in segs if not _is_non_business(s.get("segment", ""))]
+    other = [s for s in segs if _is_non_business(s.get("segment", ""))]
     other_pct = 0.0
     if other:
+        # 取所有非业务项的占比之和
         try:
-            other_pct = float(other[0].get("percent", "0") or "0")
+            other_pct = sum(float(o.get("percent", "0") or "0") for o in other)
         except ValueError:
             other_pct = 0.0
 
     multi = len(real_segs) > 1 and other_pct < 90.0
 
     seg_list = []
-    for s in real_segs + other:
+    for s in real_segs:
         name = s.get("segment", "")
         seg_list.append({
             "name": name,
@@ -163,7 +174,7 @@ def derive_segments_yaml(quarters: list) -> dict:
 
     basis = f"长桥分部数据：{len(real_segs)}个业务分部"
     if other:
-        basis += f"，所有其他占比{other_pct}%"
+        basis += f"，非业务项占比{other_pct}%"
     return {
         "multi_segment": multi,
         "judgment_basis": basis,
