@@ -24,10 +24,20 @@ Data is fetched from **yfinance** (OHLCV, news, fundamentals, financial statemen
 6. **CN market skips Phase 1.5 and Segment Analyst entirely.** No `segments.yaml`, no segment data. Run 4 analysts.
 7. **If `segments_fetch_failed.flag` exists**, treat as CN: skip Phase 1.5 and Segment Analyst, run 4 analysts. Note the missing segment view in the final report.
 
+8. **DATA QUALITY CHECK (Phase 1.1):** After data is fetched, read `data_quality.json`. If `data_fresh: false`, use `data_as_of_date` as the report's effective date throughout. If `warning_no_200_sma: true`, 200 SMA must be reported as N/A.
+9. **ARITHMETIC VERIFICATION (Phase 7):** Before writing the final report, verify: target_price = (profit × PE) / total_shares. If the numbers don't reconcile within 5%, flag and correct them. Also verify: forward_PE = current_price / forward_EPS. Cross-check market_cap = current_price × total_shares against the fundamentals.txt value.
+
 ## Workflow
 
 1. **Phase 1: Data Collection** — Bash: `fetch_data.py`
    - Foreground, synchronous; wait for it to return before proceeding.
+
+1.1. **Phase 1.1: Data Quality Check** — Read `data_quality.json` from the output directory
+   - Check `data_as_of_date`: this is the effective date for all analysis. If different from the requested `date`, use `data_as_of_date` as the report timestamp.
+   - Check `trading_days`: note how many trading days are available for indicators.
+   - Check `warning_no_200_sma`: if true, 200 SMA is NOT computable.
+   - Check `indicator_sufficiency`: each indicator has a `sufficient` boolean and `min_days` threshold.
+   - Record any `notes` warnings for inclusion in the final report.
 
 1.5. **Phase 1.5: Segment Setup** (HK/US only) — Bash: `prepare_segments.py --gen-yaml`
    - Skipped for CN market. Skipped if `segments_fetch_failed.flag` exists.
@@ -146,6 +156,12 @@ Launch Segment Analyst IN PARALLEL with the other 4 only when `segments.yaml` ha
 
 When running multi-round debates, use a **file as shared memory** to preserve complete, verbatim arguments across rounds.
 
+**The sub-agent handles all file I/O itself.** The main session does NOT read or write the debate history file. It only tells each sub-agent:
+- The file path to read/write
+- Which round this is
+- Which role it is playing (e.g., "Bull Round 1")
+- The data files it needs (analyst reports, trader plan, etc.)
+
 ### File Paths
 
 | Debate | File Path |
@@ -153,61 +169,50 @@ When running multi-round debates, use a **file as shared memory** to preserve co
 | Bull vs Bear | `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/debate_history.md` |
 | Risk Assessment | `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/risk_debate_history.md` |
 
-### Protocol (must follow exactly for EVERY debate step)
+### What each sub-agent MUST do (in order)
 
-**Step A — BEFORE launching the debate agent:**
+**1. Read the debate history file** using the Read tool.
+   - If the file doesn't exist yet (Round 1), the history is empty — note this and proceed.
+   - The agent must read the **FULL VERBATIM content**. Do NOT skip or skim.
 
-1. Read the debate history file using the Read tool.
-2. If the file doesn't exist yet (first round), the history is empty — nothing to read.
-3. In the agent's prompt, include the **FULL VERBATIM content of the debate history file** as the `history` context. Do NOT summarize, abbreviate, or paraphrase any previous arguments. The debater must see the complete, unaltered text of every previous speaker.
+**2. Read the data files** specified in its prompt (analyst reports, trader plan, etc.).
 
-**Step B — AFTER the agent returns:**
+**3. Generate its debate argument**, directly engaging with every previous speaker's exact words.
 
-1. Append the agent's complete output to the debate history file using the Write tool. Use this format:
+**4. Append its complete output to the debate history file** using the Write tool (or create the file if Round 1). Use this format:
    ```
    ### [Agent Role] — Round N
    {paste the agent's ENTIRE response here verbatim}
    
    ---
    ```
-2. If the file doesn't exist yet, create it. If it exists, append to it (read old content + write old content + new entry).
-3. Do NOT edit, truncate, or summarize the agent's response before writing it.
+   If the file exists, read old content + write old content + new entry. Do NOT edit, truncate, or summarize previous entries.
 
-**Why this protocol exists**: Passing summarized/paraphrased context between agents causes information loss — key data points, nuanced arguments, and specific rebuttals are dropped. The file ensures every debater reads the exact words of previous speakers, enabling precise counter-arguments.
+**Why this protocol exists**: Passing summarized/paraphrased context between agents causes information loss — key data points, nuanced arguments, and specific rebuttals are dropped. Having each sub-agent read the raw file directly ensures every debater sees the exact words of previous speakers, enabling precise counter-arguments. Delegating file I/O to sub-agents also keeps the main session context clean.
 
 ---
 
-## Phase 3: Bull vs Bear Debate (4 Sequential Calls)
+## Phase 3: Bull vs Bear Debate
 
-Run 4 sequential Agent calls, back-to-back. **Apply the Debate History File Protocol for every step.**
+Run **`debate_rounds`** rounds (default 2). Each round = 1 Bull call + 1 Bear call, sequential. **Sub-agents handle debate history file I/O themselves.** The main session only launches agents sequentially.
 
 Debate history file: `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/debate_history.md`
 
-### Step 3a: Bull Researcher (Round 1)
-- **Before**: Read `phase2_analyst_reports.md` to get the 4 analyst reports. Since this is Round 1, the debate history file is empty — no history to read yet.
-- **Prompt**: `skills/stock-analysis-debate/prompts/bull_researcher.md`
-- **Context in prompt**: Paste ALL 4 analyst reports verbatim (plus the Segment Analyst report if Phase 2 produced 5 reports). Set `history` to empty. Set `current_response` to empty (no bear argument yet). If a Segment Analyst report exists, include instrument-segment context: "This is a N-segment group; primary driver: <segment>."
-- **After it returns**: Write the bull's full output to the debate history file. Immediately go to 3b.
+For each round, the main session tells the sub-agent: the file path, its role (Bull/Bear), the round number, total rounds, and where to find the data files. The sub-agent reads the debate history, reads data files, generates its argument, and appends to the file — all autonomously.
 
-### Step 3b: Bear Researcher (Round 1)
-- **Before**: Read the debate history file to get the bull's Round 1 argument verbatim.
-- **Prompt**: `skills/stock-analysis-debate/prompts/bear_researcher.md`
-- **Context in prompt**: Paste ALL 4 analyst reports verbatim. Set `history` to the full debate history file content. Set `current_response` to the bull's Round 1 argument verbatim.
-- **After it returns**: Append the bear's full output to the debate history file. Immediately go to 3c.
+### Loop: For each round R = 1 to `debate_rounds`
 
-### Step 3c: Bull Researcher (Round 2)
-- **Before**: Read the debate history file to get the complete bull R1 + bear R1 arguments verbatim.
-- **Prompt**: `skills/stock-analysis-debate/prompts/bull_researcher.md`
-- **Context in prompt**: Paste ALL 4 analyst reports verbatim. Set `history` to the full debate history file content. Set `current_response` to the bear's Round 1 argument verbatim.
-- **After it returns**: Append the bull's R2 output to the debate history file. Immediately go to 3d.
+**Bull Researcher (Round R)**
+- **Tell the agent**: Role = Bull Researcher, Round = R of `debate_rounds`{is_final_marker}. Debate history file = `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/debate_history.md`. Data file = `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/phase2_analyst_reports.md`. If R == 1, the file may not exist yet (create it) and there is no Bear argument to counter. If R > 1, the file contains all prior rounds — respond to the Bear's latest argument. Include instrument context (market, ticker, currency, current price, trading rules).
+- **After agent completes**: Immediately launch the Bear for this round.
 
-### Step 3d: Bear Researcher (Round 2, final)
-- **Before**: Read the debate history file to get the complete history (bull R1, bear R1, bull R2) verbatim.
-- **Prompt**: `skills/stock-analysis-debate/prompts/bear_researcher.md`
-- **Context in prompt**: Paste ALL 4 analyst reports verbatim. Set `history` to the full debate history file content. Set `current_response` to the bull's Round 2 argument verbatim.
-- **After it returns**: Append the bear's R2 output to the debate history file. Immediately go to Phase 4.
+**Bear Researcher (Round R)**
+- **Tell the agent**: Role = Bear Researcher, Round = R of `debate_rounds`{is_final_marker}. Debate history file = `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/debate_history.md`. Data file = `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/phase2_analyst_reports.md`. The Bull has already written its Round R argument — read the file and respond. Include instrument context.
+- **After agent completes**: If R < `debate_rounds`, go to next round (Bull). If R == `debate_rounds`, immediately go to Phase 4.
 
-After Phase 3, the debate history file contains all 4 complete, verbatim arguments.
+Where `{is_final_marker}` = " (final round)" if R == `debate_rounds`, otherwise empty string.
+
+After Phase 3, the debate history file contains all rounds' complete, verbatim arguments (written by the sub-agents).
 
 ## Phase 4: Research Manager
 
@@ -227,55 +232,31 @@ After Phase 3, the debate history file contains all 4 complete, verbatim argumen
 
 ---
 
-## Phase 6: Risk Assessment Debate (6 Sequential Calls)
+## Phase 6: Risk Assessment Debate
 
-Run 2 rounds of 3 roles each. **Apply the Debate History File Protocol for every step.**
+Run **`risk_discuss_rounds`** rounds (default 2). Each round = 3 calls (Aggressive → Conservative → Neutral), sequential. **Sub-agents handle risk debate history file I/O themselves.**
 
 Risk debate history file: `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/risk_debate_history.md`
 
-**Context shared across all 6 calls**: Paste the Trader's full plan verbatim (from `trader_plan.md`). Paste ALL 4 analyst reports verbatim (from `phase2_analyst_reports.md`). If a Segment Analyst report exists, paste it verbatim with the 4 analyst reports.
+For every agent, the main session tells it: the file path, its role, the round number, total rounds, the trader plan file path (`trader_plan.md`), the analyst reports file path (`phase2_analyst_reports.md`), and instrument context.
 
-### Round 1
+### Loop: For each round R = 1 to `risk_discuss_rounds`
 
-**Step 6a: Aggressive (Round 1)**
-- **Before**: Read `trader_plan.md` and `phase2_analyst_reports.md`. Risk debate history is empty (first round).
-- **Prompt**: `skills/stock-analysis-debate/prompts/aggressive_debator.md`
-- **Context**: Trader's plan verbatim + all 4 reports verbatim + empty history. No conservative/neutral arguments yet.
-- **After**: Write aggressive's output to the risk debate history file. Immediately go to 6b.
+**Aggressive Risk Analyst (Round R)**
+- **Tell the agent**: Role = Aggressive Risk Analyst, Round = R of `risk_discuss_rounds`{is_final_marker}. Risk debate history file = `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/risk_debate_history.md`. Read trader plan from `trader_plan.md`, analyst reports from `phase2_analyst_reports.md`. If R == 1: file may not exist yet (create it), no other arguments to counter. If R > 1: file contains all prior rounds — respond to Conservative and Neutral from the previous round.
+- **After agent completes**: Immediately launch Conservative for this round.
 
-**Step 6b: Conservative (Round 1)**
-- **Before**: Read the risk debate history file to get aggressive's argument verbatim.
-- **Prompt**: `skills/stock-analysis-debate/prompts/conservative_debator.md`
-- **Context**: Trader's plan verbatim + all 4 reports verbatim + full risk debate history (aggressive's R1 argument verbatim). No neutral argument yet.
-- **After**: Append conservative's output to the risk debate history file. Immediately go to 6c.
+**Conservative Risk Analyst (Round R)**
+- **Tell the agent**: Role = Conservative Risk Analyst, Round = R of `risk_discuss_rounds`{is_final_marker}. Risk debate history file = `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/risk_debate_history.md`. Read trader plan and analyst reports. The Aggressive analyst has already written Round R — read the file and respond.
+- **After agent completes**: Immediately launch Neutral for this round.
 
-**Step 6c: Neutral (Round 1)**
-- **Before**: Read the risk debate history file to get aggressive + conservative arguments verbatim.
-- **Prompt**: `skills/stock-analysis-debate/prompts/neutral_debator.md`
-- **Context**: Trader's plan verbatim + all 4 reports verbatim + full risk debate history verbatim.
-- **After**: Append neutral's output to the risk debate history file. Immediately go to 6d.
+**Neutral Risk Analyst (Round R)**
+- **Tell the agent**: Role = Neutral Risk Analyst, Round = R of `risk_discuss_rounds`{is_final_marker}. Risk debate history file = `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/risk_debate_history.md`. Read trader plan and analyst reports. The file now contains Aggressive + Conservative for Round R (plus all prior rounds). Challenge both and deliver your assessment.
+- **After agent completes**: If R < `risk_discuss_rounds`, go to next round (Aggressive). If R == `risk_discuss_rounds`, immediately go to Phase 7.
 
-### Round 2
+Where `{is_final_marker}` = " (final round)" if R == `risk_discuss_rounds`, otherwise empty string.
 
-**Step 6d: Aggressive (Round 2)**
-- **Before**: Read the risk debate history file to get all 3 Round 1 arguments verbatim.
-- **Prompt**: `skills/stock-analysis-debate/prompts/aggressive_debator.md`
-- **Context**: Trader's plan verbatim + all 4 reports verbatim + full risk debate history verbatim. Set `current_conservative_response` and `current_neutral_response` to their Round 1 arguments verbatim.
-- **After**: Append aggressive's R2 output to the risk debate history file. Immediately go to 6e.
-
-**Step 6e: Conservative (Round 2)**
-- **Before**: Read the risk debate history file to get all previous arguments verbatim.
-- **Prompt**: `skills/stock-analysis-debate/prompts/conservative_debator.md`
-- **Context**: Trader's plan verbatim + all 4 reports verbatim + full risk debate history verbatim. Set `current_aggressive_response` to aggressive's R2 verbatim.
-- **After**: Append conservative's R2 output to the risk debate history file. Immediately go to 6f.
-
-**Step 6f: Neutral (Round 2, final)**
-- **Before**: Read the risk debate history file to get all 5 previous arguments verbatim.
-- **Prompt**: `skills/stock-analysis-debate/prompts/neutral_debator.md`
-- **Context**: Trader's plan verbatim + all 4 reports verbatim + full risk debate history verbatim. Set `current_aggressive_response` and `current_conservative_response` to their Round 2 arguments verbatim.
-- **After**: Append neutral's R2 output to the risk debate history file. Immediately go to Phase 7.
-
-After Phase 6, the risk debate history file contains all 6 complete, verbatim arguments.
+After Phase 6, the risk debate history file contains all rounds' complete, verbatim arguments (written by the sub-agents).
 
 ## Phase 7: Portfolio Manager — Final Decision + Report File (main session)
 
@@ -295,6 +276,17 @@ Read these files to refresh the complete analysis record:
 4. `research_plan.md` — Research Manager's plan (Phase 4)
 5. `trader_plan.md` — Trader's proposal (Phase 5)
 6. `risk_debate_history.md` — Risk assessment debate (Phase 6)
+7. `data_quality.json` — Data quality metadata (Phase 1.1)
+
+### Step 1.5: Arithmetic Sanity Check (MANDATORY — do NOT skip)
+
+Before synthesizing, verify these numbers with actual computation:
+
+1. **Market Cap**: current_price × total_shares. Does it match the fundamentals.txt market cap? If discrepancy >10%, flag it.
+2. **Forward PE**: current_price / forward_EPS. Does it match the reported Forward PE? Report both computed and stated values.
+3. **Target Price**: For every target price in the debate, compute `(profit × PE) / total_shares` and verify it matches. If a debater claims "550亿 × 20x = 88元" but (550e8 × 20) / shares ≠ 88, this is a HARD ERROR. Flag and correct in the final report.
+4. **Revenue/Net Income period labels**: If fundamentals analyst cited "2025全年" figures, verify they are >= the sum of visible quarters. If a column labeled "2025-12-31" is a single quarter, correct the label to "Q4 2025" in the final report.
+5. **200 SMA**: If data_quality.json says `warning_no_200_sma: true`, any mention of "200 SMA" in analyst reports that uses a value other than N/A is invalid.
 
 ### Step 2: Synthesize
 
@@ -375,4 +367,4 @@ After both outputs complete, confirm: "分析报告已保存至 skills/stock-ana
 - **Modifying prompts**: The prompt files contain the EXACT prompts from the original code. Do NOT paraphrase or improve them. Read the file and pass its content verbatim.
 - **Defaulting to Hold**: If both sides have valid points, pick the stronger argument. Hold is only for genuinely neutral situations.
 - **Forgetting to include instrument context**: Every debate/judgment agent needs to know the market (US/CN/HK), currency, and ticker format.
-- **Summarizing debate arguments instead of passing verbatim text**: This is the #1 information-loss bug. When launching a Phase 3 or Phase 6 debate agent, you MUST read the debate history file and paste its FULL content into the agent prompt. Do NOT write a summary in your own words — the debater needs to see the EXACT words of previous speakers to make precise counter-arguments. See "Debate History File Protocol" above for the mandatory file-based approach.
+- **Summarizing debate arguments instead of passing verbatim text**: This is the #1 information-loss bug. When launching a Phase 3 or Phase 6 debate agent, do NOT paste debate history into the agent prompt — the sub-agent reads the file itself. The main session only tells the agent WHERE the file is and WHAT its role/round is. See "Debate History File Protocol" above for the mandatory file-I/O-by-sub-agent approach.

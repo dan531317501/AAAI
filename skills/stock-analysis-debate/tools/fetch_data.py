@@ -40,7 +40,7 @@ from longbridge_fetcher import (build_counter_id, fetch_business_historical,
                                 parse_revenue_sankey)
 
 # Look-back windows
-PRICE_LOOKBACK_DAYS = 60  # Enough for indicators to be meaningful
+PRICE_LOOKBACK_DAYS = 350  # ~230+ trading days, comfortable margin for 200 SMA
 NEWS_LOOKBACK_DAYS = 30
 FUNDAMENTALS_LOOKBACK_DAYS = 365
 
@@ -517,8 +517,14 @@ def fetch_financial_stmt(ticker: str, stmt_type: str, freq: str = "quarterly",
             "income_stmt": "Income Statement",
         }
 
+        period_note = (
+            f"# ⚠️ PERIOD TYPE: {freq.upper()} — Each column is a SINGLE FISCAL QUARTER, NOT a full year.\n"
+            f"# To get full-year figures, sum all 4 quarters of the same fiscal year.\n"
+            f"# Example: 2025-12-31 column = Q4 2025 (Oct-Dec), NOT FY2025.\n"
+        ) if freq.lower() == "quarterly" else ""
+
         header = f"# {stmt_names.get(stmt_type, stmt_type)} for {symbol} ({freq})\n"
-        return header + data.to_csv()
+        return period_note + header + data.to_csv()
 
     except Exception as e:
         return f"# Error fetching {stmt_type} for {ticker}: {e}\n"
@@ -1009,6 +1015,77 @@ def fetch_cn_global_news(curr_date: str, lookback_days: int = 7) -> str:
     return "\n".join(lines)
 
 
+def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
+                          ohlcv_text: str, market: str) -> dict:
+    """Compute data quality metadata: trading days, indicator sufficiency, period labels.
+
+    Returns a dict consumed by agents to avoid:
+      - computing 200 SMA from <200 data points
+      - treating quarterly financials as annual
+      - mixing timestamps from different dates
+    """
+    import re
+
+    # Count trading days from OHLCV
+    trading_days = 0
+    last_ohlcv_date = None
+    for line in ohlcv_text.split("\n"):
+        if re.match(r"^\d{4}-\d{2}-\d{2},", line):
+            trading_days += 1
+            last_ohlcv_date = line.split(",")[0]
+
+    # Data freshness: is the latest OHLCV date == curr_date?
+    data_fresh = (last_ohlcv_date == curr_date) if last_ohlcv_date else False
+    as_of_date = last_ohlcv_date or curr_date
+
+    # Indicator sufficiency
+    indicator_rules = {
+        "close_50_sma": {"min_days": 50, "sufficient": trading_days >= 50},
+        "close_200_sma": {"min_days": 200, "sufficient": trading_days >= 200},
+        "close_10_ema": {"min_days": 10, "sufficient": trading_days >= 10},
+        "macd": {"min_days": 35, "sufficient": trading_days >= 35},
+        "rsi": {"min_days": 20, "sufficient": trading_days >= 20},
+        "boll": {"min_days": 25, "sufficient": trading_days >= 25},
+        "atr": {"min_days": 20, "sufficient": trading_days >= 20},
+    }
+
+    # Period labels for financial statements
+    period_labels = {
+        "income_stmt": "QUARTERLY — each column is a single fiscal quarter, NOT a full year",
+        "balance_sheet": "QUARTERLY — each column is a single fiscal quarter-end snapshot",
+        "cashflow": "QUARTERLY — each column is a single fiscal quarter",
+    }
+
+    quality = {
+        "ticker": ticker,
+        "market": market,
+        "analysis_date": curr_date,
+        "data_as_of_date": as_of_date,
+        "data_fresh": data_fresh,
+        "trading_days": trading_days,
+        "warning_no_200_sma": not indicator_rules["close_200_sma"]["sufficient"],
+        "indicator_sufficiency": indicator_rules,
+        "period_labels": period_labels,
+        "notes": [],
+    }
+
+    # Build warnings
+    if not data_fresh:
+        quality["notes"].append(
+            f"WARNING: OHLCV data ends at {as_of_date}, not {curr_date}. "
+            f"All analysis prices are as-of {as_of_date}. Do NOT use {curr_date} prices "
+            f"in the same report without explicitly noting the timestamp mismatch."
+        )
+    if not indicator_rules["close_200_sma"]["sufficient"]:
+        quality["notes"].append(
+            f"WARNING: Only {trading_days} trading days available. "
+            f"200 SMA requires 200+ days. Must output N/A for 200 SMA, "
+            f"never substitute 50 SMA value."
+        )
+
+    return quality
+
+
 def main():
     parser = argparse.ArgumentParser(description="Fetch stock data for TradingAgents analysis")
     parser.add_argument("ticker", help="Ticker symbol (e.g., AAPL, 600519.SH, 00700.HK)")
@@ -1169,6 +1246,14 @@ def main():
                 print("    segments.yaml missing -> segments_missing.flag", flush=True)
     else:
         print("  [10] Skipped (CN market, no segment analysis)", flush=True)
+
+    # 11. Data quality audit
+    print("  [11] Computing data quality metadata...")
+    quality = _compute_data_quality(ticker_dir, ticker, curr_date, ohlcv, market)
+    quality_path = os.path.join(ticker_dir, "data_quality.json")
+    with open(quality_path, "w") as f:
+        json.dump(quality, f, indent=2, default=str)
+    results["files"]["data_quality"] = quality_path
 
     # Write summary
     summary_path = os.path.join(ticker_dir, "summary.json")
