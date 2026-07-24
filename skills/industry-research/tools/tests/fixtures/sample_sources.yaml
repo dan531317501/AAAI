@@ -1,0 +1,28 @@
+sources:
+  lithium:
+    - id: shmet_lithium
+      name: 碳酸锂现货价格
+      url: https://hq.smm.cn/lithium
+      fallback_url: ""
+      frequency: daily
+      selector_type: api
+      parser: null
+  battery:
+    - id: cbea_battery_output
+      name: 动力电池产量
+      url: https://www.cbea.com/data/output
+      fallback_url: ""
+      frequency: monthly
+      selector_type: api
+      parser: null
+  policy:
+    - id: miit_nev_policy
+      name: 工信部新能源汽车公告
+      url: https://www.miit.gov.cn/search?q=新能源汽车
+      fallback_url: ""
+      frequency: on_change
+      selector_type: rss
+      parser: null
+meta:
+  last_verified: "2026-07-24"
+  broken_sources: []
