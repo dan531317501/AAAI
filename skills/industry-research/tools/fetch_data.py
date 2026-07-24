@@ -201,12 +201,54 @@ def classify_confidence(url: str) -> str:
 
 # --- Content Fetching ---
 
+CONTENT_FETCH_TIMEOUT = 10     # seconds per article
+CONTENT_FETCH_MAX = 10         # max articles to fetch full text
+CONTENT_FETCH_WORKERS = 3      # parallel content fetchers
+
+
 def fetch_article_content(url: str, raw_dir: Path) -> Optional[str]:
     """Fetch article full text via Jina AI proxy. Cache raw content."""
-    content = fetch_via_jina(url, timeout=30)
+    content = fetch_via_jina(url, timeout=CONTENT_FETCH_TIMEOUT)
     if content:
         cache_raw_content(raw_dir, "article", url, content)
     return content
+
+
+def fetch_articles_parallel(items: list[dict], raw_dir: Path,
+                            max_items: int = CONTENT_FETCH_MAX,
+                            max_workers: int = CONTENT_FETCH_WORKERS) -> int:
+    """
+    Fetch article content for top items in parallel. Modifies items in place.
+    Returns number of successfully fetched articles.
+    """
+    top_items = items[:max_items]
+    if not top_items:
+        return 0
+
+    fetched = 0
+
+    def _fetch_one(idx: int, item: dict):
+        url = item.get("url", "")
+        if not url:
+            return idx, ""
+        content = fetch_article_content(url, raw_dir)
+        return idx, (content[:5000] if content else "")
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(_fetch_one, i, item): i
+            for i, item in enumerate(top_items)
+        }
+        for future in as_completed(futures):
+            try:
+                idx, text = future.result(timeout=CONTENT_FETCH_TIMEOUT + 2)
+                if text:
+                    top_items[idx]["content"] = text
+                    fetched += 1
+            except Exception:
+                pass
+
+    return fetched
 
 
 # --- Grouping ---
@@ -224,46 +266,78 @@ def group_news_by_node(news_items: list[dict], chain: dict) -> dict[str, list[di
         grouped[nid] = []
     grouped["_unmatched"] = []
 
+    # Build token list per node (short meaningful chunks from name + key_factors)
+    node_tokens: dict[str, list[str]] = {}
+    for node in chain.get("nodes", []):
+        tokens = _tokenize_matching_terms(node.get("name", ""))
+        for kf in node.get("key_factors", []):
+            tokens.extend(_tokenize_matching_terms(kf))
+        node_tokens[node["id"]] = _deduplicate_tokens(tokens)
+
+    for sup in chain.get("supports", []):
+        tokens = _tokenize_matching_terms(sup.get("name", ""))
+        for kf in sup.get("key_factors", []):
+            tokens.extend(_tokenize_matching_terms(kf))
+        node_tokens[sup["id"]] = _deduplicate_tokens(tokens)
+
     for item in news_items:
-        matched = False
         title_and_snippet = (item.get("title", "") + " " + item.get("snippet", "")).lower()
 
-        for node in chain.get("nodes", []):
-            node_name = node.get("name", "").lower()
-            for kf in node.get("key_factors", []):
-                if _contains_any_keyword(title_and_snippet, [node_name, kf]):
-                    grouped[node["id"]].append(item)
-                    matched = True
-                    break
-            if matched:
-                break
+        best_node = None
+        best_score = 0
 
-        if not matched:
-            for sup in chain.get("supports", []):
-                sup_name = sup.get("name", "").lower()
-                for kf in sup.get("key_factors", []):
-                    if _contains_any_keyword(title_and_snippet, [sup_name, kf]):
-                        grouped[sup["id"]].append(item)
-                        matched = True
-                        break
-                if matched:
-                    break
+        for nid, tokens in node_tokens.items():
+            score = _calculate_match_score(title_and_snippet, tokens)
+            if score > best_score:
+                best_score = score
+                best_node = nid
 
-        if not matched:
+        # Require at least 1 token match to classify
+        if best_score >= 1:
+            grouped[best_node].append(item)
+        else:
             grouped["_unmatched"].append(item)
 
     return grouped
 
 
-def _contains_any_keyword(text: str, keywords: list[str]) -> bool:
-    """Check if text contains any of the keywords (fuzzy match)."""
-    for kw in keywords:
-        if not kw:
-            continue
-        if len(kw) >= 2:
-            if kw.lower() in text:
-                return True
-    return False
+def _tokenize_matching_terms(text: str) -> list[str]:
+    """Split Chinese text into meaningful short tokens for fuzzy matching."""
+    tokens = []
+    # Split on common separators and punctuation
+    import re
+    chunks = re.split(r'[/\s,，、()（）—·\-\d+]+', text)
+    for chunk in chunks:
+        chunk = chunk.strip().lower()
+        if len(chunk) >= 2:
+            tokens.append(chunk)
+            # Also extract sub-tokens of 2-3 chars for partial matching
+            if len(chunk) >= 4:
+                for i in range(len(chunk) - 1):
+                    sub = chunk[i:i+2]
+                    if len(sub) == 2:
+                        tokens.append(sub)
+    return tokens
+
+
+def _deduplicate_tokens(tokens: list[str]) -> list[str]:
+    """Remove duplicate tokens, keeping order."""
+    seen = set()
+    result = []
+    for t in tokens:
+        if t not in seen:
+            seen.add(t)
+            result.append(t)
+    return result
+
+
+def _calculate_match_score(text: str, tokens: list[str]) -> int:
+    """Count how many unique tokens appear in the text."""
+    score = 0
+    for token in tokens:
+        if len(token) >= 2 and token in text:
+            score += 1
+    return score
 
 
 # --- Data Quality ---
@@ -351,14 +425,10 @@ def fetch_data(industry: str, date_str: str, output_dir: Path) -> dict:
     for item in news_items:
         item["confidence"] = classify_confidence(item.get("url", ""))
 
-    # 4. Fetch article content for top items (limited to avoid rate issues)
-    top_items = news_items[:30]
-    for i, item in enumerate(top_items):
-        url = item.get("url", "")
-        if url:
-            content = fetch_article_content(url, raw_dir)
-            if content:
-                item["content"] = content[:5000]  # Truncate to 5K chars
+    # 4. Fetch article content for top items in parallel
+    print(f"  Fetching full text for top {CONTENT_FETCH_MAX} articles...")
+    fetched = fetch_articles_parallel(news_items, raw_dir)
+    print(f"  Fetched {fetched} articles")
 
     # 5. Group by node
     grouped = group_news_by_node(news_items, chain)
