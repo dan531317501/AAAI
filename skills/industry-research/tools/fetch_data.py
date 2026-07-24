@@ -13,13 +13,17 @@ Phase 2.2: 数据采集引擎。
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
+
+import requests
 
 from utils import (
     get_data_dir, get_report_dir, get_news_raw_dir,
@@ -28,45 +32,74 @@ from utils import (
     content_hash, cache_raw_content,
 )
 
+# SerpApi configuration
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
+SERPAPI_URL = "https://serpapi.com/search"
+MAX_SEARCH_WORKERS = 5
+SINGLE_QUERY_TIMEOUT = 10  # seconds per query
+TOTAL_SEARCH_TIMEOUT = 30  # seconds total for all queries
+
 
 # --- Search ---
 
-def search_news_queries(queries: list[str], num_results: int = 5) -> list[dict]:
+def search_news_queries(queries: list[str], num_results: int = 5,
+                        max_workers: int = MAX_SEARCH_WORKERS,
+                        total_timeout: int = TOTAL_SEARCH_TIMEOUT) -> list[dict]:
     """
-    Execute search queries and return results.
+    Execute search queries in parallel via SerpApi HTTP API.
 
-    Priority: SerpApi -> DuckDuckGo Lite -> fallback.
-    Each query returns a list of {title, url, snippet, date} dicts.
+    Uses ThreadPoolExecutor for parallel requests. Returns deduplicated
+    list of {title, url, snippet, date, source} dicts.
     """
+    if not SERPAPI_KEY:
+        print("WARNING: SERPAPI_KEY not set, skipping live search", file=sys.stderr)
+        return []
+
+    if not queries:
+        return []
+
     all_results = []
     seen_urls = set()
 
-    for query in queries:
-        results = _search_via_serpapi(query, num_results)
-        if not results:
-            results = _search_via_duckduckgo(query, num_results)
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(queries))) as executor:
+        futures = {
+            executor.submit(_search_serpapi_http, q, num_results): q
+            for q in queries
+        }
 
-        for r in results:
-            url = r.get("url", "")
-            if url and url not in seen_urls:
-                seen_urls.add(url)
-                all_results.append(r)
+        try:
+            for future in as_completed(futures, timeout=total_timeout):
+                try:
+                    results = future.result(timeout=SINGLE_QUERY_TIMEOUT)
+                except Exception:
+                    results = []
+                for r in results:
+                    url = r.get("url", "")
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        all_results.append(r)
+        except FuturesTimeoutError:
+            print(f"  Search timed out after {total_timeout}s, got {len(all_results)} results", file=sys.stderr)
 
     return all_results
 
 
-def _search_via_serpapi(query: str, num: int = 5) -> list[dict]:
-    """Search via SerpApi (requires API key). Returns [] on failure."""
+def _search_serpapi_http(query: str, num: int = 5) -> list[dict]:
+    """Search via SerpApi HTTP API. Returns [] on failure."""
     try:
-        import subprocess
-        result = subprocess.run(
-            ["bash", str(Path.home() / ".claude/tools/serpapi-search.sh"),
-             "--query", query, "--num", str(num), "--tbm", "nws", "--no-cache"],
-            capture_output=True, text=True, timeout=30
-        )
-        if result.returncode != 0:
+        params = {
+            "q": query,
+            "api_key": SERPAPI_KEY,
+            "engine": "google",
+            "tbm": "nws",
+            "num": str(num),
+            "gl": "us",
+            "hl": "zh-CN",
+        }
+        resp = requests.get(SERPAPI_URL, params=params, timeout=SINGLE_QUERY_TIMEOUT)
+        if resp.status_code != 200:
             return []
-        data = json.loads(result.stdout)
+        data = resp.json()
         news = data.get("news_results", [])
         return [
             {
@@ -78,35 +111,6 @@ def _search_via_serpapi(query: str, num: int = 5) -> list[dict]:
             }
             for n in news
         ]
-    except Exception:
-        return []
-
-
-def _search_via_duckduckgo(query: str, num: int = 5) -> list[dict]:
-    """Search via DuckDuckGo Lite. Returns [] on failure."""
-    try:
-        url = f"https://lite.duckduckgo.com/lite/?q={quote(query)}"
-        html = fetch_direct(url, timeout=15)
-        if not html:
-            return []
-        # Parse DDG Lite HTML: links are in <a rel="nofollow" href="...">
-        results = []
-        link_pattern = re.compile(r'<a[^>]*href="(https?://[^"]+)"[^>]*class="result-link"[^>]*>(.*?)</a>', re.DOTALL)
-        snippet_pattern = re.compile(r'<td[^>]*class="result-snippet"[^>]*>(.*?)</td>', re.DOTALL)
-
-        links = link_pattern.findall(html)
-        snippets = snippet_pattern.findall(html)
-
-        for i, (href, title) in enumerate(links[:num]):
-            snippet = snippets[i] if i < len(snippets) else ""
-            results.append({
-                "title": re.sub(r'<[^>]+>', '', title).strip(),
-                "url": href,
-                "snippet": re.sub(r'<[^>]+>', '', snippet).strip(),
-                "date": "",
-                "source": "",
-            })
-        return results
     except Exception:
         return []
 

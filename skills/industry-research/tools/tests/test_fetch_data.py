@@ -13,6 +13,8 @@ from fetch_data import (
     classify_confidence,
     DataQualityReport,
     FetchMetadata,
+    _search_serpapi_http,
+    search_news_queries,
 )
 from utils import load_yaml
 
@@ -129,3 +131,73 @@ class TestFetchMetadata:
         assert meta["sources_success"] == 9
         assert meta["sources_failed"] == 1
         assert "timestamp" in meta
+
+
+class TestSerpApiHttp:
+    """Test SerpApi HTTP search function."""
+
+    @patch("fetch_data.SERPAPI_KEY", "")
+    def test_returns_empty_without_api_key(self):
+        results = _search_serpapi_http("test query")
+        assert results == []
+
+    @patch("fetch_data.requests.get")
+    @patch("fetch_data.SERPAPI_KEY", "test_key")
+    def test_parses_valid_response(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "news_results": [
+                {
+                    "title": "Test Title",
+                    "link": "https://example.com/1",
+                    "snippet": "Test snippet",
+                    "date": "2 days ago",
+                    "source": "Test Source",
+                }
+            ]
+        }
+        mock_get.return_value = mock_resp
+
+        results = _search_serpapi_http("test query")
+        assert len(results) == 1
+        assert results[0]["title"] == "Test Title"
+        assert results[0]["url"] == "https://example.com/1"
+
+    @patch("fetch_data.requests.get")
+    @patch("fetch_data.SERPAPI_KEY", "test_key")
+    def test_handles_http_error(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 403
+        mock_get.return_value = mock_resp
+
+        results = _search_serpapi_http("test query")
+        assert results == []
+
+    @patch("fetch_data.requests.get")
+    @patch("fetch_data.SERPAPI_KEY", "test_key")
+    def test_handles_network_error(self, mock_get):
+        mock_get.side_effect = Exception("Connection timeout")
+
+        results = _search_serpapi_http("test query")
+        assert results == []
+
+    @patch("fetch_data._search_serpapi_http")
+    @patch("fetch_data.SERPAPI_KEY", "test_key")
+    def test_parallel_deduplicates_by_url(self, mock_search):
+        mock_search.side_effect = lambda q, num: [
+            {"title": f"Result for {q}", "url": "https://example.com/same_url", "snippet": "", "date": "", "source": ""}
+        ]
+
+        results = search_news_queries(["q1", "q2", "q3"])
+        # Same URL for all, dedup should produce 1
+        assert len(results) == 1
+
+    @patch("fetch_data.SERPAPI_KEY", "")
+    def test_search_returns_empty_without_key(self):
+        results = search_news_queries(["q1", "q2"])
+        assert results == []
+
+    def test_search_returns_empty_for_empty_queries(self):
+        results = search_news_queries([])
+        assert results == []
