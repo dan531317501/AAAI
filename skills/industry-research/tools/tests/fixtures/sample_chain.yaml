@@ -1,0 +1,69 @@
+industry: 新能源汽车
+description: 以电能为动力的汽车产业
+discovery_date: "2026-07-24"
+nodes:
+  - id: lithium
+    name: 锂矿
+    description: 动力电池核心原料
+    key_factors:
+      - 碳酸锂价格
+      - 锂矿产能
+      - 盐湖提锂技术
+    layer: -3
+  - id: battery
+    name: 动力电池
+    description: 电动车核心部件
+    key_factors:
+      - 电池成本
+      - 产能利用率
+      - 技术路线
+    layer: -2
+  - id: vehicle_oem
+    name: 整车制造
+    description: 新能源汽车整车生产与销售
+    key_factors:
+      - 月度销量
+      - 新车型发布
+      - 价格竞争
+    layer: 0
+  - id: consumer
+    name: 消费者
+    description: 终端购车用户
+    key_factors:
+      - 渗透率
+      - 充电便利性
+      - 保值率
+    layer: 1
+edges:
+  - from: lithium
+    to: battery
+    type: upstream
+    mechanism: 锂矿价格→电池成本→整车定价
+  - from: battery
+    to: vehicle_oem
+    type: upstream
+    mechanism: 电池成本与技术→整车竞争力
+  - from: vehicle_oem
+    to: consumer
+    type: downstream
+    mechanism: 产品与价格→消费决策
+supports:
+  - id: policy
+    name: 政策法规
+    affects:
+      - vehicle_oem
+      - consumer
+    key_factors:
+      - 购置税减免
+      - 新能源补贴
+      - 双积分政策
+  - id: charging
+    name: 充电基础设施
+    affects:
+      - consumer
+    key_factors:
+      - 充电桩保有量
+      - 快充功率
+meta:
+  version: 1
+  last_updated: "2026-07-24"
