@@ -4,3 +4,8 @@ __pycache__/
 .pytest_cache/
 data/
 .idea/
+
+# Industry research: un-ignore data dir so .gitkeep is trackable
+!skills/industry-research/data/
+skills/industry-research/data/*
+!skills/industry-research/data/.gitkeep
