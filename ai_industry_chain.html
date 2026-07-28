@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 产业依赖关系网络 — 30+ 领域 × 100+ 条依赖链</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    background:linear-gradient(170deg,#060610 0%,#0d0d20 30%,#120d2e 60%,#0a101c 100%);
+    color:#c8c8c8;min-height:100vh;padding:40px 20px;
+  }
+  .container{max-width:1700px;margin:0 auto}
+
+  h1{
+    text-align:center;font-size:2.4em;
+    background:linear-gradient(135deg,#00d2ff,#7b2ff7,#ff6b6b);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    margin-bottom:6px;
+  }
+  .subtitle{text-align:center;color:#777;margin-bottom:50px;font-size:1em}
+
+  /* ===== 图例 ===== */
+  .legend{display:flex;gap:30px;justify-content:center;flex-wrap:wrap;margin-bottom:50px}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:.82em;color:#999}
+  .legend-line{width:30px;height:3px;border-radius:2px}
+  .legend-line.hard{background:#ef4444}
+  .legend-line.tech{background:#8b5cf6}
+  .legend-line.supply{background:#f59e0b}
+  .legend-line.enable{background:#06b6d4}
+
+  /* ===== 关键路径大图 ===== */
+  .critical-path{background:rgba(255,255,255,.02);border-radius:20px;padding:35px 25px;margin-bottom:50px;border:1px solid rgba(255,255,255,.05);overflow-x:auto}
+  .cp-title{text-align:center;font-size:1.3em;font-weight:700;color:#f87171;margin-bottom:30px}
+  .cp-flow{display:flex;align-items:flex-start;justify-content:center;flex-wrap:wrap;gap:0;min-width:1400px}
+
+  .cp-node{
+    display:flex;flex-direction:column;align-items:center;
+    padding:14px 10px;border-radius:12px;min-width:100px;text-align:center;
+    font-size:.82em;font-weight:600;position:relative;
+  }
+  .cp-node.green{border:2px solid #76b900;background:rgba(118,185,0,.08);color:#a3e635}
+  .cp-node.teal{border:2px solid #14b8a6;background:rgba(20,184,166,.08);color:#2dd4bf}
+  .cp-node.purple{border:2px solid #8b5cf6;background:rgba(139,92,246,.08);color:#a78bfa}
+  .cp-node.orange{border:2px solid #f59e0b;background:rgba(245,158,11,.08);color:#fbbf24}
+  .cp-node.blue{border:2px solid #3b82f6;background:rgba(59,130,246,.08);color:#60a5fa}
+  .cp-node.red{border:2px solid #ef4444;background:rgba(239,68,68,.08);color:#f87171}
+  .cp-node.pink{border:2px solid #ec4899;background:rgba(236,72,153,.08);color:#f472b6}
+  .cp-node .cp-sub{font-size:.65em;font-weight:400;color:#888;margin-top:4px}
+
+  .cp-arrow{display:flex;align-items:center;padding:0 4px;color:#555;font-size:.85em;white-space:nowrap}
+  .cp-arrow.hard{color:#ef4444;font-weight:700}
+  .cp-arrow.tech{color:#8b5cf6;font-weight:700}
+  .cp-arrow.supply{color:#f59e0b;font-weight:700}
+
+  /* ===== 依赖关系卡片 ===== */
+  .dep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:18px;margin-bottom:40px}
+
+  .dep-card{
+    background:rgba(255,255,255,.02);border-radius:16px;padding:22px 26px;
+    border:1px solid rgba(255,255,255,.06);
+    transition:transform .2s,background .2s;
+  }
+  .dep-card:hover{transform:translateY(-2px);background:rgba(255,255,255,.04)}
+
+  .dep-card-header{
+    display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;
+    border-bottom:1px solid rgba(255,255,255,.05);
+  }
+  .dep-card-icon{
+    width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-size:1.3em;flex-shrink:0
+  }
+  .dep-card-title{font-size:1.1em;font-weight:700;line-height:1.3}
+  .dep-card-company{font-size:.78em;color:#777}
+
+  .dep-section{margin-bottom:12px}
+  .dep-label{font-size:.75em;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+  .dep-label.up{color:#f87171}
+  .dep-label.down{color:#60a5fa}
+  .dep-label.side{color:#fbbf24}
+
+  .dep-tag{
+    display:inline-block;padding:4px 10px;border-radius:6px;font-size:.78em;
+    margin:2px 4px 2px 0;font-weight:600;
+  }
+  .dep-tag.硬依赖{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+  .dep-tag.技术依赖{background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.25)}
+  .dep-tag.供给关系{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
+  .dep-tag.赋能关系{background:rgba(6,182,212,.15);color:#22d3ee;border:1px solid rgba(6,182,212,.25)}
+
+  .dep-chain{
+    font-size:.78em;color:#888;margin-top:8px;padding:8px 12px;
+    background:rgba(255,255,255,.02);border-radius:8px;line-height:1.7;
+  }
+
+  .highlight-num{font-weight:700;color:#fbbf24}
+
+  /* ===== 专用依赖链展示 ===== */
+  .chain-hero{
+    background:rgba(255,255,255,.02);border-radius:20px;padding:30px 25px;margin-bottom:50px;
+    border:1px solid rgba(255,255,255,.05);
+  }
+  .chain-hero h2{text-align:center;font-size:1.3em;margin-bottom:25px;color:#fbbf24}
+
+  .chain-row{display:flex;align-items:center;gap:0;margin-bottom:16px;overflow-x:auto;padding:8px 0}
+  .chain-step{
+    padding:10px 16px;border-radius:10px;font-size:.85em;font-weight:600;white-space:nowrap;
+    text-align:center;min-width:70px;flex-shrink:0;
+  }
+  .chain-conn{
+    color:#666;font-size:1.2em;padding:0 6px;flex-shrink:0
+  }
+  .chain-conn.hard-conn{color:#ef4444}
+  .chain-conn.tech-conn{color:#8b5cf6}
+
+  .nodata{text-align:center;color:#555;font-size:.85em;padding:20px}
+
+  .source-box{
+    text-align:center;color:#444;font-size:.72em;margin-top:60px;padding-top:30px;
+    border-top:1px solid rgba(255,255,255,.04);line-height:1.8
+  }
+
+  @media(max-width:900px){
+    .dep-grid{grid-template-columns:1fr}
+    .cp-flow{min-width:auto}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>AI 产业链依赖关系网络</h1>
+<p class="subtitle">覆盖 30+ 细分领域 ｜ 展示 100+ 条依赖关系 ｜ 每条关系标注依赖类型</p>
+
+<!-- 图例 -->
+<div class="legend">
+  <div class="legend-item"><span class="legend-line hard"></span> 硬制造依赖 (缺了做不出来)</div>
+  <div class="legend-item"><span class="legend-line tech"></span> 技术栈依赖 (训练/推理必须用)</div>
+  <div class="legend-item"><span class="legend-line supply"></span> 供给关系 (上下游商业关系)</div>
+  <div class="legend-item"><span class="legend-line enable"></span> 赋能关系 (提升/加速/使能)</div>
+</div>
+
+<!-- ============ 关键路径：从沙子到 AI ============ -->
+<div class="critical-path">
+  <div class="cp-title">🔴 关键路径 #1: 从沙子到训练好的大模型</div>
+  <div class="cp-flow">
+    <div class="cp-node teal">
+      晶圆代工<br><span class="cp-sub">TSMC 3nm/4nm</span>
+    </div>
+    <div class="cp-arrow hard">制造→</div>
+    <div class="cp-node green">
+      GPU 芯片<br><span class="cp-sub">NVIDIA GB200</span>
+    </div>
+    <div class="cp-arrow supply">+HBM→</div>
+    <div class="cp-node orange">
+      HBM 内存<br><span class="cp-sub">SK Hynix HBM3E</span>
+    </div>
+    <div class="cp-arrow hard">封装→</div>
+    <div class="cp-node purple">
+      CoWoS<br><span class="cp-sub">TSMC CoWoS-L</span>
+    </div>
+    <div class="cp-arrow supply">组装→</div>
+    <div class="cp-node blue">
+      AI 服务器<br><span class="cp-sub">Foxconn / Quanta</span>
+    </div>
+    <div class="cp-arrow supply">部署→</div>
+    <div class="cp-node red">
+      云计算<br><span class="cp-sub">AWS / Azure / GCP</span>
+    </div>
+    <div class="cp-arrow tech">训练→</div>
+    <div class="cp-node pink">
+      大语言模型<br><span class="cp-sub">Anthropic / OpenAI</span>
+    </div>
+  </div>
+
+  <div class="cp-title" style="margin-top:30px;color:#60a5fa">🔵 关键路径 #2: 从模型到终端应用</div>
+  <div class="cp-flow">
+    <div class="cp-node pink">
+      大语言模型<br><span class="cp-sub">Claude / GPT / Gemini</span>
+    </div>
+    <div class="cp-arrow tech">API→</div>
+    <div class="cp-node purple">
+      Agent 框架<br><span class="cp-sub">MCP / LangChain</span>
+    </div>
+    <div class="cp-arrow tech">驱动→</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="cp-node blue" style="min-width:80px">AI 编程<br><span class="cp-sub">Copilot/Cursor</span></div>
+      <div class="cp-node orange" style="min-width:80px">AI 搜索<br><span class="cp-sub">ChatGPT/Perplexity</span></div>
+      <div class="cp-node red" style="min-width:80px">自动驾驶<br><span class="cp-sub">Waymo/Tesla</span></div>
+    </div>
+    <div class="cp-arrow tech" style="flex-direction:column;gap:4px">→<br>→<br>→</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="cp-node green" style="min-width:80px">AIGC<br><span class="cp-sub">Midjourney/Sora</span></div>
+      <div class="cp-node teal" style="min-width:80px">机器人<br><span class="cp-sub">Optimus/Figure</span></div>
+      <div class="cp-node pink" style="min-width:80px">医疗/金融<br><span class="cp-sub">行业应用</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 核心依赖链详解 ============ -->
+<div class="chain-hero">
+  <h2>⚡ GPU 芯片制造的硬依赖链（缺一环即停产）</h2>
+  <div class="chain-row">
+    <div class="chain-step" style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);color:#a78bfa">EDA 工具<br><small>Synopsys/Cadence</small></div>
+    <span class="chain-conn hard-conn">━━━▶</span>
+    <div class="chain-step" style="background:rgba(20,184,166,.15);border:1px solid rgba(20,184,166,.3);color:#2dd4bf">晶圆代工<br><small>TSMC 3nm</small></div>
+    <span class="chain-conn hard-conn">━━━▶</span>
+    <div class="chain-step" style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);color:#a78bfa">CoWoS 封装<br><small>TSMC CoWoS-L</small></div>
+    <span class="chain-conn hard-conn">━━━▶</span>
+    <div class="chain-step" style="background:rgba(118,185,0,.15);border:1px solid rgba(118,185,0,.3);color:#a3e635">GPU 芯片<br><small>NVIDIA GB200</small></div>
+    <span class="chain-conn hard-conn">━↑━</span>
+    <div class="chain-step" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#fbbf24">HBM 内存<br><small>SK Hynix HBM3E</small></div>
+  </div>
+  <div class="dep-chain">
+    关键节点: NVIDIA GPU 消耗 TSMC CoWoS 产能的 <span class="highlight-num">50-60%</span>，SK Hynix HBM3E 产能几乎 <span class="highlight-num">90%+</span> 供 NVIDIA。
+    CoWoS 是当前最大产能瓶颈，2025 年月产能仅 6.5-7.5 万片。
+  </div>
+
+  <h2 style="margin-top:30px;color:#a78bfa">🧠 大模型训练的完整技术栈依赖</h2>
+  <div class="chain-row">
+    <div class="chain-step" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#60a5fa">数据标注<br><small>Scale AI</small></div>
+    <span class="chain-conn tech-conn">━━▶</span>
+    <div class="chain-step" style="background:rgba(238,76,44,.15);border:1px solid rgba(238,76,44,.3);color:#f87171">AI 框架<br><small>PyTorch</small></div>
+    <span class="chain-conn tech-conn">━━▶</span>
+    <div class="chain-step" style="background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.3);color:#fbbf24">大模型训练<br><small>GPU 集群</small></div>
+    <span class="chain-conn tech-conn">━━▶</span>
+    <div class="chain-step" style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);color:#a78bfa">MLOps 平台<br><small>W&B / Databricks</small></div>
+    <span class="chain-conn tech-conn">━━▶</span>
+    <div class="chain-step" style="background:rgba(236,72,153,.15);border:1px solid rgba(236,72,153,.3);color:#f472b6">模型发布<br><small>Hugging Face</small></div>
+  </div>
+  <div class="chain-row">
+    <span class="chain-conn tech-conn" style="color:#ec4899">部署到 ←</span>
+    <div class="chain-step" style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);color:#a78bfa">向量数据库<br><small>Pinecone/Milvus</small></div>
+    <span class="chain-conn tech-conn">RAG→</span>
+    <div class="chain-step" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#4ade80">Agent 框架<br><small>MCP/LangChain</small></div>
+    <span class="chain-conn tech-conn">调用→</span>
+    <div class="chain-step" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#60a5fa">AI 应用<br><small>编程/搜索/生成</small></div>
+  </div>
+
+  <h2 style="margin-top:30px;color:#fbbf24">🏗️ AI 数据中心建设的物理供应链</h2>
+  <div class="chain-row">
+    <div class="chain-step" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#a78bfa">AI 服务器<br><small>Foxconn 组装</small></div>
+    <span class="chain-conn hard-conn">━━▶</span>
+    <div class="chain-step" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171">光模块互联<br><small>Lumentum/中际旭创</small></div>
+    <span class="chain-conn hard-conn">━━▶</span>
+    <div class="chain-step" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#4ade80">交换机<br><small>NVIDIA Spectrum-X</small></div>
+    <span class="chain-conn hard-conn">━━▶</span>
+    <div class="chain-step" style="background:rgba(132,204,22,.15);border:1px solid rgba(132,204,22,.3);color:#a3e635">液冷散热<br><small>Vertiv</small></div>
+    <span class="chain-conn hard-conn">━━▶</span>
+    <div class="chain-step" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#fbbf24">电力供应<br><small>核能 SMR</small></div>
+  </div>
+  <div class="dep-chain">
+    GB200 NVL72 机架功耗高达 <span class="highlight-num">120kW+</span>，传统风冷无法应对，液冷成为硬依赖。
+    单座 10 万 GPU 数据中心年耗电量相当于一座小型城市，核电 SMR 成为 2026 年重要供给方案。
+  </div>
+</div>
+
+<!-- ============ 各领域依赖关系卡片 ============ -->
+<h2 style="text-align:center;font-size:1.4em;color:#f87171;margin-bottom:25px">📋 各领域依赖关系明细</h2>
+
+<!-- UPSTREAM sectors -->
+<div class="dep-grid">
+
+  <!-- 1. GPU -->
+  <div class="dep-card" style="border-left:4px solid #76b900">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(118,185,0,.15)">💻</div>
+      <div><div class="dep-card-title">AI GPU / 加速器</div><div class="dep-card-company">NVIDIA 80% · AMD 8%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游 (5 条硬依赖)</div>
+      <span class="dep-tag 硬依赖">TSMC 晶圆代工</span>
+      <span class="dep-tag 硬依赖">CoWoS 先进封装</span>
+      <span class="dep-tag 硬依赖">HBM 内存</span>
+      <span class="dep-tag 硬依赖">Synopsys/Cadence EDA</span>
+      <span class="dep-tag 硬依赖">SK 海力士 HBM3E</span>
+      <span class="dep-tag 供给关系">台积电独占 3nm</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 硬依赖">AI 服务器 ODM</span>
+      <span class="dep-tag 技术依赖">云计算平台</span>
+      <span class="dep-tag 技术依赖">LLM 训练</span>
+      <span class="dep-tag 赋能关系">自动驾驶</span>
+      <span class="dep-tag 赋能关系">科学研究</span>
+    </div>
+    <div class="dep-chain">NVIDIA 消耗 TSMC CoWoS 产能 <b style="color:#fbbf24">50-60%</b>，SK Hynix HBM <b style="color:#fbbf24">90%+</b> 供 NVIDIA。任一短缺即影响出货。</div>
+  </div>
+
+  <!-- 2. Foundry -->
+  <div class="dep-card" style="border-left:4px solid #00a19c">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(0,161,156,.15)">🏭</div>
+      <div><div class="dep-card-title">晶圆代工 Foundry</div><div class="dep-card-company">TSMC 62% · 三星 13% · Intel 5%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游</div>
+      <span class="dep-tag 供给关系">ASML EUV 光刻机</span>
+      <span class="dep-tag 供给关系">EDA 工具 (设计文件)</span>
+      <span class="dep-tag 供给关系">硅晶圆 (信越/SUMCO)</span>
+      <span class="dep-tag 供给关系">化学材料 (东京应化/JSR)</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 硬依赖">所有 AI 芯片</span>
+      <span class="dep-tag 硬依赖">HBM/DRAM/NAND</span>
+      <span class="dep-tag 硬依赖">手机/PC SoC</span>
+      <span class="dep-tag 硬依赖">自动驾驶芯片</span>
+    </div>
+    <div class="dep-chain">TSMC 在 ≤7nm 先进制程几近垄断，是<span style="color:#f87171">全球 AI 产业的单点瓶颈</span>。ASML EUV 光刻机年产量仅 ~50 台，台积电拿走大半。</div>
+  </div>
+
+  <!-- 3. CoWoS -->
+  <div class="dep-card" style="border-left:4px solid #a855f7">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(168,85,247,.15)">📦</div>
+      <div><div class="dep-card-title">先进封装 CoWoS</div><div class="dep-card-company">TSMC ~55% · ASE ~22% · Amkor ~10%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游</div>
+      <span class="dep-tag 硬依赖">GPU 裸片 (台积电前道)</span>
+      <span class="dep-tag 硬依赖">HBM 堆叠 (SK 海力士)</span>
+      <span class="dep-tag 供给关系">硅中介层 (TSMC 自制)</span>
+      <span class="dep-tag 供给关系">ABF 基板 (Ibiden/欣兴)</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 硬依赖">NVIDIA B 系列 GPU</span>
+      <span class="dep-tag 硬依赖">AMD MI300/400</span>
+      <span class="dep-tag 供给关系">Google TPU</span>
+      <span class="dep-tag 供给关系">Amazon Trainium</span>
+    </div>
+    <div class="dep-chain"><b style="color:#f87171">当前 AI 产业最大产能瓶颈</b>。2025 年月产能 6.5-7.5 万片，2026 目标 9-11 万片。NVIDIA 需求远超供给。</div>
+  </div>
+
+  <!-- 4. HBM -->
+  <div class="dep-card" style="border-left:4px solid #f05628">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(240,86,40,.15)">🧩</div>
+      <div><div class="dep-card-title">HBM 高带宽内存</div><div class="dep-card-company">SK 海力士 62% · 美光 21% · 三星 17%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游</div>
+      <span class="dep-tag 硬依赖">DRAM 晶圆制造</span>
+      <span class="dep-tag 硬依赖">TSV 硅通孔技术</span>
+      <span class="dep-tag 供给关系">CoWoS / 先进封装</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 硬依赖">NVIDIA GPU (必配)</span>
+      <span class="dep-tag 硬依赖">AMD GPU</span>
+      <span class="dep-tag 硬依赖">Google TPU</span>
+      <span class="dep-tag 硬依赖">Intel Gaudi</span>
+    </div>
+    <div class="dep-chain">每颗 H100 配 6 颗 HBM，<b style="color:#fbbf24">B200 配 8 颗 HBM3E</b>。SK 海力士 HBM4（2026）预计独占 NVIDIA Rubin 平台 <b style="color:#fbbf24">~70%</b> 份额。</div>
+  </div>
+
+  <!-- 5. DRAM + NAND together -->
+  <div class="dep-card" style="border-left:4px solid #e74c3c">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(231,76,60,.15)">💾</div>
+      <div><div class="dep-card-title">DRAM / NAND 存储</div><div class="dep-card-company">三星 · SK 海力士 · CXMT · YMTC</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游</div>
+      <span class="dep-tag 硬依赖">晶圆代工 (自家 Fab)</span>
+      <span class="dep-tag 供给关系">ASML EUV/DUV</span>
+      <span class="dep-tag 供给关系">EDA / 材料</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 硬依赖">AI 服务器 (DDR5)</span>
+      <span class="dep-tag 硬依赖">HBM (DRAM 为基础)</span>
+      <span class="dep-tag 硬依赖">企业存储 (SSD)</span>
+      <span class="dep-tag 供给关系">数据标注/处理</span>
+    </div>
+    <div class="dep-chain">
+      DRAM: 三星 38% · SK 海力士 29% · <b style="color:#f87171">长鑫科技 CXMT 8%</b> (中国唯一规模化 DRAM 厂商)<br>
+      NAND: 三星 29% · <b style="color:#3b82f6">长江存储 YMTC 13%</b> (XTacking 3D 架构全球领先)
+    </div>
+  </div>
+
+  <!-- 6. AI Server ODM -->
+  <div class="dep-card" style="border-left:4px solid #6366f1">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(99,102,241,.15)">🖥️</div>
+      <div><div class="dep-card-title">AI 服务器 ODM/组装</div><div class="dep-card-company">Foxconn 40% · Quanta 15% · Wistron 12%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游 (组装所有硬件)</div>
+      <span class="dep-tag 硬依赖">GPU 模组 (NVIDIA)</span>
+      <span class="dep-tag 硬依赖">HBM/DRAM/SSD</span>
+      <span class="dep-tag 硬依赖">主板/PCB (沪电/鹏鼎)</span>
+      <span class="dep-tag 硬依赖">电源模块 (台达)</span>
+      <span class="dep-tag 硬依赖">机壳/连接器</span>
+      <span class="dep-tag 供给关系">液冷组件 (Vertiv)</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 硬依赖">云计算 IaaS</span>
+      <span class="dep-tag 硬依赖">企业私有 AI DC</span>
+      <span class="dep-tag 供给关系">NVIDIA 整机柜 NVL72</span>
+    </div>
+    <div class="dep-chain"><b style="color:#6366f1">工业富联 Foxconn</b> 全球 AI 服务器份额超 40%。NVIDIA GB200 NVL72 整机柜由 Foxconn/Quanta 独家交付。</div>
+  </div>
+
+  <!-- 7. 光模块 -->
+  <div class="dep-card" style="border-left:4px solid #f43f5e">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(244,63,94,.15)">🔦</div>
+      <div><div class="dep-card-title">光模块 800G/1.6T</div><div class="dep-card-company">Lumentum 21% · Coherent 18% · 中际旭创 14%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游</div>
+      <span class="dep-tag 供给关系">激光器芯片 (EML/CW)</span>
+      <span class="dep-tag 供给关系">DSP 芯片 (Broadcom/Marvell)</span>
+      <span class="dep-tag 供给关系">硅光 SiPh 工艺</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 硬依赖">数据中心交换机</span>
+      <span class="dep-tag 硬依赖">GPU 集群互联</span>
+      <span class="dep-tag 赋能关系">CPO 共封装 (下一代)</span>
+    </div>
+    <div class="dep-chain">800G 光模块 2025 出货量爆发。GPU 集群规模越大，光模块用量指数增长。1.6T 2026 量产。</div>
+  </div>
+
+  <!-- 8. Cloud IaaS -->
+  <div class="dep-card" style="border-left:4px solid #ff9900">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(255,153,0,.15)">☁️</div>
+      <div><div class="dep-card-title">云计算 IaaS</div><div class="dep-card-company">AWS 30% · Azure 25% · GCP 13%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游 (硬件 + 能源)</div>
+      <span class="dep-tag 硬依赖">AI 服务器</span>
+      <span class="dep-tag 硬依赖">数据中心交换机</span>
+      <span class="dep-tag 硬依赖">光模块互联</span>
+      <span class="dep-tag 硬依赖">液冷散热</span>
+      <span class="dep-tag 硬依赖">电力/能源</span>
+      <span class="dep-tag 供给关系">土地/建筑</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 技术依赖">LLM 训练/推理</span>
+      <span class="dep-tag 技术依赖">所有 AI SaaS</span>
+      <span class="dep-tag 技术依赖">MaaS (模型即服务)</span>
+      <span class="dep-tag 赋能关系">企业数字化转型</span>
+    </div>
+    <div class="dep-chain">2025 年 CSP 资本开支 ~$350B，其中 <b>70%+</b> 投向 AI 基础设施。云厂商是 GPU 最大买家。</div>
+  </div>
+
+  <!-- 9. LLM -->
+  <div class="dep-card" style="border-left:4px solid #d97706">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(217,119,6,.15)">🧠</div>
+      <div><div class="dep-card-title">大语言模型 (闭源)</div><div class="dep-card-company">Anthropic 40% · OpenAI 27% · Google 21%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游 (6 条关键依赖)</div>
+      <span class="dep-tag 硬依赖">云计算 GPU 集群</span>
+      <span class="dep-tag 技术依赖">PyTorch/JAX 框架</span>
+      <span class="dep-tag 技术依赖">数据标注 (SFT/RLHF)</span>
+      <span class="dep-tag 技术依赖">MLOps 训练平台</span>
+      <span class="dep-tag 技术依赖">HuggingFace 模型生态</span>
+      <span class="dep-tag 供给关系">NVIDIA GPU 供应</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖 (几乎赋能所有 AI 应用)</div>
+      <span class="dep-tag 技术依赖">AI 编程助手</span>
+      <span class="dep-tag 技术依赖">AI Agent 框架</span>
+      <span class="dep-tag 技术依赖">AI 搜索/对话</span>
+      <span class="dep-tag 技术依赖">AIGC 生成</span>
+      <span class="dep-tag 技术依赖">向量数据库 (RAG)</span>
+      <span class="dep-tag 赋能关系">自动驾驶/机器人</span>
+      <span class="dep-tag 赋能关系">医疗/金融/安全</span>
+    </div>
+    <div class="dep-chain"><b>LLM 是 AI 产业的中枢节点</b> — 向上依赖算力+数据+框架，向下赋能所有应用层。Anthropic 企业 API 份额从 24%→40%。</div>
+  </div>
+
+  <!-- 10. AI Coding -->
+  <div class="dep-card" style="border-left:4px solid #2ea44f">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(46,164,79,.15)">🤖</div>
+      <div><div class="dep-card-title">AI 编程助手</div><div class="dep-card-company">Copilot 42% · Cursor 28% · Claude Code 15%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游</div>
+      <span class="dep-tag 技术依赖">LLM API (Anthropic/OpenAI)</span>
+      <span class="dep-tag 技术依赖">Agent 框架 (MCP)</span>
+      <span class="dep-tag 供给关系">IDE 生态 (VS Code/JetBrains)</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 赋能关系">软件开发者 (数千万)</span>
+      <span class="dep-tag 赋能关系">企业研发效率</span>
+    </div>
+    <div class="dep-chain">编程助手是 LLM 技术栈上 <b style="color:#fbbf24">第一个达到 $10B+ 规模的杀手应用</b>。Copilot 4.7M 付费用户，Cursor ARR $2B。</div>
+  </div>
+
+  <!-- 11. AIGC -->
+  <div class="dep-card" style="border-left:4px solid #3b82f6">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(59,130,246,.15)">🎨</div>
+      <div><div class="dep-card-title">AIGC 图像 / 视频 / 音乐</div><div class="dep-card-company">Midjourney · Sora · Runway · Suno</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游</div>
+      <span class="dep-tag 技术依赖">多模态 LLM (GPT-4o/Gemini)</span>
+      <span class="dep-tag 技术依赖">Diffusion 模型 (SD/Flux)</span>
+      <span class="dep-tag 技术依赖">GPU 推理集群</span>
+      <span class="dep-tag 供给关系">HuggingFace 开源模型</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 赋能关系">广告/营销/设计</span>
+      <span class="dep-tag 赋能关系">影视/游戏制作</span>
+      <span class="dep-tag 赋能关系">社交媒体内容</span>
+    </div>
+    <div class="dep-chain">Midjourney v7 图像质量接近摄影级。Sora 推动视频生成商业化。可灵/即梦在中国市场份额领先。</div>
+  </div>
+
+  <!-- 12. 自动驾驶 -->
+  <div class="dep-card" style="border-left:4px solid #e82127">
+    <div class="dep-card-header">
+      <div class="dep-card-icon" style="background:rgba(232,33,39,.15)">🚗</div>
+      <div><div class="dep-card-title">L4 自动驾驶</div><div class="dep-card-company">Waymo 35% · Tesla 28% · 百度 15%</div></div>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label up">▼ 依赖上游</div>
+      <span class="dep-tag 硬依赖">端侧 AI 芯片 (Orin/Thor)</span>
+      <span class="dep-tag 技术依赖">多模态 LLM (VLM)</span>
+      <span class="dep-tag 技术依赖">PyTorch 训练框架</span>
+      <span class="dep-tag 硬依赖">激光雷达/摄像头/毫米波</span>
+      <span class="dep-tag 供给关系">高精地图 (HD Map)</span>
+      <span class="dep-tag 技术依赖">仿真平台 + 数据标注</span>
+    </div>
+    <div class="dep-section">
+      <div class="dep-label down">▼ 被下游依赖</div>
+      <span class="dep-tag 赋能关系">出行服务 (Robotaxi)</span>
+      <span class="dep-tag 赋能关系">物流配送</span>
+      <span class="dep-tag 赋能关系">城市交通管理</span>
+    </div>
+    <div class="dep-chain">Waymo 旧金山网约车份额达 <b>20-27%</b>。Tesla FSD 依赖自研 Dojo 超算训练。</div>
+  </div>
+
+</div>
+
+<!-- ============ 依赖关系矩阵总览 ============ -->
+<div class="chain-hero">
+  <h2>📊 核心依赖关系矩阵</h2>
+  <p style="text-align:center;color:#666;margin-bottom:20px;font-size:.85em">
+    （行=依赖方 → 列=被依赖方） 红色=硬依赖 紫色=技术依赖 橙色=供给关系
+  </p>
+
+  <div style="overflow-x:auto;font-size:.78em;color:#999;line-height:1.8">
+<pre style="white-space:pre;font-family:monospace;color:#c8c8c8">
+                         被 依 赖 方 →
+依赖方 ↓                  TSMC  CoWoS  GPU  HBM  DRAM  NAND  EDA  服务器 光模块 交换机 液冷  电力  云   框架  LLM  向量DB Agent 编程  标注  AIGC  驾驶
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+GPU 芯片                   <span style="color:#ef4444">███</span>   <span style="color:#ef4444">███</span>    -   <span style="color:#ef4444">███</span>   ·     ·   <span style="color:#ef4444">██</span>    ·     ·     ·     ·    ·    ·    ·    ·    ·    ·    ·    ·    ·     ·
+CoWoS 封装                  ·      -     ·   <span style="color:#ef4444">███</span>   ·     ·    ·     ·     ·     ·     ·    ·    ·    ·    ·    ·    ·    ·    ·    ·     ·
+HBM 内存                    ·    <span style="color:#ef4444">██</span>    ·    -    <span style="color:#ef4444">███</span>   ·    ·     ·     ·     ·     ·    ·    ·    ·    ·    ·    ·    ·    ·    ·     ·
+DRAM/NAND 存储              ·      ·     ·    ·    -     ·    ·     ·     ·     ·     ·    ·    ·    ·    ·    ·    ·    ·    ·    ·     ·
+AI 服务器 ODM              <span style="color:#f59e0b">···</span>   <span style="color:#f59e0b">···</span>  <span style="color:#ef4444">███</span> <span style="color:#ef4444">███</span>  <span style="color:#ef4444">███</span>  <span style="color:#ef4444">██</span>   ·     -    <span style="color:#f59e0b">···</span>   <span style="color:#f59e0b">···</span>  <span style="color:#f59e0b">···</span>  <span style="color:#f59e0b">···</span>   ·    ·    ·    ·    ·    ·    ·     ·
+光模块                      ·      ·     ·    ·     ·     ·    ·     ·     -     <span style="color:#f59e0b">···</span>   ·    ·    ·    ·    ·    ·    ·    ·    ·     ·
+数据中心交换机              ·      ·     ·    ·     ·     ·    ·     ·   <span style="color:#ef4444">███</span>    -     ·    ·    ·    ·    ·    ·    ·    ·    ·     ·
+液冷散热                    ·      ·     ·    ·     ·     ·    ·     ·     ·     ·     -    <span style="color:#f59e0b">···</span>  <span style="color:#f59e0b">···</span>  ·    ·    ·    ·    ·    ·     ·
+云计算 IaaS                <span style="color:#f59e0b">···</span>    ·   <span style="color:#ef4444">███</span>  ·     ·     ·    ·   <span style="color:#ef4444">███</span>  <span style="color:#ef4444">███</span>  <span style="color:#ef4444">███</span>  <span style="color:#ef4444">███</span> <span style="color:#ef4444">███</span>   -    ·    ·    ·    ·    ·    ·     ·
+大语言模型 LLM             <span style="color:#f59e0b">···</span>    ·   <span style="color:#ef4444">███</span>  ·     ·     ·    ·     ·     ·     ·     ·    ·   <span style="color:#ef4444">███</span>  <span style="color:#8b5cf6">███</span>   -    <span style="color:#8b5cf6">███</span>  <span style="color:#8b5cf6">███</span>  <span style="color:#8b5cf6">███</span> <span style="color:#8b5cf6">███</span>  <span style="color:#8b5cf6">███</span>  ·      ·
+向量数据库                  ·      ·     ·    ·     ·     ·    ·     ·     ·     ·     ·    ·    ·    ·   <span style="color:#8b5cf6">███</span>   -     ·     ·     ·     ·      ·
+AI Agent 框架               ·      ·     ·    ·     ·     ·    ·     ·     ·     ·     ·    ·    ·    ·   <span style="color:#8b5cf6">███</span>  <span style="color:#8b5cf6">███</span>   -     ·     ·     ·      ·
+AI 编程助手                 ·      ·     ·    ·     ·     ·    ·     ·     ·     ·     ·    ·    ·    ·   <span style="color:#8b5cf6">███</span>   ·    <span style="color:#8b5cf6">███</span>   -     ·     ·      ·
+数据标注                    ·      ·     ·    ·     ·     ·    ·     ·     ·     ·     ·    ·    ·    ·   <span style="color:#8b5cf6">███</span>   ·     ·     ·     -     ·      ·
+AIGC 生成                   ·      ·     ·    ·     ·     ·    ·     ·     ·     ·     ·    ·    ·    ·   <span style="color:#8b5cf6">███</span>   ·     ·     ·   <span style="color:#8b5cf6">███</span>    -      ·
+自动驾驶                    ·      ·     ·    ·     ·     ·    ·     ·     ·     ·     ·    ·    ·    ·   <span style="color:#8b5cf6">███</span>   ·     ·     ·   <span style="color:#8b5cf6">███</span>   ·      -
+</pre>
+  </div>
+  <div style="display:flex;gap:30px;justify-content:center;margin-top:16px;font-size:.8em">
+    <span><span style="color:#ef4444">███</span> 硬依赖</span>
+    <span><span style="color:#8b5cf6">███</span> 技术依赖</span>
+    <span><span style="color:#f59e0b">···</span> 供给关系</span>
+    <span>· 弱/无直接关系</span>
+  </div>
+</div>
+
+<!-- ============ 总结 ============ -->
+<div class="chain-hero">
+  <h2 style="color:#f87171">🔑 关键洞察</h2>
+  <div class="dep-grid" style="grid-template-columns:repeat(auto-fit,minmax(350px,1fr))">
+    <div class="dep-card" style="border-left:4px solid #ef4444">
+      <div style="font-weight:700;color:#f87171;margin-bottom:8px">单点瓶颈 #1: TSMC + CoWoS</div>
+      <div style="font-size:.82em;color:#999;line-height:1.7">
+        全球先进制程 + CoWoS 封装几乎全部依赖 TSMC。NVIDIA GPU 缺货的根本原因不是芯片设计，而是<b> CoWoS 封装产能不足</b>。2025 年月产能仅 6.5-7.5 万片。
+      </div>
+    </div>
+    <div class="dep-card" style="border-left:4px solid #f59e0b">
+      <div style="font-weight:700;color:#fbbf24;margin-bottom:8px">单点瓶颈 #2: HBM 供给</div>
+      <div style="font-size:.82em;color:#999;line-height:1.7">
+        SK 海力士 HBM3E 几乎独占 NVIDIA 供应。HBM 生产周期长(3-4 个月)，良率低，产能扩张慢。每颗 GPU 配 6-8 颗 HBM，<b>AI 算力增长 = HBM 需求倍增</b>。
+      </div>
+    </div>
+    <div class="dep-card" style="border-left:4px solid #8b5cf6">
+      <div style="font-weight:700;color:#a78bfa;margin-bottom:8px">技术栈中枢: LLM 是最关键的中间层</div>
+      <div style="font-size:.82em;color:#999;line-height:1.7">
+        LLM 向上消耗所有算力基础设施，向下赋能<b>所有 AI 应用</b>（编程、搜索、AIGC、自动驾驶、机器人、医疗、金融）。理解了 LLM 的依赖关系，就理解了整个 AI 产业。
+      </div>
+    </div>
+    <div class="dep-card" style="border-left:4px solid #06b6d4">
+      <div style="font-weight:700;color:#22d3ee;margin-bottom:8px">中国企业的位置</div>
+      <div style="font-size:.82em;color:#999;line-height:1.7">
+        上游: 工业富联(ODM 40%)、长鑫科技(DRAM 8%)、长江存储(NAND 13%)、中际旭创(光模块 14%)<br>
+        中游: DeepSeek(开源 LLM ~25%)、阿里 Qwen(~18%)、Milvus(向量 DB)<br>
+        下游: 百度 Apollo(自动驾驶 15%)、宇树(机器人 15%)、可灵(AIGC)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="source-box">
+  数据来源: Counterpoint Research · Synergy Research Group Q1 2026 · Menlo VC 2025 Enterprise AI Report · Silicon Analysts ·
+  IDC Ethernet Switch Tracker · Chosun Biz · Visual Capitalist · Grand View Research · Fortune Business Insights · Goldman Sachs<br>
+  注: ~ 表示估算值 ｜ 依赖关系类型: 硬依赖(缺了无法运行)、技术依赖(技术栈必须调用)、供给关系(商业上下游)、赋能关系(非必须但显著提升)
+</div>
+
+</div>
+</body>
+</html>

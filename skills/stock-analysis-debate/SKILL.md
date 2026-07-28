@@ -130,7 +130,13 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 
 **CRITICAL**: Launch ALL 4 analyst agents in a SINGLE message as parallel Agent tool calls. Do NOT use `run_in_background` — use foreground calls so results return to the main conversation. The system will execute them in parallel and wait for all to complete.
 
-**IMPORTANT**: Tell each agent to read its prompt file AND the data files it needs. Include summaries of the key data directly in the agent prompt so the agent doesn't need to discover which files to read.
+**IMPORTANT — Main session must NOT read prompt files or data files before dispatching analysts.** Each sub-agent reads its own prompt file and data files via the Read tool — the main session reading them too is pure context waste. The main session only tells each agent:
+- Full absolute file paths to: its prompt file + all required data files
+- Instrument context: ticker, market, currency, current price
+- Phase 1.1 findings: data_as_of_date, trading_days, warning_no_200_sma flag, indicator_sufficiency summary
+- For Segment Analyst: also mention the segment list from `segments.yaml`
+
+The sub-agent discovers everything else by reading the files itself.
 
 ### The 4 Analysts (launch simultaneously in one message):
 
