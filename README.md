@@ -46,7 +46,8 @@
 ### 多业务分部视角（仅 HK/US）
 
 - **Phase 1.5**：`prepare_segments.py --gen-yaml` 以长桥 `revenue-sankey?report=qf` 为唯一分部数据源，生成 `revenue_sankey.json`、`revenue_sankey.csv` 和 ticker 级 `segments.yaml`。CSV 完整保留桑基节点，并按 `node_key` 本地计算 QoQ/YoY，补充节点分类、抵销前分部构成、合并勾稽和 Level-1 分部缺失检测；不再抓取或保存 `business_historical`。
-- **Segment Analyst**：条件触发（`multi_segment: true`），读取增强后的 `revenue_sankey.csv`，识别业务线增长/衰退拐点及长桥桑基口径下的利润结构变化，判断对集团股价综合方向。
+- **Segment Analyst**：条件触发（`multi_segment: true`），与其他 Phase 2 分析师独立并行，读取增强后的 `revenue_sankey.csv` 和 `income_stmt.csv`，识别业务线增长/衰退拐点及长桥桑基口径下的利润结构变化，判断对集团股价综合方向；不依赖 News Analyst 的中间结果。
+- **Phase 2 产物**：所有适用分析师返回后，由主会话将 4 或 5 份完整响应统一写入并校验 `phase2_analyst_reports.md`，再进入辩论阶段。
 - **CN 市场不走业务线分析**（长桥无 A 股分部数据），退化为 4 分析师流程。
 - **降级**：长桥抓取失败时生成 `segments_fetch_failed.flag`，跳过分部视角，不阻断分析。
 
