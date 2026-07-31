@@ -60,6 +60,105 @@ def test_dedup_empty_list():
     assert dedup_by_title([]) == []
 
 
+from news_filter import render_news_evidence
+
+
+def test_render_news_evidence_preserves_summary_and_marks_content_level():
+    articles = [
+        {
+            "title": "公司发布季度业绩",
+            "date": "2026-07-30 09:00",
+            "provider": "Example News",
+            "link": "https://example.com/earnings",
+            "summary": "季度收入同比增长 20%。",
+        },
+        {
+            "title": "分析师调整目标价",
+            "date": "2026-07-30 10:00",
+            "provider": "Example News",
+            "link": "https://example.com/target",
+            "summary": "",
+        },
+    ]
+
+    text, stats = render_news_evidence(articles, "2026-07-01", "2026-07-31")
+
+    assert "### [N001] 公司发布季度业绩" in text
+    assert "Content Level: summary" in text
+    assert "Summary: 季度收入同比增长 20%。" in text
+    assert "### [N002] 分析师调整目标价" in text
+    assert "Content Level: title_only" in text
+    assert stats == {
+        "summary": 1,
+        "title_only": 1,
+        "social_data_available": False,
+    }
+
+
+def test_render_news_evidence_ids_follow_final_article_order():
+    articles = [
+        _article("第一条新闻", "2026-07-30 09:00"),
+        _article("第二条新闻", "2026-07-30 10:00"),
+    ]
+
+    first_text, _ = render_news_evidence(articles, "2026-07-01", "2026-07-31")
+    second_text, _ = render_news_evidence(articles, "2026-07-01", "2026-07-31")
+
+    assert first_text == second_text
+    assert first_text.index("[N001] 第一条新闻") < first_text.index("[N002] 第二条新闻")
+
+
+def test_render_news_evidence_discloses_missing_social_dataset():
+    text, stats = render_news_evidence([], "2026-07-01", "2026-07-31")
+
+    assert "Social Data Available: false" in text
+    assert "no first-party social-media posts or platform sentiment metrics" in text
+    assert stats["social_data_available"] is False
+
+
+from fetch_data import process_and_write_news
+
+
+def test_process_and_write_news_merges_evidence_and_audit_counts(tmp_path):
+    raw_items = [
+        {
+            "title": "公司发布季度业绩",
+            "date": "2026-07-30 09:00",
+            "provider": "Example News",
+            "link": "https://example.com/earnings",
+            "summary": "季度收入同比增长 20%。",
+        },
+        {
+            "title": "分析师调整目标价",
+            "date": "2026-07-30 10:00",
+            "provider": "Example News",
+            "link": "https://example.com/target",
+            "summary": "",
+        },
+    ]
+    news_path = tmp_path / "news.txt"
+    legacy_meta_path = tmp_path / "news_meta.txt"
+    legacy_meta_path.write_text("stale audit")
+
+    kept = process_and_write_news(
+        raw_items,
+        "2026-07-31",
+        "2026-07-01",
+        str(news_path),
+        market="US",
+    )
+
+    news_text = news_path.read_text()
+    assert kept == 2
+    assert "[N001] 公司发布季度业绩" in news_text
+    assert "Summary: 季度收入同比增长 20%。" in news_text
+    assert "## News Processing Audit (2026-07-01 to 2026-07-31)" in news_text
+    assert "content_level_summary: 1" in news_text
+    assert "content_level_title_only: 1" in news_text
+    assert "social_data_available: false" in news_text
+    assert not legacy_meta_path.exists()
+
+
 from news_filter import is_noise, filter_noise
 
 

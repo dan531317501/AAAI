@@ -12,6 +12,7 @@ from typing import Any
 
 
 AUDIT_HEADING = "## Point-in-Time Valuation and GAAP Operating Profit Audit"
+RECONCILIATION_TOLERANCE = 0.05
 
 
 def _parse_number(value: str | None) -> float | None:
@@ -75,6 +76,42 @@ def _statement_value(
     return _parse_number(row[period_index])
 
 
+def _latest_statement_values(
+    periods: list[str],
+    rows: dict[str, list[str]],
+    label: str,
+    count: int,
+) -> list[tuple[str, float]]:
+    row = rows.get(label)
+    if row is None:
+        return []
+
+    latest_periods = sorted(
+        zip(periods, row),
+        key=lambda item: item[0],
+        reverse=True,
+    )[:count]
+    values: list[tuple[str, float]] = []
+    for period, raw_value in latest_periods:
+        value = _parse_number(raw_value)
+        if period and value is not None:
+            values.append((period, value))
+    return values
+
+
+def _relative_difference(
+    provider_value: float | None,
+    statement_value: float | None,
+) -> float | None:
+    if (
+        provider_value is None
+        or statement_value is None
+        or statement_value == 0
+    ):
+        return None
+    return abs(provider_value - statement_value) / abs(statement_value)
+
+
 def _latest_close(ohlcv_text: str) -> tuple[str | None, float | None]:
     data_lines = [
         line for line in ohlcv_text.splitlines()
@@ -132,6 +169,10 @@ def compute_point_in_time_metrics(
     cash_and_investments = balance(
         "Cash Cash Equivalents And Short Term Investments"
     )
+    provider_ttm_eps = fundamentals.get("EPS (TTM)")
+    provider_ttm_pe = fundamentals.get("PE Ratio (TTM)")
+    provider_forward_eps = fundamentals.get("Forward EPS")
+    provider_forward_pe = fundamentals.get("Forward PE")
     provider_ttm_ebitda = fundamentals.get("EBITDA")
     total_revenue = income("Total Revenue")
     reported_operating_income = income("Total Operating Income As Reported")
@@ -171,6 +212,59 @@ def compute_point_in_time_metrics(
         if reported_operating_income is not None and total_revenue not in (None, 0)
         else None
     )
+    diluted_eps_quarters = _latest_statement_values(
+        income_periods, income_rows, "Diluted EPS", 4
+    )
+    statement_ttm_eps = (
+        sum(value for _, value in diluted_eps_quarters)
+        if len(diluted_eps_quarters) == 4
+        else None
+    )
+    statement_ttm_pe = (
+        current_price / statement_ttm_eps
+        if current_price is not None
+        and statement_ttm_eps is not None
+        and statement_ttm_eps > 0
+        else None
+    )
+    ttm_eps_difference = _relative_difference(provider_ttm_eps, statement_ttm_eps)
+    ttm_pe_difference = _relative_difference(provider_ttm_pe, statement_ttm_pe)
+
+    if statement_ttm_eps is None:
+        ttm_reconciliation_status = (
+            "provider_only" if provider_ttm_eps is not None else "unavailable"
+        )
+    elif provider_ttm_eps is None:
+        ttm_reconciliation_status = "statement_only"
+    elif (
+        ttm_eps_difference is not None
+        and ttm_eps_difference > RECONCILIATION_TOLERANCE
+    ) or (
+        ttm_pe_difference is not None
+        and ttm_pe_difference > RECONCILIATION_TOLERANCE
+    ):
+        ttm_reconciliation_status = "mismatch"
+    else:
+        ttm_reconciliation_status = "verified"
+
+    preferred_ttm_eps = statement_ttm_eps
+    preferred_ttm_pe = statement_ttm_pe
+    preferred_ttm_source = (
+        "quarterly income statement"
+        if statement_ttm_eps is not None
+        else None
+    )
+
+    computed_forward_pe = (
+        current_price / provider_forward_eps
+        if current_price is not None
+        and provider_forward_eps is not None
+        and provider_forward_eps > 0
+        else None
+    )
+    forward_pe_difference = _relative_difference(
+        provider_forward_pe, computed_forward_pe
+    )
     operating_income_gap = (
         derived_operating_income - reported_operating_income
         if derived_operating_income is not None
@@ -198,6 +292,21 @@ def compute_point_in_time_metrics(
         "total_debt": total_debt,
         "cash_and_short_term_investments": cash_and_investments,
         "simplified_enterprise_value": enterprise_value,
+        "provider_ttm_eps": provider_ttm_eps,
+        "provider_ttm_pe": provider_ttm_pe,
+        "statement_ttm_diluted_eps": statement_ttm_eps,
+        "statement_ttm_pe": statement_ttm_pe,
+        "ttm_eps_periods": [period for period, _ in diluted_eps_quarters],
+        "ttm_eps_difference": ttm_eps_difference,
+        "ttm_pe_difference": ttm_pe_difference,
+        "ttm_valuation_reconciliation_status": ttm_reconciliation_status,
+        "preferred_ttm_eps": preferred_ttm_eps,
+        "preferred_ttm_pe": preferred_ttm_pe,
+        "preferred_ttm_source": preferred_ttm_source,
+        "provider_forward_eps": provider_forward_eps,
+        "provider_forward_pe": provider_forward_pe,
+        "computed_provider_forward_pe": computed_forward_pe,
+        "forward_pe_difference": forward_pe_difference,
         "provider_ttm_ebitda": provider_ttm_ebitda,
         "ev_to_provider_ttm_ebitda": ev_to_ebitda,
         "total_revenue": total_revenue,
@@ -227,8 +336,29 @@ def compute_point_in_time_metrics(
         reported_operating_income,
         reported_operating_margin,
     )
-    result["status"] = "complete" if all(v is not None for v in required) else "partial"
+    base_complete = all(v is not None for v in required)
+    if not base_complete or ttm_reconciliation_status in (
+        "provider_only",
+        "unavailable",
+    ):
+        result["status"] = "partial"
+    elif ttm_reconciliation_status == "mismatch":
+        result["status"] = "conflict"
+    else:
+        result["status"] = "complete"
     result["warnings"] = []
+    if ttm_reconciliation_status == "mismatch":
+        result["warnings"].append(
+            "Provider TTM EPS/P/E conflicts with the latest four quarterly "
+            "Diluted EPS values. Use the statement-derived TTM EPS/P/E and "
+            "disclose the provider mismatch."
+        )
+    elif ttm_reconciliation_status in ("provider_only", "unavailable"):
+        result["warnings"].append(
+            "Fewer than four valid quarterly Diluted EPS values are available; "
+            "TTM EPS/P/E cannot be independently reconciled. Keep preferred "
+            "TTM EPS/P/E unavailable; provider values are disclosure-only."
+        )
     if reported_operating_income is None and derived_operating_income is not None:
         result["warnings"].append(
             "GAAP 'Total Operating Income As Reported' is unavailable; "
@@ -243,6 +373,10 @@ def _amount(value: float | None) -> str:
 
 def _ratio(value: float | None) -> str:
     return "N/A" if value is None else f"{value:.4f}"
+
+
+def _percent(value: float | None) -> str:
+    return "N/A" if value is None else f"{value * 100:.2f}%"
 
 
 def render_audit(metrics: dict[str, Any]) -> str:
@@ -267,6 +401,27 @@ def render_audit(metrics: dict[str, Any]) -> str:
         f"{_amount(metrics.get('cash_and_short_term_investments'))}",
         "Simplified Enterprise Value: "
         f"{_amount(metrics.get('simplified_enterprise_value'))}",
+        f"Provider TTM EPS: {_ratio(metrics.get('provider_ttm_eps'))}",
+        f"Provider TTM P/E: {_ratio(metrics.get('provider_ttm_pe'))}",
+        "Statement-Derived TTM Diluted EPS: "
+        f"{_ratio(metrics.get('statement_ttm_diluted_eps'))}",
+        f"Statement-Derived TTM P/E: {_ratio(metrics.get('statement_ttm_pe'))}",
+        "TTM EPS Statement Periods: "
+        f"{', '.join(metrics.get('ttm_eps_periods', [])) or 'N/A'}",
+        f"TTM EPS Difference: {_percent(metrics.get('ttm_eps_difference'))}",
+        f"TTM P/E Difference: {_percent(metrics.get('ttm_pe_difference'))}",
+        "TTM Valuation Reconciliation Status: "
+        f"{metrics.get('ttm_valuation_reconciliation_status', 'unavailable')}",
+        f"Preferred TTM EPS: {_ratio(metrics.get('preferred_ttm_eps'))}",
+        f"Preferred TTM P/E: {_ratio(metrics.get('preferred_ttm_pe'))}",
+        "Preferred TTM Source: "
+        f"{metrics.get('preferred_ttm_source') or 'N/A'}",
+        f"Provider Forward EPS: {_ratio(metrics.get('provider_forward_eps'))}",
+        f"Provider Forward P/E: {_ratio(metrics.get('provider_forward_pe'))}",
+        "Computed Provider-Implied Forward P/E: "
+        f"{_ratio(metrics.get('computed_provider_forward_pe'))}",
+        "Provider Forward P/E Difference: "
+        f"{_percent(metrics.get('forward_pe_difference'))}",
         f"Provider TTM EBITDA: {_amount(metrics.get('provider_ttm_ebitda'))}",
         "Point-in-Time EV / Provider TTM EBITDA: "
         f"{_ratio(metrics.get('ev_to_provider_ttm_ebitda'))}",
@@ -291,6 +446,12 @@ def render_audit(metrics: dict[str, Any]) -> str:
         "over the provider snapshot fields above.",
         "- EV/EBITDA must use Simplified Enterprise Value divided by Provider "
         "TTM EBITDA; keep both numerator and denominator in the same base currency.",
+        "- Prefer Statement-Derived TTM Diluted EPS and P/E whenever four "
+        "quarters are available. If reconciliation status is mismatch, disclose "
+        "the provider values and do not use them as the valuation anchor.",
+        "- Forward EPS and Forward P/E are provider consensus snapshot fields. "
+        "Their arithmetic can be checked, but the forecast itself is not "
+        "independently audited.",
         "- Use GAAP Operating Income As Reported for GAAP operating-profit and "
         "margin claims. The derived Operating Income field is not a substitute.",
     ]

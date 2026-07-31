@@ -35,7 +35,9 @@
 - **去重**：数据层做标题归一化后完全相同去重；近似重复（媒体洗稿）交由 News Analyst LLM 识别。
 - **去噪**：关键词 + 来源黑名单过滤明显噪声（地缘无关/鸡汤/国旗等）。
 - **打分标注**：News Analyst 对每条新闻打影响力分(0-3) + 标注业务线，输出高分事件表与业务线命中表。
-- 全量保留可审计：`news_meta.txt` 记录抓取/去重/去噪统计。
+- **证据可审计**：`news.txt` 为最终新闻分配稳定的 `[Nxxx]` 编号，标明 `title_only`/`summary` 内容层级并保留可用摘要；分析师只能在对应证据边界内陈述事实。
+- **社交数据降级**：当前抓取链路不采集社交帖子或平台情绪指标，`news.txt` 显式记录 `social_data_available: false`；Social Media Analyst 必须输出 `Not Rated`，不得生成提及量、情绪分数或社区趋势。必要时最多抓取 3 篇高价值新闻正文辅助新闻叙事分析，但不得将其视为社交情绪数据。
+- **单文件审计**：抓取、去重、去噪、内容层级和社交数据可用性统计直接追加到 `news.txt`；不再单独生成 `news_meta.txt`，重新抓取同一日期时会清理旧版审计文件。
 
 ### 股价数据兜底
 
@@ -55,9 +57,9 @@
 
 | 文件 | 职责 |
 |------|------|
-| `tools/fetch_data.py` | 主抓取流程（新浪翻页+去噪流水+长桥分部+flag），并把同口径估值/GAAP 营业利润审计追加到 `fundamentals.txt` |
-| `tools/financial_audit.py` | 使用最新有效收盘价与同一财季报表复算市值、P/B、简化 EV/EBITDA，并区分 GAAP 报告营业利润与派生营业利润 |
-| `tools/news_filter.py` | 新闻去重/去噪/分层保留纯函数 |
+| `tools/fetch_data.py` | 主抓取流程（新浪翻页+去噪流水+长桥分部+flag），并把同口径估值、TTM EPS/P/E 对账和 GAAP 营业利润审计追加到 `fundamentals.txt` |
+| `tools/financial_audit.py` | 使用最新有效收盘价与季度报表复算市值、P/B、简化 EV/EBITDA 和 TTM EPS/P/E；对比 provider 快照并输出冲突状态，同时区分 GAAP 报告营业利润与派生营业利润 |
+| `tools/news_filter.py` | 新闻去重/去噪/分层保留及证据编号、内容层级序列化纯函数 |
 | `tools/longbridge_fetcher.py` | 长桥日 K 兜底、counter_id、分部 API 抓取解析及清单推导 |
 | `tools/prepare_segments.py` | 长桥桑基 JSON→增强 CSV + `--gen-yaml` 生成清单 |
 

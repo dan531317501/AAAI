@@ -25,7 +25,8 @@ Data is fetched primarily from **yfinance** (OHLCV, news, fundamentals, financia
 7. **If `segments_fetch_failed.flag` exists**, treat as CN: skip Phase 1.5 and Segment Analyst, run 4 analysts. Note the missing segment view in the final report.
 
 8. **DATA QUALITY CHECK (Phase 1.1):** After data is fetched, read `data_quality.json`. If `data_fresh: false`, use `data_as_of_date` as the report's effective date throughout. If `warning_no_200_sma: true`, 200 SMA must be reported as N/A.
-9. **ARITHMETIC VERIFICATION (Phase 7):** Before writing the final report, verify: target_price = (profit × PE) / total_shares. If the numbers don't reconcile within 5%, flag and correct them. Also verify: forward_PE = current_price / forward_EPS. Cross-check market_cap = current_price × total_shares against the fundamentals.txt value.
+9. **ARITHMETIC VERIFICATION (Phase 7):** Before writing the final report, verify TTM EPS/P/E reconciliation, target_price = (profit × PE) / total_shares, forward_PE = current_price / forward_EPS, and market_cap = current_price × total_shares. If values conflict beyond the stated tolerance, disclose and correct them before producing the rating.
+10. **NEWS/SENTIMENT EVIDENCE:** Treat `news.txt` evidence IDs and content levels as hard boundaries. If `Social Data Available: false`, social sentiment is Not Rated and must not affect the rating, target price, position sizing, or risk limits.
 
 ## Workflow
 
@@ -83,9 +84,9 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 |------|---------|--------|
 | `ohlcv.csv` | OHLCV price data (60 days) | yfinance + Longbridge latest-date fallback |
 | `indicators.txt` | 13 technical indicators | stockstats via yfinance/Longbridge OHLCV |
-| `news.txt` | Company-specific news (30 days) | yfinance |
+| `news.txt` | Company-specific news with evidence IDs, content levels, available summaries, processing audit, and explicit social-data availability (30 days) | yfinance + fetch_data.py |
 | `global_news.txt` | Macro/global news | yfinance Search |
-| `fundamentals.txt` | 28 fundamental metrics | yfinance |
+| `fundamentals.txt` | Provider fundamentals plus point-in-time valuation, TTM EPS/P/E reconciliation, and GAAP operating-profit audit | yfinance + financial_audit.py |
 | `balance_sheet.csv` | Quarterly balance sheet | yfinance |
 | `cashflow.csv` | Quarterly cash flow | yfinance |
 | `income_stmt.csv` | Quarterly income statement | yfinance |
@@ -98,7 +99,6 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 |------|---------|--------|
 | `revenue_sankey.json` | Longbridge quarterly Sankey data; preserves all original nodes and links and adds classification, QoQ/YoY, segment mix, consolidated reconciliation, and segment completeness checks | Longbridge revenue-sankey API (fetched in Phase 1) |
 | `revenue_sankey.csv` | Enhanced Sankey nodes for recent periods, used for business-segment and profit-structure analysis | prepare_segments.py (Phase 1.5) |
-| `news_meta.txt` | News fetch, deduplication, and noise-filtering audit | fetch_data.py |
 | `segments_missing.flag` | Missing segment-manifest marker that triggers Phase 1.5 generation | fetch_data.py |
 | `segments_fetch_failed.flag` | Longbridge fetch-failure marker used for graceful degradation | fetch_data.py |
 
@@ -242,10 +242,13 @@ Before synthesizing, verify these numbers with actual computation:
 2. **P/B**: use current_price ÷ (latest-quarter common stock equity ÷ ordinary shares from that same quarter). Do not use a stale provider Book Value or attribute the mismatch to share count.
 3. **EV/EBITDA**: use point-in-time market cap + latest total debt - latest cash and short-term investments, divided by TTM EBITDA in the same base currency. Preserve the numerator/denominator units and label simplified EV explicitly.
 4. **GAAP operating profit**: use `Total Operating Income As Reported`; reconcile `Operating Income`, restructuring/merger charges, and other operating adjustments. Longbridge `oper_inc` is a provider-defined Sankey subtotal and must not be relabeled as GAAP without reconciliation.
-5. **Forward PE**: current_price / forward_EPS. Does it match the reported Forward PE? Report both computed and stated values.
-6. **Target Price**: For every target price in the debate, compute `(profit × PE) / total_shares` and verify it matches. If a debater claims "CNY 55 billion × 20x = CNY 88 per share" but the formula produces a different value, this is a HARD ERROR. Flag and correct it in the final report.
-7. **Revenue/Net Income period labels**: If the Fundamentals Analyst cites a figure as "full-year 2025," verify that it is at least the sum of the visible quarters. If a column labeled "2025-12-31" is a single quarter, correct the label to "Q4 2025" in the final report.
-8. **200 SMA**: If data_quality.json says `warning_no_200_sma: true`, any mention of "200 SMA" in analyst reports that uses a value other than N/A is invalid.
+5. **TTM EPS/P/E**: Use the audit section's `Preferred TTM EPS` and `Preferred TTM P/E`. When reconciliation status is `mismatch`, disclose provider and statement-derived values, use the statement-derived values, and remove downstream claims based on the conflicting provider values. When status is `provider_only` or `unavailable`, report audited TTM EPS/P/E as N/A and do not use provider values as a valuation anchor.
+6. **Forward PE**: Compute current_price / provider_forward_EPS and compare it with provider Forward PE. Label both as provider consensus snapshot metrics; arithmetic agreement does not independently validate the forecast.
+7. **Target Price**: For every target price in the debate, compute `(profit × PE) / total_shares` and verify it matches. If a debater claims "CNY 55 billion × 20x = CNY 88 per share" but the formula produces a different value, this is a HARD ERROR. Flag and correct it in the final report.
+8. **Revenue/Net Income period labels**: If the Fundamentals Analyst cites a figure as "full-year 2025," verify that it is at least the sum of the visible quarters. If a column labeled "2025-12-31" is a single quarter, correct the label to "Q4 2025" in the final report.
+9. **200 SMA**: If data_quality.json says `warning_no_200_sma: true`, any mention of "200 SMA" in analyst reports that uses a value other than N/A is invalid.
+10. **News evidence**: Every material company-news claim must cite `[Nxxx]`. A `title_only` item supports only the literal headline; do not upgrade secondary reporting to an official confirmation or treat media rewrites as independent corroboration.
+11. **Social sentiment**: If `news.txt` says `Social Data Available: false`, report social sentiment as Not Rated. Remove unsupported mention counts, sentiment scores, community trends, user positioning, and ticker comparisons from downstream outputs. These claims must not influence the rating, target price, position sizing, or risk limits.
 
 ### Step 2: Synthesize
 

@@ -47,6 +47,52 @@ def dedup_by_title(articles: list) -> list:
             and seen[normalize_title(art.get("title", ""))] is art]
 
 
+def render_news_evidence(articles: list, news_start: str, curr_date: str) -> tuple[str, dict]:
+    """将最终新闻列表序列化为带稳定证据编号和内容层级的文本。
+
+    当前采集链路不包含社交媒体帖子或平台情绪指标，因此在产物中显式标记
+    social_data_available=false，供下游分析师做确定性降级。
+    """
+    lines = [
+        f"## News ({news_start} to {curr_date})\n",
+        "Evidence Scope: company news feed",
+        "Social Data Available: false",
+        (
+            "Social Data Note: this file contains no first-party social-media posts "
+            "or platform sentiment metrics.\n"
+        ),
+    ]
+    summary_count = 0
+    title_only_count = 0
+
+    for index, art in enumerate(articles, start=1):
+        evidence_id = f"N{index:03d}"
+        summary = str(art.get("summary") or "").strip()
+        content_level = "summary" if summary else "title_only"
+        if summary:
+            summary_count += 1
+        else:
+            title_only_count += 1
+
+        lines.append(f"### [{evidence_id}] {art.get('title', '')}")
+        lines.append(f"  Date: {art.get('date', '')}")
+        if art.get("provider"):
+            lines.append(f"  Source: {art.get('provider')}")
+        if art.get("link"):
+            lines.append(f"  Link: {art.get('link')}")
+        lines.append(f"  Content Level: {content_level}")
+        if summary:
+            lines.append(f"  Summary: {summary}")
+        lines.append("")
+
+    stats = {
+        "summary": summary_count,
+        "title_only": title_only_count,
+        "social_data_available": False,
+    }
+    return "\n".join(lines), stats
+
+
 # 明显与公司股价无关的关键词。保守：只放确定性的噪声。
 _NOISE_KEYWORDS = [
     # 地缘冲突（与个股无关的纯地缘新闻）

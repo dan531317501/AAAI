@@ -34,7 +34,8 @@ import pandas as pd
 import yfinance as yf
 from stockstats import wrap
 
-from news_filter import filter_noise, split_recent_and_history, dedup_by_title
+from news_filter import (dedup_by_title, filter_noise, render_news_evidence,
+                         split_recent_and_history)
 from longbridge_fetcher import (fetch_range_klines, fetch_revenue_sankey,
                                 get_revenue_sankey_metadata,
                                 parse_range_klines, parse_revenue_sankey)
@@ -962,9 +963,11 @@ def _yf_news_to_list(ticker: str, start_date: str, end_date: str,
 
 
 def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
-                           out_path: str, meta_path: str, lookback_days: int = 30,
+                           out_path: str, lookback_days: int = 30,
                            market: str = "US") -> int:
-    """对原始新闻跑去噪+去重，写 news.txt + news_meta.txt。返回最终保留条数。
+    """对原始新闻跑去噪+去重，将正文和处理审计合并写入 news.txt。
+
+    返回最终保留条数，并清理同目录下旧版 news_meta.txt，避免留下过期审计副本。
 
     HK/US 市场（yfinance 新闻，质量高）：只做 filter_noise + dedup_by_title，
     不做分层过滤（split_recent_and_history），保留全部新闻。
@@ -990,37 +993,36 @@ def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
     after_dedup = dedup_by_title(combined)
     dedup_count = len(combined) - len(after_dedup)
 
-    lines = [f"## News ({news_start} to {curr_date})\n"]
-    for art in after_dedup:
-        lines.append(f"**{art.get('title','')}**")
-        lines.append(f"  Date: {art.get('date','')}")
-        if art.get("provider"):
-            lines.append(f"  Source: {art.get('provider')}")
-        if art.get("link"):
-            lines.append(f"  Link: {art.get('link')}")
-        lines.append("")
-    with open(out_path, "w") as f:
-        f.write("\n".join(lines))
-
-    meta = [
-        f"# News Processing Audit ({news_start} to {curr_date})\n",
+    news_text, evidence_stats = render_news_evidence(
+        after_dedup, news_start, curr_date
+    )
+    audit = [
+        f"## News Processing Audit ({news_start} to {curr_date})",
         f"market: {market}",
         f"raw_fetched: {raw_count}",
         f"after_noise_filter: {len(after_noise)} (removed {noise_count})",
     ]
     if market == "CN":
-        meta.extend([
+        audit.extend([
             f"recent_7d_kept: {len(recent)}",
             f"history_8_30d_kept: {len(history)}",
         ])
     else:
-        meta.append(f"split_skipped: HK/US yfinance news, full retention")
-    meta.extend([
+        audit.append("split_skipped: HK/US yfinance news, full retention")
+    audit.extend([
         f"after_dedup: {len(after_dedup)} (removed {dedup_count})",
         f"final_kept: {len(after_dedup)}",
+        f"content_level_summary: {evidence_stats['summary']}",
+        f"content_level_title_only: {evidence_stats['title_only']}",
+        "social_data_available: false",
     ])
-    with open(meta_path, "w") as f:
-        f.write("\n".join(meta))
+    audit_text = "\n".join(audit)
+    with open(out_path, "w") as f:
+        f.write(f"{news_text}\n\n{audit_text}")
+
+    legacy_meta_path = os.path.join(os.path.dirname(out_path), "news_meta.txt")
+    if os.path.exists(legacy_meta_path):
+        os.remove(legacy_meta_path)
     return len(after_dedup)
 
 
@@ -1213,14 +1215,13 @@ def main():
     # 3. News (route by market, 翻页+过滤流水)
     print("  [3/8] Fetching company news...")
     news_path = os.path.join(ticker_dir, "news.txt")
-    meta_path = os.path.join(ticker_dir, "news_meta.txt")
     if market == "CN":
         raw = fetch_cn_news_raw(ticker, news_start, curr_date)
     elif market == "HK":
         raw = fetch_hk_news_raw(ticker, news_start, curr_date)
     else:
         raw = _yf_news_to_list(yf_ticker, news_start, curr_date, market=market)
-    process_and_write_news(raw, curr_date, news_start, news_path, meta_path,
+    process_and_write_news(raw, curr_date, news_start, news_path,
                            lookback_days=NEWS_LOOKBACK_DAYS, market=market)
     results["files"]["news"] = news_path
 
