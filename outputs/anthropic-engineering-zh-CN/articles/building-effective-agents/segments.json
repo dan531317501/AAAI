@@ -1,0 +1,1670 @@
+[
+  {
+    "id": "seg-0001",
+    "source": "Building Effective AI Agents \\ Anthropic",
+    "kind": "text",
+    "context": "title > [document] > html > head"
+  },
+  {
+    "id": "seg-0002",
+    "source": "Skip to main content",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0003",
+    "source": "Skip to footer",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0004",
+    "source": "Research",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0005",
+    "source": "Policy",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0006",
+    "source": "Commitments",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0007",
+    "source": "Learn",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0008",
+    "source": "News",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0009",
+    "source": "Try Claude",
+    "kind": "text",
+    "context": "a > header > div > div > div"
+  },
+  {
+    "id": "seg-0010",
+    "source": "Engineering at Anthropic",
+    "kind": "text",
+    "context": "a > html > body > main > section"
+  },
+  {
+    "id": "seg-0011",
+    "source": "Building effective agents",
+    "kind": "text",
+    "context": "h1 > main > section > div > div"
+  },
+  {
+    "id": "seg-0012",
+    "source": "Published",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0013",
+    "source": "Dec 19, 2024",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0014",
+    "source": "We've worked with dozens of teams building LLM agents across industries. Consistently, the most successful implementations use simple, composable patterns rather than complex frameworks.",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0015",
+    "source": "Over the past year, we've worked with dozens of teams building large language model (LLM) agents across industries. Consistently, the most successful implementations weren't using complex frameworks or specialized libraries. Instead, they were building with simple, composable patterns.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0016",
+    "source": "In this post, we share what we’ve learned from working with our customers and building agents ourselves, and give practical advice for developers on building effective agents.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0017",
+    "source": "What are agents?",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0018",
+    "source": "\"Agent\" can be defined in several ways. Some customers define agents as fully autonomous systems that operate independently over extended periods, using various tools to accomplish complex tasks. Others use the term to describe more prescriptive implementations that follow predefined workflows. At Anthropic, we categorize all these variations as",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0019",
+    "source": "agentic systems",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0020",
+    "source": ", but draw an important architectural distinction between",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0021",
+    "source": "workflows",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0022",
+    "source": "and",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0023",
+    "source": "agents",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0024",
+    "source": "Workflows",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0025",
+    "source": "are systems where LLMs and tools are orchestrated through predefined code paths.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0026",
+    "source": "Agents",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0027",
+    "source": ", on the other hand, are systems where LLMs dynamically direct their own processes and tool usage, maintaining control over how they accomplish tasks.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0028",
+    "source": "Below, we will explore both types of agentic systems in detail. In Appendix 1 (“Agents in Practice”), we describe two domains where customers have found particular value in using these kinds of systems.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0029",
+    "source": "When (and when not) to use agents",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0030",
+    "source": "When building applications with LLMs, we recommend finding the simplest solution possible, and only increasing complexity when needed. This might mean not building agentic systems at all. Agentic systems often trade latency and cost for better task performance, and you should consider when this tradeoff makes sense.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0031",
+    "source": "When more complexity is warranted, workflows offer predictability and consistency for well-defined tasks, whereas agents are the better option when flexibility and model-driven decision-making are needed at scale. For many applications, however, optimizing single LLM calls with retrieval and in-context examples is usually enough.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0032",
+    "source": "When and how to use frameworks",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0033",
+    "source": "There are many frameworks that make agentic systems easier to implement, including:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0034",
+    "source": "The",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0035",
+    "source": "Claude Agent SDK",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0036",
+    "source": "Strands Agents SDK by AWS",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0037",
+    "source": "Rivet",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0038",
+    "source": ", a drag and drop GUI LLM workflow builder; and",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0039",
+    "source": "Vellum",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0040",
+    "source": ", another GUI tool for building and testing complex workflows.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0041",
+    "source": "These frameworks make it easy to get started by simplifying standard low-level tasks like calling LLMs, defining and parsing tools, and chaining calls together. However, they often create extra layers of abstraction that can obscure the underlying prompts ​​and responses, making them harder to debug. They can also make it tempting to add complexity when a simpler setup would suffice.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0042",
+    "source": "We suggest that developers start by using LLM APIs directly: many patterns can be implemented in a few lines of code. If you do use a framework, ensure you understand the underlying code. Incorrect assumptions about what's under the hood are a common source of customer error.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0043",
+    "source": "See our",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0044",
+    "source": "cookbook",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0045",
+    "source": "for some sample implementations.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0046",
+    "source": "Building blocks, workflows, and agents",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0047",
+    "source": "In this section, we’ll explore the common patterns for agentic systems we’ve seen in production. We'll start with our foundational building block—the augmented LLM—and progressively increase complexity, from simple compositional workflows to autonomous agents.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0048",
+    "source": "Building block: The augmented LLM",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0049",
+    "source": "The basic building block of agentic systems is an LLM enhanced with augmentations such as retrieval, tools, and memory. Our current models can actively use these capabilities—generating their own search queries, selecting appropriate tools, and determining what information to retain.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0050",
+    "source": "The augmented LLM",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0051",
+    "source": "We recommend focusing on two key aspects of the implementation: tailoring these capabilities to your specific use case and ensuring they provide an easy, well-documented interface for your LLM. While there are many ways to implement these augmentations, one approach is through our recently released",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0052",
+    "source": "Model Context Protocol",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0053",
+    "source": ", which allows developers to integrate with a growing ecosystem of third-party tools with a simple",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0054",
+    "source": "client implementation",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0055",
+    "source": "For the remainder of this post, we'll assume each LLM call has access to these augmented capabilities.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0056",
+    "source": "Workflow: Prompt chaining",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0057",
+    "source": "Prompt chaining decomposes a task into a sequence of steps, where each LLM call processes the output of the previous one. You can add programmatic checks (see \"gate” in the diagram below) on any intermediate steps to ensure that the process is still on track.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0058",
+    "source": "The prompt chaining workflow",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0059",
+    "source": "When to use this workflow:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0060",
+    "source": "This workflow is ideal for situations where the task can be easily and cleanly decomposed into fixed subtasks. The main goal is to trade off latency for higher accuracy, by making each LLM call an easier task.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0061",
+    "source": "Examples where prompt chaining is useful:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0062",
+    "source": "Generating Marketing copy, then translating it into a different language.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0063",
+    "source": "Writing an outline of a document, checking that the outline meets certain criteria, then writing the document based on the outline.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0064",
+    "source": "Workflow: Routing",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0065",
+    "source": "Routing classifies an input and directs it to a specialized followup task. This workflow allows for separation of concerns, and building more specialized prompts. Without this workflow, optimizing for one kind of input can hurt performance on other inputs.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0066",
+    "source": "The routing workflow",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0067",
+    "source": "Routing works well for complex tasks where there are distinct categories that are better handled separately, and where classification can be handled accurately, either by an LLM or a more traditional classification model/algorithm.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0068",
+    "source": "Examples where routing is useful:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0069",
+    "source": "Directing different types of customer service queries (general questions, refund requests, technical support) into different downstream processes, prompts, and tools.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0070",
+    "source": "Routing easy/common questions to smaller, cost-efficient models like Claude Haiku 4.5 and hard/unusual questions to more capable models like Claude Sonnet 4.5 to optimize for best performance.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0071",
+    "source": "Workflow: Parallelization",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0072",
+    "source": "LLMs can sometimes work simultaneously on a task and have their outputs aggregated programmatically. This workflow, parallelization, manifests in two key variations:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0073",
+    "source": "Sectioning",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0074",
+    "source": ": Breaking a task into independent subtasks run in parallel.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0075",
+    "source": "Voting:",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0076",
+    "source": "Running the same task multiple times to get diverse outputs.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0077",
+    "source": "The parallelization workflow",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0078",
+    "source": "Parallelization is effective when the divided subtasks can be parallelized for speed, or when multiple perspectives or attempts are needed for higher confidence results. For complex tasks with multiple considerations, LLMs generally perform better when each consideration is handled by a separate LLM call, allowing focused attention on each specific aspect.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0079",
+    "source": "Examples where parallelization is useful:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0080",
+    "source": "Implementing guardrails where one model instance processes user queries while another screens them for inappropriate content or requests. This tends to perform better than having the same LLM call handle both guardrails and the core response.",
+    "kind": "text",
+    "context": "li > div > ul > li > ul"
+  },
+  {
+    "id": "seg-0081",
+    "source": "Automating evals for evaluating LLM performance, where each LLM call evaluates a different aspect of the model’s performance on a given prompt.",
+    "kind": "text",
+    "context": "li > div > ul > li > ul"
+  },
+  {
+    "id": "seg-0082",
+    "source": "Voting",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0083",
+    "source": "Reviewing a piece of code for vulnerabilities, where several different prompts review and flag the code if they find a problem.",
+    "kind": "text",
+    "context": "li > div > ul > li > ul"
+  },
+  {
+    "id": "seg-0084",
+    "source": "Evaluating whether a given piece of content is inappropriate, with multiple prompts evaluating different aspects or requiring different vote thresholds to balance false positives and negatives.",
+    "kind": "text",
+    "context": "li > div > ul > li > ul"
+  },
+  {
+    "id": "seg-0085",
+    "source": "Workflow: Orchestrator-workers",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0086",
+    "source": "In the orchestrator-workers workflow, a central LLM dynamically breaks down tasks, delegates them to worker LLMs, and synthesizes their results.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0087",
+    "source": "The orchestrator-workers workflow",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0088",
+    "source": "This workflow is well-suited for complex tasks where you can’t predict the subtasks needed (in coding, for example, the number of files that need to be changed and the nature of the change in each file likely depend on the task). Whereas it’s topographically similar, the key difference from parallelization is its flexibility—subtasks aren't pre-defined, but determined by the orchestrator based on the specific input.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0089",
+    "source": "Example where orchestrator-workers is useful:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0090",
+    "source": "Coding products that make complex changes to multiple files each time.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0091",
+    "source": "Search tasks that involve gathering and analyzing information from multiple sources for possible relevant information.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0092",
+    "source": "Workflow: Evaluator-optimizer",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0093",
+    "source": "In the evaluator-optimizer workflow, one LLM call generates a response while another provides evaluation and feedback in a loop.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0094",
+    "source": "The evaluator-optimizer workflow",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0095",
+    "source": "This workflow is particularly effective when we have clear evaluation criteria, and when iterative refinement provides measurable value. The two signs of good fit are, first, that LLM responses can be demonstrably improved when a human articulates their feedback; and second, that the LLM can provide such feedback. This is analogous to the iterative writing process a human writer might go through when producing a polished document.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0096",
+    "source": "Examples where evaluator-optimizer is useful:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0097",
+    "source": "Literary translation where there are nuances that the translator LLM might not capture initially, but where an evaluator LLM can provide useful critiques.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0098",
+    "source": "Complex search tasks that require multiple rounds of searching and analysis to gather comprehensive information, where the evaluator decides whether further searches are warranted.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0099",
+    "source": "Agents are emerging in production as LLMs mature in key capabilities—understanding complex inputs, engaging in reasoning and planning, using tools reliably, and recovering from errors. Agents begin their work with either a command from, or interactive discussion with, the human user. Once the task is clear, agents plan and operate independently, potentially returning to the human for further information or judgement. During execution, it's crucial for the agents to gain “ground truth” from the environment at each step (such as tool call results or code execution) to assess its progress. Agents can then pause for human feedback at checkpoints or when encountering blockers. The task often terminates upon completion, but it’s also common to include stopping conditions (such as a maximum number of iterations) to maintain control.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0100",
+    "source": "Agents can handle sophisticated tasks, but their implementation is often straightforward. They are typically just LLMs using tools based on environmental feedback in a loop. It is therefore crucial to design toolsets and their documentation clearly and thoughtfully. We expand on best practices for tool development in Appendix 2 (\"Prompt Engineering your Tools\").",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0101",
+    "source": "Autonomous agent",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0102",
+    "source": "When to use agents:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0103",
+    "source": "Agents can be used for open-ended problems where it’s difficult or impossible to predict the required number of steps, and where you can’t hardcode a fixed path. The LLM will potentially operate for many turns, and you must have some level of trust in its decision-making. Agents' autonomy makes them ideal for scaling tasks in trusted environments.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0104",
+    "source": "The autonomous nature of agents means higher costs, and the potential for compounding errors. We recommend extensive testing in sandboxed environments, along with the appropriate guardrails.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0105",
+    "source": "Examples where agents are useful:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0106",
+    "source": "The following examples are from our own implementations:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0107",
+    "source": "A coding Agent to resolve",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0108",
+    "source": "SWE-bench tasks",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0109",
+    "source": ", which involve edits to many files based on a task description;",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0110",
+    "source": "Our",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0111",
+    "source": "“computer use” reference implementation",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0112",
+    "source": ", where Claude uses a computer to accomplish tasks.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0113",
+    "source": "High-level flow of a coding agent",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0114",
+    "source": "Combining and customizing these patterns",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0115",
+    "source": "These building blocks aren't prescriptive. They're common patterns that developers can shape and combine to fit different use cases. The key to success, as with any LLM features, is measuring performance and iterating on implementations. To repeat: you should consider adding complexity",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0116",
+    "source": "only",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0117",
+    "source": "when it demonstrably improves outcomes.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0118",
+    "source": "Summary",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0119",
+    "source": "Success in the LLM space isn't about building the most sophisticated system. It's about building the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0120",
+    "source": "right",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0121",
+    "source": "system for your needs. Start with simple prompts, optimize them with comprehensive evaluation, and add multi-step agentic systems only when simpler solutions fall short.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0122",
+    "source": "When implementing agents, we try to follow three core principles:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0123",
+    "source": "Maintain",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0124",
+    "source": "simplicity",
+    "kind": "text",
+    "context": "strong > div > div > ol > li"
+  },
+  {
+    "id": "seg-0125",
+    "source": "in your agent's design.",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0126",
+    "source": "Prioritize",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0127",
+    "source": "transparency",
+    "kind": "text",
+    "context": "strong > div > div > ol > li"
+  },
+  {
+    "id": "seg-0128",
+    "source": "by explicitly showing the agent’s planning steps.",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0129",
+    "source": "Carefully craft your agent-computer interface (ACI) through thorough tool",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0130",
+    "source": "documentation and testing",
+    "kind": "text",
+    "context": "strong > div > div > ol > li"
+  },
+  {
+    "id": "seg-0131",
+    "source": "Frameworks can help you get started quickly, but don't hesitate to reduce abstraction layers and build with basic components as you move to production. By following these principles, you can create agents that are not only powerful but also reliable, maintainable, and trusted by their users.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0132",
+    "source": "Acknowledgements",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0133",
+    "source": "Written by Erik S. and Barry Zhang. This work draws upon our experiences building agents at Anthropic and the valuable insights shared by our customers, for which we're deeply grateful.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0134",
+    "source": "Appendix 1: Agents in practice",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0135",
+    "source": "Our work with customers has revealed two particularly promising applications for AI agents that demonstrate the practical value of the patterns discussed above. Both applications illustrate how agents add the most value for tasks that require both conversation and action, have clear success criteria, enable feedback loops, and integrate meaningful human oversight.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0136",
+    "source": "A. Customer support",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0137",
+    "source": "Customer support combines familiar chatbot interfaces with enhanced capabilities through tool integration. This is a natural fit for more open-ended agents because:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0138",
+    "source": "Support interactions naturally follow a conversation flow while requiring access to external information and actions;",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0139",
+    "source": "Tools can be integrated to pull customer data, order history, and knowledge base articles;",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0140",
+    "source": "Actions such as issuing refunds or updating tickets can be handled programmatically; and",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0141",
+    "source": "Success can be clearly measured through user-defined resolutions.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0142",
+    "source": "Several companies have demonstrated the viability of this approach through usage-based pricing models that charge only for successful resolutions, showing confidence in their agents' effectiveness.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0143",
+    "source": "B. Coding agents",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0144",
+    "source": "The software development space has shown remarkable potential for LLM features, with capabilities evolving from code completion to autonomous problem-solving. Agents are particularly effective because:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0145",
+    "source": "Code solutions are verifiable through automated tests;",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0146",
+    "source": "Agents can iterate on solutions using test results as feedback;",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0147",
+    "source": "The problem space is well-defined and structured; and",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0148",
+    "source": "Output quality can be measured objectively.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0149",
+    "source": "In our own implementation, agents can now solve real GitHub issues in the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0150",
+    "source": "SWE-bench Verified",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0151",
+    "source": "benchmark based on the pull request description alone. However, whereas automated testing helps verify functionality, human review remains crucial for ensuring solutions align with broader system requirements.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0152",
+    "source": "Appendix 2: Prompt engineering your tools",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0153",
+    "source": "No matter which agentic system you're building, tools will likely be an important part of your agent.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0154",
+    "source": "Tools",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0155",
+    "source": "enable Claude to interact with external services and APIs by specifying their exact structure and definition in our API. When Claude responds, it will include a",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0156",
+    "source": "tool use block",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0157",
+    "source": "in the API response if it plans to invoke a tool. Tool definitions and specifications should be given just as much prompt engineering attention as your overall prompts. In this brief appendix, we describe how to prompt engineer your tools.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0158",
+    "source": "There are often several ways to specify the same action. For instance, you can specify a file edit by writing a diff, or by rewriting the entire file. For structured output, you can return code inside markdown or inside JSON. In software engineering, differences like these are cosmetic and can be converted losslessly from one to the other. However, some formats are much more difficult for an LLM to write than others. Writing a diff requires knowing how many lines are changing in the chunk header before the new code is written. Writing code inside JSON (compared to markdown) requires extra escaping of newlines and quotes.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0159",
+    "source": "Our suggestions for deciding on tool formats are the following:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0160",
+    "source": "Give the model enough tokens to \"think\" before it writes itself into a corner.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0161",
+    "source": "Keep the format close to what the model has seen naturally occurring in text on the internet.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0162",
+    "source": "Make sure there's no formatting \"overhead\" such as having to keep an accurate count of thousands of lines of code, or string-escaping any code it writes.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0163",
+    "source": "One rule of thumb is to think about how much effort goes into human-computer interfaces (HCI), and plan to invest just as much effort in creating good",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0164",
+    "source": "agent",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0165",
+    "source": "-computer interfaces (ACI). Here are some thoughts on how to do so:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0166",
+    "source": "Put yourself in the model's shoes. Is it obvious how to use this tool, based on the description and parameters, or would you need to think carefully about it? If so, then it’s probably also true for the model. A good tool definition often includes example usage, edge cases, input format requirements, and clear boundaries from other tools.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0167",
+    "source": "How can you change parameter names or descriptions to make things more obvious? Think of this as writing a great docstring for a junior developer on your team. This is especially important when using many similar tools.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0168",
+    "source": "Test how the model uses your tools: Run many example inputs in our",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0169",
+    "source": "workbench",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0170",
+    "source": "to see what mistakes the model makes, and iterate.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0171",
+    "source": "Poka-yoke",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0172",
+    "source": "your tools. Change the arguments so that it is harder to make mistakes.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0173",
+    "source": "While building our agent for",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0174",
+    "source": "SWE-bench",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0175",
+    "source": ", we actually spent more time optimizing our tools than the overall prompt. For example, we found that the model would make mistakes with tools using relative filepaths after the agent had moved out of the root directory. To fix this, we changed the tool to always require absolute filepaths—and we found that the model used this method flawlessly.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0176",
+    "source": "Get the developer newsletter",
+    "kind": "text",
+    "context": "h2 > div > div > div > div"
+  },
+  {
+    "id": "seg-0177",
+    "source": "Product updates, how-tos, community spotlights, and more. Delivered monthly to your inbox.",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0178",
+    "source": "Please provide your email address if you'd like to receive our monthly developer newsletter. You can unsubscribe at any time.",
+    "kind": "text",
+    "context": "p > div > div > div > form"
+  },
+  {
+    "id": "seg-0179",
+    "source": "Products",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0180",
+    "source": "Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0181",
+    "source": "Claude Code",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0182",
+    "source": "Claude Code Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0183",
+    "source": "Claude Cowork",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0184",
+    "source": "Claude Design",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0185",
+    "source": "Claude Science",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0186",
+    "source": "Claude Security",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0187",
+    "source": "Claude for Chrome",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0188",
+    "source": "Claude for Microsoft 365",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0189",
+    "source": "Skills",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0190",
+    "source": "Download app",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0191",
+    "source": "Pricing",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0192",
+    "source": "Log in to Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0193",
+    "source": "Models",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0194",
+    "source": "Mythos",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0195",
+    "source": "Fable",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0196",
+    "source": "Opus",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0197",
+    "source": "Sonnet",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0198",
+    "source": "Haiku",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0199",
+    "source": "Solutions",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0200",
+    "source": "AI agents",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0201",
+    "source": "Code modernization",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0202",
+    "source": "Coding",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0203",
+    "source": "Customer support",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0204",
+    "source": "Cybersecurity",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0205",
+    "source": "Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0206",
+    "source": "Financial services",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0207",
+    "source": "Government",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0208",
+    "source": "Healthcare",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0209",
+    "source": "Higher education",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0210",
+    "source": "K-12 teachers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0211",
+    "source": "Legal",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0212",
+    "source": "Life sciences",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0213",
+    "source": "Nonprofits",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0214",
+    "source": "Small business",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0215",
+    "source": "Claude Platform",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0216",
+    "source": "Overview",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0217",
+    "source": "Developer docs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0218",
+    "source": "Ecosystem",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0219",
+    "source": "Marketplace",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0220",
+    "source": "Regional compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0221",
+    "source": "Claude on AWS",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0222",
+    "source": "Google Cloud",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0223",
+    "source": "Microsoft Foundry",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0224",
+    "source": "Console login",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0225",
+    "source": "Resources",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0226",
+    "source": "Blog",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0227",
+    "source": "Claude partner network",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0228",
+    "source": "Community",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0229",
+    "source": "Connectors",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0230",
+    "source": "Courses",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0231",
+    "source": "Customer stories",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0232",
+    "source": "Events",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0233",
+    "source": "Plugins",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0234",
+    "source": "Powered by Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0235",
+    "source": "Service partners",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0236",
+    "source": "Tutorials",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0237",
+    "source": "Use cases",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0238",
+    "source": "Programs",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0239",
+    "source": "Startups",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0240",
+    "source": "Research Labs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0241",
+    "source": "Help and security",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0242",
+    "source": "Availability",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0243",
+    "source": "Status",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0244",
+    "source": "Support center",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0245",
+    "source": "Company",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0246",
+    "source": "Anthropic",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0247",
+    "source": "Careers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0248",
+    "source": "Economic Futures",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0249",
+    "source": "Claude’s Constitution",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0250",
+    "source": "Claude Corps",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0251",
+    "source": "Keep thinking",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0252",
+    "source": "Policy on the AI Exponential",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0253",
+    "source": "Responsible Scaling Policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0254",
+    "source": "Security and compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0255",
+    "source": "Transparency",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0256",
+    "source": "Terms and policies",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0257",
+    "source": "Privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0258",
+    "source": "Consumer health data privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0259",
+    "source": "Responsible disclosure policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0260",
+    "source": "Terms of service: Commercial",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0261",
+    "source": "Terms of service: Consumer",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0262",
+    "source": "Terms of Service: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0263",
+    "source": "Data Processing Agreement: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0264",
+    "source": "Usage policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0265",
+    "source": "© 2026 Anthropic PBC",
+    "kind": "text",
+    "context": "small > body > footer > div > div"
+  },
+  {
+    "id": "seg-0266",
+    "source": "Home",
+    "kind": "attribute:aria-label",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0267",
+    "source": "Navigation menu",
+    "kind": "attribute:aria-label",
+    "context": "button > body > header > div > div"
+  },
+  {
+    "id": "seg-0268",
+    "source": "Engineering Article Hero",
+    "kind": "attribute:aria-label",
+    "context": "section > [document] > html > body > main"
+  },
+  {
+    "id": "seg-0269",
+    "source": "Email address",
+    "kind": "attribute:aria-label",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0270",
+    "source": "Enter your email",
+    "kind": "attribute:placeholder",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0271",
+    "source": "Subscribe",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > form > div"
+  },
+  {
+    "id": "seg-0272",
+    "source": "Site footer",
+    "kind": "attribute:aria-label",
+    "context": "footer > [document] > html > body"
+  },
+  {
+    "id": "seg-0273",
+    "source": "Return to homepage",
+    "kind": "attribute:aria-label",
+    "context": "a > body > footer > div > div"
+  },
+  {
+    "id": "seg-0274",
+    "source": "Footer navigation",
+    "kind": "attribute:aria-label",
+    "context": "nav > html > body > footer > div"
+  },
+  {
+    "id": "seg-0275",
+    "source": "Social media links",
+    "kind": "attribute:aria-label",
+    "context": "ul > body > footer > div > div"
+  },
+  {
+    "id": "seg-0276",
+    "source": "Visit our LinkedIn page",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0277",
+    "source": "Visit our X (formerly Twitter) profile",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0278",
+    "source": "Visit our YouTube channel",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  }
+]

@@ -1,0 +1,4 @@
+interface:
+  display_name: "网页中文化"
+  short_description: "快速将网页完整翻译成中文，并保留原始结构、样式与资源"
+  default_prompt: "Use $translate-webpage-to-chinese to quickly translate this webpage into Chinese and preserve its original structure and styling."

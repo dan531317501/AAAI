@@ -1,0 +1,1202 @@
+[
+  {
+    "id": "seg-0001",
+    "source": "Effective harnesses for long-running agents \\ Anthropic",
+    "kind": "text",
+    "context": "title > [document] > html > head"
+  },
+  {
+    "id": "seg-0002",
+    "source": "Skip to main content",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0003",
+    "source": "Skip to footer",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0004",
+    "source": "Research",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0005",
+    "source": "Policy",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0006",
+    "source": "Commitments",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0007",
+    "source": "Learn",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0008",
+    "source": "News",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0009",
+    "source": "Try Claude",
+    "kind": "text",
+    "context": "a > header > div > div > div"
+  },
+  {
+    "id": "seg-0010",
+    "source": "Engineering at Anthropic",
+    "kind": "text",
+    "context": "a > html > body > main > section"
+  },
+  {
+    "id": "seg-0011",
+    "source": "Effective harnesses for long-running agents",
+    "kind": "text",
+    "context": "h1 > main > section > div > div"
+  },
+  {
+    "id": "seg-0012",
+    "source": "Published",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0013",
+    "source": "Nov 26, 2025",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0014",
+    "source": "Agents still face challenges working across many context windows. We looked to human engineers for inspiration in creating a more effective harness for long-running agents.",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0015",
+    "source": "As AI agents become more capable, developers are increasingly asking them to take on complex tasks requiring work that spans hours, or even days. However, getting agents to make consistent progress across multiple context windows remains an open problem.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0016",
+    "source": "The core challenge of long-running agents is that they must work in discrete sessions, and each new session begins with no memory of what came before. Imagine a software project staffed by engineers working in shifts, where each new engineer arrives with no memory of what happened on the previous shift. Because context windows are limited, and because most complex projects cannot be completed within a single window, agents need a way to bridge the gap between coding sessions.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0017",
+    "source": "We developed a two-fold solution to enable the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0018",
+    "source": "Claude Agent SDK",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0019",
+    "source": "to work effectively across many context windows: an",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0020",
+    "source": "initializer agent",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0021",
+    "source": "that sets up the environment on the first run, and a",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0022",
+    "source": "coding agent",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0023",
+    "source": "that is tasked with making incremental progress in every session, while leaving clear artifacts for the next session. You can find code examples in the accompanying",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0024",
+    "source": "quickstart.",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0025",
+    "source": "The long-running agent problem",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0026",
+    "source": "The Claude Agent SDK is a powerful, general-purpose agent harness adept at coding, as well as other tasks that require the model to use tools to gather context, plan, and execute. It has context management capabilities such as compaction, which enables an agent to work on a task without exhausting the context window. Theoretically, given this setup, it should be possible for an agent to continue to do useful work for an arbitrarily long time.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0027",
+    "source": "However, compaction isn’t sufficient. Out of the box, even a frontier coding model like Opus 4.5 running on the Claude Agent SDK in a loop across multiple context windows will fall short of building a production-quality web app if it’s only given a high-level prompt, such as “build a clone of",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0028",
+    "source": "claude.ai",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0029",
+    "source": "Claude’s failures manifested in two patterns. First, the agent tended to try to do too much at once—essentially to attempt to one-shot the app. Often, this led to the model running out of context in the middle of its implementation, leaving the next session to start with a feature half-implemented and undocumented. The agent would then have to guess at what had happened, and spend substantial time trying to get the basic app working again. This happens even with compaction, which doesn’t always pass perfectly clear instructions to the next agent.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0030",
+    "source": "A second failure mode would often occur later in a project. After some features had already been built, a later agent instance would look around, see that progress had been made, and declare the job done.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0031",
+    "source": "This decomposes the problem into two parts. First, we need to set up an initial environment that lays the foundation for",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0032",
+    "source": "all",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0033",
+    "source": "the features that a given prompt requires, which sets up the agent to work step-by-step and feature-by-feature. Second, we should prompt each agent to make incremental progress towards its goal while also leaving the environment in a clean state at the end of a session. By “clean state” we mean the kind of code that would be appropriate for merging to a main branch: there are no major bugs, the code is orderly and well-documented, and in general, a developer could easily begin work on a new feature without first having to clean up an unrelated mess.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0034",
+    "source": "When experimenting internally, we addressed these problems using a two-part solution:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0035",
+    "source": "Initializer agent: The very first agent session uses a specialized prompt that asks the model to set up the initial environment: an",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0036",
+    "source": "script, a claude-progress.txt file that keeps a log of what agents have done, and an initial git commit that shows what files were added.",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0037",
+    "source": "Coding agent: Every subsequent session asks the model to make incremental progress, then leave structured updates.",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0038",
+    "source": "The key insight here was finding a way for agents to quickly understand the state of work when starting with a fresh context window, which is accomplished with the claude-progress.txt file alongside the git history. Inspiration for these practices came from knowing what effective software engineers do every day.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0039",
+    "source": "Environment management",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0040",
+    "source": "In the updated",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0041",
+    "source": "Claude 4 prompting guide",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0042",
+    "source": ", we shared some best practices for multi-context window workflows, including a harness structure that uses “a different prompt for the very first context window.” This “different prompt” requests that the initializer agent set up the environment with all the necessary context that future coding agents will need to work effectively. Here, we provide a deeper dive on some of the key components of such an environment.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0043",
+    "source": "Feature list",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0044",
+    "source": "To address the problem of the agent one-shotting an app or prematurely considering the project complete, we prompted the initializer agent to write a comprehensive file of feature requirements expanding on the user’s initial prompt. In the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0045",
+    "source": "clone example, this meant over 200 features, such as “a user can open a new chat, type in a query, press enter, and see an AI response.” These features were all initially marked as “failing” so that later coding agents would have a clear outline of what full functionality looked like.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0046",
+    "source": "Copy",
+    "kind": "text",
+    "context": "span > div > div > div > button"
+  },
+  {
+    "id": "seg-0047",
+    "source": "We prompt coding agents to edit this file only by changing the status of a passes field, and we use strongly-worded instructions like “It is unacceptable to remove or edit tests because this could lead to missing or buggy functionality.” After some experimentation, we landed on using JSON for this, as the model is less likely to inappropriately change or overwrite JSON files compared to Markdown files.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0048",
+    "source": "Incremental progress",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0049",
+    "source": "Given this initial environment scaffolding, the next iteration of the coding agent was then asked to work on only one feature at a time. This incremental approach turned out to be critical to addressing the agent’s tendency to do too much at once.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0050",
+    "source": "Once working incrementally, it’s still essential that the model leaves the environment in a clean state after making a code change. In our experiments, we found that the best way to elicit this behavior was to ask the model to commit its progress to git with descriptive commit messages and to write summaries of its progress in a progress file. This allowed the model to use git to revert bad code changes and recover working states of the code base.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0051",
+    "source": "These approaches also increased efficiency, as they eliminated the need for an agent to have to guess at what had happened and spend its time trying to get the basic app working again.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0052",
+    "source": "Testing",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0053",
+    "source": "One final major failure mode that we observed was Claude’s tendency to mark a feature as complete without proper testing. Absent explicit prompting, Claude tended to make code changes, and even do testing with unit tests or",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0054",
+    "source": "commands against a development server, but would fail recognize that the feature didn’t work end-to-end.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0055",
+    "source": "In the case of building a web app, Claude mostly did well at verifying features end-to-end once explicitly prompted to use browser automation tools and do all testing as a human user would.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0056",
+    "source": "Screenshots taken by Claude through the Puppeteer MCP server as it tested the claude.ai clone.",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0057",
+    "source": "Providing Claude with these kinds of testing tools dramatically improved performance, as the agent was able to identify and fix bugs that weren’t obvious from the code alone.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0058",
+    "source": "Some issues remain, like limitations to Claude’s vision and to browser automation tools making it difficult to identify every kind of bug. For example, Claude can’t see browser-native alert modals through the Puppeteer MCP, and features relying on these modals tended to be buggier as a result.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0059",
+    "source": "Getting up to speed",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0060",
+    "source": "With all of the above in place, every coding agent is prompted to run through a series of steps to get its bearings, some quite basic but still helpful:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0061",
+    "source": "Run",
+    "kind": "text",
+    "context": "em > div > div > ol > li"
+  },
+  {
+    "id": "seg-0062",
+    "source": "to see the directory you’re working in. You’ll only be able to edit files in this directory.",
+    "kind": "text",
+    "context": "em > div > div > ol > li"
+  },
+  {
+    "id": "seg-0063",
+    "source": "Read the git logs and progress files to get up to speed on what was recently worked on.",
+    "kind": "text",
+    "context": "em > div > div > ol > li"
+  },
+  {
+    "id": "seg-0064",
+    "source": "Read the features list file and choose the highest-priority feature that’s not yet done to work on.",
+    "kind": "text",
+    "context": "em > div > div > ol > li"
+  },
+  {
+    "id": "seg-0065",
+    "source": "This approach saves Claude some tokens in every session since it doesn’t have to figure out how to test the code. It also helps to ask the initializer agent to write an init.sh script that can run the development server, and then run through a basic end-to-end test before implementing a new feature.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0066",
+    "source": "In the case of the claude.ai clone, this meant that the agent always started the local development server and used the Puppeteer MCP to start a new chat, send a message, and receive a response. This ensured that Claude could quickly identify if the app had been left in a broken state, and immediately fix any existing bugs. If the agent had instead started implementing a new feature, it would likely make the problem worse.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0067",
+    "source": "Given all this, a typical session starts off with the following assistant messages:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0068",
+    "source": "Agent failure modes and solutions",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0069",
+    "source": "Problem",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > th"
+  },
+  {
+    "id": "seg-0070",
+    "source": "Initializer Agent Behavior",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > th"
+  },
+  {
+    "id": "seg-0071",
+    "source": "Coding Agent Behavior",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > th"
+  },
+  {
+    "id": "seg-0072",
+    "source": "Claude declares victory on the entire project too early.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0073",
+    "source": "Set up a feature list file: based on the input spec, set up a structured JSON file with a list of end-to-end feature descriptions.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0074",
+    "source": "Read the feature list file at the beginning of a session. Choose a single feature to start working on.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0075",
+    "source": "Claude leaves the environment in a state with bugs or undocumented progress.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0076",
+    "source": "An initial git repo and progress notes file is written.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0077",
+    "source": "Start the session by reading the progress notes file and git commit logs, and run a basic test on the development server to catch any undocumented bugs. End the session by writing a git commit and progress update.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0078",
+    "source": "Claude marks features as done prematurely.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0079",
+    "source": "Set up a feature list file.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0080",
+    "source": "Self-verify all features. Only mark features as “passing” after careful testing.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0081",
+    "source": "Claude has to spend time figuring out how to run the app.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0082",
+    "source": "Write an",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0083",
+    "source": "script that can run the development server.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0084",
+    "source": "Start the session by reading",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0085",
+    "source": "Summarizing four common failure modes and solutions in long-running AI agents.",
+    "kind": "text",
+    "context": "figcaption > div > div > div > div"
+  },
+  {
+    "id": "seg-0086",
+    "source": "Future work",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0087",
+    "source": "This research demonstrates one possible set of solutions in a long-running agent harness to enable the model to make incremental progress across many context windows. However, there remain open questions.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0088",
+    "source": "Most notably, it’s still unclear whether a single, general-purpose coding agent performs best across contexts, or if better performance can be achieved through a multi-agent architecture. It seems reasonable that specialized agents like a testing agent, a quality assurance agent, or a code cleanup agent, could do an even better job at sub-tasks across the software development lifecycle.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0089",
+    "source": "Additionally, this demo is optimized for full-stack web app development. A future direction is to generalize these findings to other fields. It’s likely that some or all of these lessons can be applied to the types of long-running agentic tasks required in, for example, scientific research or financial modeling.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0090",
+    "source": "Acknowledgements",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0091",
+    "source": "Written by Justin Young. Special thanks to David Hershey, Prithvi Rajasakeran, Jeremy Hadfield, Naia Bouscal, Michael Tingley, Jesse Mu, Jake Eaton, Marius Buleandara, Maggie Vo, Pedram Navid, Nadine Yasser, and Alex Notov for their contributions.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0092",
+    "source": "This work reflects the collective efforts of several teams across Anthropic who made it possible for Claude to safely do long-horizon autonomous software engineering, especially the code RL & Claude Code teams. Interested candidates who would like to contribute are welcome to apply at",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0093",
+    "source": "Footnotes",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0094",
+    "source": "1. We refer to these as separate agents in this context only because they have different initial user prompts. The system prompt, set of tools, and overall agent harness was otherwise identical.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0095",
+    "source": "Get the developer newsletter",
+    "kind": "text",
+    "context": "h2 > div > div > div > div"
+  },
+  {
+    "id": "seg-0096",
+    "source": "Product updates, how-tos, community spotlights, and more. Delivered monthly to your inbox.",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0097",
+    "source": "Please provide your email address if you'd like to receive our monthly developer newsletter. You can unsubscribe at any time.",
+    "kind": "text",
+    "context": "p > div > div > div > form"
+  },
+  {
+    "id": "seg-0098",
+    "source": "Products",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0099",
+    "source": "Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0100",
+    "source": "Claude Code",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0101",
+    "source": "Claude Code Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0102",
+    "source": "Claude Cowork",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0103",
+    "source": "Claude Design",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0104",
+    "source": "Claude Science",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0105",
+    "source": "Claude Security",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0106",
+    "source": "Claude for Chrome",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0107",
+    "source": "Claude for Microsoft 365",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0108",
+    "source": "Skills",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0109",
+    "source": "Download app",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0110",
+    "source": "Pricing",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0111",
+    "source": "Log in to Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0112",
+    "source": "Models",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0113",
+    "source": "Mythos",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0114",
+    "source": "Fable",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0115",
+    "source": "Opus",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0116",
+    "source": "Sonnet",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0117",
+    "source": "Haiku",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0118",
+    "source": "Solutions",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0119",
+    "source": "AI agents",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0120",
+    "source": "Code modernization",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0121",
+    "source": "Coding",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0122",
+    "source": "Customer support",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0123",
+    "source": "Cybersecurity",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0124",
+    "source": "Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0125",
+    "source": "Financial services",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0126",
+    "source": "Government",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0127",
+    "source": "Healthcare",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0128",
+    "source": "Higher education",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0129",
+    "source": "K-12 teachers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0130",
+    "source": "Legal",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0131",
+    "source": "Life sciences",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0132",
+    "source": "Nonprofits",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0133",
+    "source": "Small business",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0134",
+    "source": "Claude Platform",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0135",
+    "source": "Overview",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0136",
+    "source": "Developer docs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0137",
+    "source": "Ecosystem",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0138",
+    "source": "Marketplace",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0139",
+    "source": "Regional compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0140",
+    "source": "Claude on AWS",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0141",
+    "source": "Google Cloud",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0142",
+    "source": "Microsoft Foundry",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0143",
+    "source": "Console login",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0144",
+    "source": "Resources",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0145",
+    "source": "Blog",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0146",
+    "source": "Claude partner network",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0147",
+    "source": "Community",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0148",
+    "source": "Connectors",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0149",
+    "source": "Courses",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0150",
+    "source": "Customer stories",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0151",
+    "source": "Events",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0152",
+    "source": "Plugins",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0153",
+    "source": "Powered by Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0154",
+    "source": "Service partners",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0155",
+    "source": "Tutorials",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0156",
+    "source": "Use cases",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0157",
+    "source": "Programs",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0158",
+    "source": "Startups",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0159",
+    "source": "Research Labs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0160",
+    "source": "Help and security",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0161",
+    "source": "Availability",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0162",
+    "source": "Status",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0163",
+    "source": "Support center",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0164",
+    "source": "Company",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0165",
+    "source": "Anthropic",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0166",
+    "source": "Careers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0167",
+    "source": "Economic Futures",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0168",
+    "source": "Claude’s Constitution",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0169",
+    "source": "Claude Corps",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0170",
+    "source": "Keep thinking",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0171",
+    "source": "Policy on the AI Exponential",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0172",
+    "source": "Responsible Scaling Policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0173",
+    "source": "Security and compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0174",
+    "source": "Transparency",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0175",
+    "source": "Terms and policies",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0176",
+    "source": "Privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0177",
+    "source": "Consumer health data privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0178",
+    "source": "Responsible disclosure policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0179",
+    "source": "Terms of service: Commercial",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0180",
+    "source": "Terms of service: Consumer",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0181",
+    "source": "Terms of Service: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0182",
+    "source": "Data Processing Agreement: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0183",
+    "source": "Usage policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0184",
+    "source": "© 2026 Anthropic PBC",
+    "kind": "text",
+    "context": "small > body > footer > div > div"
+  },
+  {
+    "id": "seg-0185",
+    "source": "Home",
+    "kind": "attribute:aria-label",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0186",
+    "source": "Navigation menu",
+    "kind": "attribute:aria-label",
+    "context": "button > body > header > div > div"
+  },
+  {
+    "id": "seg-0187",
+    "source": "Engineering Article Hero",
+    "kind": "attribute:aria-label",
+    "context": "section > [document] > html > body > main"
+  },
+  {
+    "id": "seg-0188",
+    "source": "Copy code",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0189",
+    "source": " Screenshots taken by Claude through the Puppeteer MCP server as it tested the claude.ai clone. ",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0190",
+    "source": "Summarizing four common failure modes and solutions in long-running AI agents.",
+    "kind": "attribute:aria-label",
+    "context": "div > div > div > div > div"
+  },
+  {
+    "id": "seg-0191",
+    "source": "Email address",
+    "kind": "attribute:aria-label",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0192",
+    "source": "Enter your email",
+    "kind": "attribute:placeholder",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0193",
+    "source": "Subscribe",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > form > div"
+  },
+  {
+    "id": "seg-0194",
+    "source": "Site footer",
+    "kind": "attribute:aria-label",
+    "context": "footer > [document] > html > body"
+  },
+  {
+    "id": "seg-0195",
+    "source": "Return to homepage",
+    "kind": "attribute:aria-label",
+    "context": "a > body > footer > div > div"
+  },
+  {
+    "id": "seg-0196",
+    "source": "Footer navigation",
+    "kind": "attribute:aria-label",
+    "context": "nav > html > body > footer > div"
+  },
+  {
+    "id": "seg-0197",
+    "source": "Social media links",
+    "kind": "attribute:aria-label",
+    "context": "ul > body > footer > div > div"
+  },
+  {
+    "id": "seg-0198",
+    "source": "Visit our LinkedIn page",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0199",
+    "source": "Visit our X (formerly Twitter) profile",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0200",
+    "source": "Visit our YouTube channel",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  }
+]

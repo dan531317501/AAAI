@@ -1,0 +1,1274 @@
+[
+  {
+    "id": "seg-0001",
+    "source": "Equipping agents for the real world with Agent Skills \\ Anthropic",
+    "kind": "text",
+    "context": "title > [document] > html > head"
+  },
+  {
+    "id": "seg-0002",
+    "source": "Skip to main content",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0003",
+    "source": "Skip to footer",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0004",
+    "source": "Research",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0005",
+    "source": "Policy",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0006",
+    "source": "Commitments",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0007",
+    "source": "Learn",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0008",
+    "source": "News",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0009",
+    "source": "Try Claude",
+    "kind": "text",
+    "context": "a > header > div > div > div"
+  },
+  {
+    "id": "seg-0010",
+    "source": "Engineering at Anthropic",
+    "kind": "text",
+    "context": "a > html > body > main > section"
+  },
+  {
+    "id": "seg-0011",
+    "source": "Equipping agents for the real world with Agent Skills",
+    "kind": "text",
+    "context": "h1 > main > section > div > div"
+  },
+  {
+    "id": "seg-0012",
+    "source": "Published",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0013",
+    "source": "Oct 16, 2025",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0014",
+    "source": "Claude is powerful, but real work requires procedural knowledge and organizational context. Introducing Agent Skills, a new way to build specialized agents using files and folders.",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0015",
+    "source": "Update: We've published",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0016",
+    "source": "Agent Skills",
+    "kind": "text",
+    "context": "em > div > div > p > a"
+  },
+  {
+    "id": "seg-0017",
+    "source": "as an open standard for cross-platform portability. (December 18, 2025)",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0018",
+    "source": "As model capabilities improve, we can now build general-purpose agents that interact with full-fledged computing environments.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0019",
+    "source": "Claude Code",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0020",
+    "source": ", for example, can accomplish complex tasks across domains using local code execution and filesystems. But as these agents become more powerful, we need more composable, scalable, and portable ways to equip them with domain-specific expertise.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0021",
+    "source": "This led us to create",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0022",
+    "source": ": organized folders of instructions, scripts, and resources that agents can discover and load dynamically to perform better at specific tasks.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0023",
+    "source": "Skills extend Claude’s capabilities by packaging your expertise into composable resources for Claude, transforming general-purpose agents into specialized agents that fit your needs.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0024",
+    "source": "Building a skill for an agent is like putting together an onboarding guide for a new hire. Instead of building fragmented, custom-designed agents for each use case, anyone can now specialize their agents with composable capabilities by capturing and sharing their procedural knowledge. In this article, we explain what Skills are, show how they work, and share best practices for building your own.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0025",
+    "source": "A skill is a directory containing a SKILL.md file that contains organized folders of instructions, scripts, and resources that give agents additional capabilities.",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0026",
+    "source": "The anatomy of a skill",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0027",
+    "source": "To see Skills in action, let’s walk through a real example: one of the skills that powers",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0028",
+    "source": "Claude’s recently launched document editing abilities",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0029",
+    "source": ". Claude already knows a lot about understanding PDFs, but is limited in its ability to manipulate them directly (e.g. to fill out a form). This",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0030",
+    "source": "PDF skill",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0031",
+    "source": "lets us give Claude these new abilities.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0032",
+    "source": "At its simplest, a skill is a directory that contains a",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0033",
+    "source": ". This file must start with YAML frontmatter that contains some required metadata:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0034",
+    "source": "and",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0035",
+    "source": ". At startup, the agent pre-loads the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0036",
+    "source": "of every installed skill into its system prompt.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0037",
+    "source": "This metadata is the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0038",
+    "source": "first level",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0039",
+    "source": "of",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0040",
+    "source": "progressive disclosure",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0041",
+    "source": ": it provides just enough information for Claude to know when each skill should be used without loading all of it into context. The actual body of this file is the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0042",
+    "source": "second level",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0043",
+    "source": "of detail. If Claude thinks the skill is relevant to the current task, it will load the skill by reading its full",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0044",
+    "source": "into context.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0045",
+    "source": "A SKILL.md file must begin with YAML Frontmatter that contains a file name and description, which is loaded into its system prompt at startup.",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0046",
+    "source": "As skills grow in complexity, they may contain too much context to fit into a single",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0047",
+    "source": ", or context that’s relevant only in specific scenarios. In these cases, skills can bundle additional files within the skill directory and reference them by name from",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0048",
+    "source": ". These additional linked files are the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0049",
+    "source": "third level",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0050",
+    "source": "(and beyond) of detail, which Claude can choose to navigate and discover only as needed.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0051",
+    "source": "In the PDF skill shown below, the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0052",
+    "source": "refers to two additional files (",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0053",
+    "source": ") that the skill author chooses to bundle alongside the core",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0054",
+    "source": ". By moving the form-filling instructions to a separate file (",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0055",
+    "source": "), the skill author is able to keep the core of the skill lean, trusting that Claude will read",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0056",
+    "source": "only when filling out a form.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0057",
+    "source": "You can incorporate more context (via additional files) into your skill that can then be triggered by Claude based on the system prompt.",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0058",
+    "source": "Progressive disclosure is the core design principle that makes Agent Skills flexible and scalable. Like a well-organized manual that starts with a table of contents, then specific chapters, and finally a detailed appendix, skills let Claude load information only as needed:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0059",
+    "source": "Agents with a filesystem and code execution tools don’t need to read the entirety of a skill into their context window when working on a particular task. This means that the amount of context that can be bundled into a skill is effectively unbounded.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0060",
+    "source": "Skills and the context window",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0061",
+    "source": "The following diagram shows how the context window changes when a skill is triggered by a user’s message.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0062",
+    "source": "Skills are triggered in the context window via your system prompt.",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0063",
+    "source": "The sequence of operations shown:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0064",
+    "source": "To start, the context window has the core system prompt and the metadata for each of the installed skills, along with the user’s initial message;",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0065",
+    "source": "Claude triggers the PDF skill by invoking a Bash tool to read the contents of",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0066",
+    "source": "Claude chooses to read the",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0067",
+    "source": "file bundled with the skill;",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0068",
+    "source": "Finally, Claude proceeds with the user’s task now that it has loaded relevant instructions from the PDF skill.",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0069",
+    "source": "Skills and code execution",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0070",
+    "source": "Skills can also include code for Claude to execute as tools at its discretion.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0071",
+    "source": "Large language models excel at many tasks, but certain operations are better suited for traditional code execution. For example, sorting a list via token generation is far more expensive than simply running a sorting algorithm. Beyond efficiency concerns, many applications require the deterministic reliability that only code can provide.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0072",
+    "source": "In our example, the PDF skill includes a pre-written Python script that reads a PDF and extracts all form fields. Claude can run this script without loading either the script or the PDF into context. And because code is deterministic, this workflow is consistent and repeatable.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0073",
+    "source": "Skills can also include code for Claude to execute as tools at its discretion based on the nature of the task.",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0074",
+    "source": "Developing and evaluating skills",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0075",
+    "source": "Here are some helpful guidelines for getting started with authoring and testing skills:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0076",
+    "source": "Start with evaluation:",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0077",
+    "source": "Identify specific gaps in your agents’ capabilities by running them on representative tasks and observing where they struggle or require additional context. Then build skills incrementally to address these shortcomings.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0078",
+    "source": "Structure for scale:",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0079",
+    "source": "When the",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0080",
+    "source": "file becomes unwieldy, split its content into separate files and reference them. If certain contexts are mutually exclusive or rarely used together, keeping the paths separate will reduce the token usage. Finally, code can serve as both executable tools and as documentation. It should be clear whether Claude should run scripts directly or read them into context as reference.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0081",
+    "source": "Think from Claude’s perspective:",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0082",
+    "source": "Monitor how Claude uses your skill in real scenarios and iterate based on observations: watch for unexpected trajectories or overreliance on certain contexts. Pay special attention to the",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0083",
+    "source": "of your skill. Claude will use these when deciding whether to trigger the skill in response to its current task.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0084",
+    "source": "Iterate with Claude:",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0085",
+    "source": "As you work on a task with Claude, ask Claude to capture its successful approaches and common mistakes into reusable context and code within a skill. If it goes off track when using a skill to complete a task, ask it to self-reflect on what went wrong. This process will help you discover what context Claude actually needs, instead of trying to anticipate it upfront.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0086",
+    "source": "Security considerations when using Skills",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0087",
+    "source": "Skills provide Claude with new capabilities through instructions and code. While this makes them powerful, it also means that malicious skills may introduce vulnerabilities in the environment where they’re used or direct Claude to exfiltrate data and take unintended actions.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0088",
+    "source": "We recommend installing skills only from trusted sources. When installing a skill from a less-trusted source, thoroughly audit it before use. Start by reading the contents of the files bundled in the skill to understand what it does, paying particular attention to code dependencies and bundled resources like images or scripts. Similarly, pay attention to instructions or code within the skill that instruct Claude to connect to potentially untrusted external network sources.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0089",
+    "source": "The future of Skills",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0090",
+    "source": "Agent Skills are",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0091",
+    "source": "supported today",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0092",
+    "source": "across",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0093",
+    "source": "Claude.ai",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0094",
+    "source": ", Claude Code, the Claude Agent SDK, and the Claude Developer Platform.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0095",
+    "source": "In the coming weeks, we’ll continue to add features that support the full lifecycle of creating, editing, discovering, sharing, and using Skills. We’re especially excited about the opportunity for Skills to help organizations and individuals share their context and workflows with Claude. We’ll also explore how Skills can complement",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0096",
+    "source": "Model Context Protocol",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0097",
+    "source": "(MCP) servers by teaching agents more complex workflows that involve external tools and software.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0098",
+    "source": "Looking further ahead, we hope to enable agents to create, edit, and evaluate Skills on their own, letting them codify their own patterns of behavior into reusable capabilities.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0099",
+    "source": "Skills are a simple concept with a correspondingly simple format. This simplicity makes it easier for organizations, developers, and end users to build customized agents and give them new capabilities.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0100",
+    "source": "We’re excited to see what people build with Skills. Get started today by checking out our Skills",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0101",
+    "source": "docs",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0102",
+    "source": "cookbook",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0103",
+    "source": "Acknowledgements",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0104",
+    "source": "Written by Barry Zhang, Keith Lazuka, and Mahesh Murag, who all really like folders. Special thanks to the many others across Anthropic who championed, supported, and built Skills.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0105",
+    "source": "Get the developer newsletter",
+    "kind": "text",
+    "context": "h2 > div > div > div > div"
+  },
+  {
+    "id": "seg-0106",
+    "source": "Product updates, how-tos, community spotlights, and more. Delivered monthly to your inbox.",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0107",
+    "source": "Please provide your email address if you'd like to receive our monthly developer newsletter. You can unsubscribe at any time.",
+    "kind": "text",
+    "context": "p > div > div > div > form"
+  },
+  {
+    "id": "seg-0108",
+    "source": "Products",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0109",
+    "source": "Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0110",
+    "source": "Claude Code Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0111",
+    "source": "Claude Cowork",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0112",
+    "source": "Claude Design",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0113",
+    "source": "Claude Science",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0114",
+    "source": "Claude Security",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0115",
+    "source": "Claude for Chrome",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0116",
+    "source": "Claude for Microsoft 365",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0117",
+    "source": "Skills",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0118",
+    "source": "Download app",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0119",
+    "source": "Pricing",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0120",
+    "source": "Log in to Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0121",
+    "source": "Models",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0122",
+    "source": "Mythos",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0123",
+    "source": "Fable",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0124",
+    "source": "Opus",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0125",
+    "source": "Sonnet",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0126",
+    "source": "Haiku",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0127",
+    "source": "Solutions",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0128",
+    "source": "AI agents",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0129",
+    "source": "Code modernization",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0130",
+    "source": "Coding",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0131",
+    "source": "Customer support",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0132",
+    "source": "Cybersecurity",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0133",
+    "source": "Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0134",
+    "source": "Financial services",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0135",
+    "source": "Government",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0136",
+    "source": "Healthcare",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0137",
+    "source": "Higher education",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0138",
+    "source": "K-12 teachers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0139",
+    "source": "Legal",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0140",
+    "source": "Life sciences",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0141",
+    "source": "Nonprofits",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0142",
+    "source": "Small business",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0143",
+    "source": "Claude Platform",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0144",
+    "source": "Overview",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0145",
+    "source": "Developer docs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0146",
+    "source": "Ecosystem",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0147",
+    "source": "Marketplace",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0148",
+    "source": "Regional compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0149",
+    "source": "Claude on AWS",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0150",
+    "source": "Google Cloud",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0151",
+    "source": "Microsoft Foundry",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0152",
+    "source": "Console login",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0153",
+    "source": "Resources",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0154",
+    "source": "Blog",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0155",
+    "source": "Claude partner network",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0156",
+    "source": "Community",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0157",
+    "source": "Connectors",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0158",
+    "source": "Courses",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0159",
+    "source": "Customer stories",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0160",
+    "source": "Events",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0161",
+    "source": "Plugins",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0162",
+    "source": "Powered by Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0163",
+    "source": "Service partners",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0164",
+    "source": "Tutorials",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0165",
+    "source": "Use cases",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0166",
+    "source": "Programs",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0167",
+    "source": "Startups",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0168",
+    "source": "Research Labs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0169",
+    "source": "Help and security",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0170",
+    "source": "Availability",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0171",
+    "source": "Status",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0172",
+    "source": "Support center",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0173",
+    "source": "Company",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0174",
+    "source": "Anthropic",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0175",
+    "source": "Careers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0176",
+    "source": "Economic Futures",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0177",
+    "source": "Claude’s Constitution",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0178",
+    "source": "Claude Corps",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0179",
+    "source": "Keep thinking",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0180",
+    "source": "Policy on the AI Exponential",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0181",
+    "source": "Responsible Scaling Policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0182",
+    "source": "Security and compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0183",
+    "source": "Transparency",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0184",
+    "source": "Terms and policies",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0185",
+    "source": "Privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0186",
+    "source": "Consumer health data privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0187",
+    "source": "Responsible disclosure policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0188",
+    "source": "Terms of service: Commercial",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0189",
+    "source": "Terms of service: Consumer",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0190",
+    "source": "Terms of Service: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0191",
+    "source": "Data Processing Agreement: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0192",
+    "source": "Usage policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0193",
+    "source": "© 2026 Anthropic PBC",
+    "kind": "text",
+    "context": "small > body > footer > div > div"
+  },
+  {
+    "id": "seg-0194",
+    "source": "Home",
+    "kind": "attribute:aria-label",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0195",
+    "source": "Navigation menu",
+    "kind": "attribute:aria-label",
+    "context": "button > body > header > div > div"
+  },
+  {
+    "id": "seg-0196",
+    "source": "Engineering Article Hero",
+    "kind": "attribute:aria-label",
+    "context": "section > [document] > html > body > main"
+  },
+  {
+    "id": "seg-0197",
+    "source": "To activate skills, all you need to do is write a SKILL.md file with custom guidance for your agent.",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0198",
+    "source": "Anatomy of a SKILL.md file including the relevant metadata: name, description, and context related to the specific actions the skill should take.",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0199",
+    "source": "How to bundle additional content into a SKILL.md file.",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0200",
+    "source": "This image depicts how progressive disclosure of context in Skills.",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0201",
+    "source": "This image depicts how skills are triggered in your context window.",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0202",
+    "source": "This image depicts how code is executed via Skills.",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0203",
+    "source": "Email address",
+    "kind": "attribute:aria-label",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0204",
+    "source": "Enter your email",
+    "kind": "attribute:placeholder",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0205",
+    "source": "Subscribe",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > form > div"
+  },
+  {
+    "id": "seg-0206",
+    "source": "Site footer",
+    "kind": "attribute:aria-label",
+    "context": "footer > [document] > html > body"
+  },
+  {
+    "id": "seg-0207",
+    "source": "Return to homepage",
+    "kind": "attribute:aria-label",
+    "context": "a > body > footer > div > div"
+  },
+  {
+    "id": "seg-0208",
+    "source": "Footer navigation",
+    "kind": "attribute:aria-label",
+    "context": "nav > html > body > footer > div"
+  },
+  {
+    "id": "seg-0209",
+    "source": "Social media links",
+    "kind": "attribute:aria-label",
+    "context": "ul > body > footer > div > div"
+  },
+  {
+    "id": "seg-0210",
+    "source": "Visit our LinkedIn page",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0211",
+    "source": "Visit our X (formerly Twitter) profile",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0212",
+    "source": "Visit our YouTube channel",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  }
+]

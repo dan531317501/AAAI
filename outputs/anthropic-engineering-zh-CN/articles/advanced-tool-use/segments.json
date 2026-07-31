@@ -1,0 +1,1940 @@
+[
+  {
+    "id": "seg-0001",
+    "source": "Introducing advanced tool use on the Claude Developer Platform \\ Anthropic",
+    "kind": "text",
+    "context": "title > [document] > html > head"
+  },
+  {
+    "id": "seg-0002",
+    "source": "Skip to main content",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0003",
+    "source": "Skip to footer",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0004",
+    "source": "Research",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0005",
+    "source": "Policy",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0006",
+    "source": "Commitments",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0007",
+    "source": "Learn",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0008",
+    "source": "News",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0009",
+    "source": "Try Claude",
+    "kind": "text",
+    "context": "a > header > div > div > div"
+  },
+  {
+    "id": "seg-0010",
+    "source": "Engineering at Anthropic",
+    "kind": "text",
+    "context": "a > html > body > main > section"
+  },
+  {
+    "id": "seg-0011",
+    "source": "Introducing advanced tool use on the Claude Developer Platform",
+    "kind": "text",
+    "context": "h1 > main > section > div > div"
+  },
+  {
+    "id": "seg-0012",
+    "source": "Published",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0013",
+    "source": "Nov 24, 2025",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0014",
+    "source": "We’ve added three new beta features that let Claude discover, learn, and execute tools dynamically. Here’s how they work.",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0015",
+    "source": "The future of AI agents is one where models work seamlessly across hundreds or thousands of tools. An IDE assistant that integrates git operations, file manipulation, package managers, testing frameworks, and deployment pipelines. An operations coordinator that connects Slack, GitHub, Google Drive, Jira, company databases, and dozens of MCP servers simultaneously.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0016",
+    "source": "To",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0017",
+    "source": "build effective agents",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0018",
+    "source": ", they need to work with unlimited tool libraries without stuffing every definition into context upfront. Our blog article on using",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0019",
+    "source": "code execution with MCP",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0020",
+    "source": "discussed how tool results and definitions can sometimes consume 50,000+ tokens before an agent reads a request. Agents should discover and load tools on-demand, keeping only what's relevant for the current task.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0021",
+    "source": "Agents also need the ability to call tools from code. When using natural language tool calling, each invocation requires a full inference pass, and intermediate results pile up in context whether they're useful or not. Code is a natural fit for orchestration logic, such as loops, conditionals, and data transformations. Agents need the flexibility to choose between code execution and inference based on the task at hand.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0022",
+    "source": "Agents also need to learn correct tool usage from examples, not just schema definitions. JSON schemas define what's structurally valid, but can't express usage patterns: when to include optional parameters, which combinations make sense, or what conventions your API expects.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0023",
+    "source": "Today, we're releasing three features that make this possible:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0024",
+    "source": "Tool Search Tool,",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0025",
+    "source": "which allows Claude to use search tools to access thousands of tools without consuming its context window",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0026",
+    "source": "Programmatic Tool Calling",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0027",
+    "source": ", which allows Claude to invoke tools in a code execution environment reducing the impact on the model’s context window",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0028",
+    "source": "Tool Use Examples",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0029",
+    "source": ", which provides a universal standard for demonstrating how to effectively use a given tool",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0030",
+    "source": "In internal testing, we’ve found these features have helped us build things that wouldn’t have been possible with conventional tool use patterns. For example,",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0031",
+    "source": "Claude for Excel",
+    "kind": "text",
+    "context": "a > div > div > p > strong"
+  },
+  {
+    "id": "seg-0032",
+    "source": "uses Programmatic Tool Calling to read and modify spreadsheets with thousands of rows without overloading the model’s context window.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0033",
+    "source": "Based on our experience, we believe these features open up new possibilities for what you can build with Claude.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0034",
+    "source": "Tool Search Tool",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0035",
+    "source": "The challenge",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0036",
+    "source": "MCP tool definitions provide important context, but as more servers connect, those tokens can add up. Consider a five-server setup:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0037",
+    "source": "GitHub: 35 tools (~26K tokens)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0038",
+    "source": "Slack: 11 tools (~21K tokens)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0039",
+    "source": "Sentry: 5 tools (~3K tokens)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0040",
+    "source": "Grafana: 5 tools (~3K tokens)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0041",
+    "source": "Splunk: 2 tools (~2K tokens)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0042",
+    "source": "That's 58 tools consuming approximately 55K tokens before the conversation even starts. Add more servers like Jira (which alone uses ~17K tokens) and you're quickly approaching 100K+ token overhead. At Anthropic, we've seen tool definitions consume 134K tokens before optimization.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0043",
+    "source": "But token cost isn't the only issue. The most common failures are wrong tool selection and incorrect parameters, especially when tools have similar names like",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0044",
+    "source": "vs.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0045",
+    "source": "Our solution",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0046",
+    "source": "Instead of loading all tool definitions upfront, the Tool Search Tool discovers tools on-demand. Claude only sees the tools it actually needs for the current task.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0047",
+    "source": "Tool Search Tool preserves 191,300 tokens of context compared to 122,800 with Claude’s traditional approach.",
+    "kind": "text",
+    "context": "em > div > div > figure > figcaption"
+  },
+  {
+    "id": "seg-0048",
+    "source": "Traditional approach:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0049",
+    "source": "All tool definitions loaded upfront (~72K tokens for 50+ MCP tools)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0050",
+    "source": "Conversation history and system prompt compete for remaining space",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0051",
+    "source": "Total context consumption: ~77K tokens before any work begins",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0052",
+    "source": "With the Tool Search Tool:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0053",
+    "source": "Only the Tool Search Tool loaded upfront (~500 tokens)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0054",
+    "source": "Tools discovered on-demand as needed (3-5 relevant tools, ~3K tokens)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0055",
+    "source": "Total context consumption: ~8.7K tokens, preserving 95% of context window",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0056",
+    "source": "This represents an 85% reduction in token usage while maintaining access to your full tool library. Internal testing showed significant accuracy improvements on MCP evaluations when working with large tool libraries. Opus 4 improved from 49% to 74%, and Opus 4.5 improved from 79.5% to 88.1% with Tool Search Tool enabled.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0057",
+    "source": "How the Tool Search Tool works",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0058",
+    "source": "The Tool Search Tool lets Claude dynamically discover tools instead of loading all definitions upfront. You provide all your tool definitions to the API, but mark tools with",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0059",
+    "source": "to make them discoverable on-demand. Deferred tools aren't loaded into Claude's context initially. Claude only sees the Tool Search Tool itself plus any tools with",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0060",
+    "source": "(your most critical, frequently-used tools).",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0061",
+    "source": "When Claude needs specific capabilities, it searches for relevant tools. The Tool Search Tool returns references to matching tools, which get expanded into full definitions in Claude's context.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0062",
+    "source": "For example, if Claude needs to interact with GitHub, it searches for \"github,\" and only",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0063",
+    "source": "and",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0064",
+    "source": "get loaded—not your other 50+ tools from Slack, Jira, and Google Drive.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0065",
+    "source": "This way, Claude has access to your full tool library while only paying the token cost for tools it actually needs.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0066",
+    "source": "Prompt caching note:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0067",
+    "source": "Tool Search Tool doesn't break prompt caching because deferred tools are excluded from the initial prompt entirely. They're only added to context after Claude searches for them, so your system prompt and core tool definitions remain cacheable.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0068",
+    "source": "Implementation:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0069",
+    "source": "Copy",
+    "kind": "text",
+    "context": "span > div > div > div > button"
+  },
+  {
+    "id": "seg-0070",
+    "source": "For MCP servers, you can defer loading entire servers while keeping specific high-use tools loaded:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0071",
+    "source": "The Claude Developer Platform provides regex-based and BM25-based search tools out of the box, but you can also implement custom search tools using embeddings or other strategies.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0072",
+    "source": "When to use the Tool Search Tool",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0073",
+    "source": "Like any architectural decision, enabling the Tool Search Tool involves trade-offs. The feature adds a search step before tool invocation, so it delivers the best ROI when the context savings and accuracy improvements outweigh additional latency.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0074",
+    "source": "Use it when:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0075",
+    "source": "Tool definitions consuming >10K tokens",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0076",
+    "source": "Experiencing tool selection accuracy issues",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0077",
+    "source": "Building MCP-powered systems with multiple servers",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0078",
+    "source": "10+ tools available",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0079",
+    "source": "Less beneficial when:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0080",
+    "source": "Small tool library (<10 tools)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0081",
+    "source": "All tools used frequently in every session",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0082",
+    "source": "Tool definitions are compact",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0083",
+    "source": "Traditional tool calling creates two fundamental problems as workflows become more complex:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0084",
+    "source": "Context pollution from intermediate results",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0085",
+    "source": ": When Claude analyzes a 10MB log file for error patterns, the entire file enters its context window, even though Claude only needs a summary of error frequencies. When fetching customer data across multiple tables, every record accumulates in context regardless of relevance. These intermediate results consume massive token budgets and can push important information out of the context window entirely.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0086",
+    "source": "Inference overhead and manual synthesis",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0087",
+    "source": ": Each tool call requires a full model inference pass. After receiving results, Claude must \"eyeball\" the data to extract relevant information, reason about how pieces fit together, and decide what to do next—all through natural language processing. A five tool workflow means five inference passes plus Claude parsing each result, comparing values, and synthesizing conclusions. This is both slow and error-prone.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0088",
+    "source": "Programmatic Tool Calling enables Claude to orchestrate tools through code rather than through individual API round-trips. Instead of Claude requesting tools one at a time with each result being returned to its context, Claude writes code that calls multiple tools, processes their outputs, and controls what information actually enters its context window.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0089",
+    "source": "Claude excels at writing code and by letting it express orchestration logic in Python rather than through natural language tool invocations, you get more reliable, precise control flow. Loops, conditionals, data transformations, and error handling are all explicit in code rather than implicit in Claude's reasoning.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0090",
+    "source": "Example: Budget compliance check",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0091",
+    "source": "Consider a common business task: \"Which team members exceeded their Q3 travel budget?\"",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0092",
+    "source": "You have three tools available:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0093",
+    "source": "- Returns team member list with IDs and levels",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0094",
+    "source": "- Returns expense line items for a user",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0095",
+    "source": "- Returns budget limits for an employee level",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0096",
+    "source": "Traditional approach",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0097",
+    "source": "Fetch team members → 20 people",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0098",
+    "source": "For each person, fetch their Q3 expenses → 20 tool calls, each returning 50-100 line items (flights, hotels, meals, receipts)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0099",
+    "source": "Fetch budget limits by employee level",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0100",
+    "source": "All of this enters Claude's context: 2,000+ expense line items (50 KB+)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0101",
+    "source": "Claude manually sums each person's expenses, looks up their budget, compares expenses against budget limits",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0102",
+    "source": "More round-trips to the model, significant context consumption",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0103",
+    "source": "With Programmatic Tool Calling",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0104",
+    "source": "Instead of each tool result returning to Claude, Claude writes a Python script that orchestrates the entire workflow. The script runs in the Code Execution tool (a sandboxed environment), pausing when it needs results from your tools. When you return tool results via the API, they're processed by the script rather than consumed by the model. The script continues executing, and Claude only sees the final output.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0105",
+    "source": "Programmatic Tool Calling enables Claude to orchestrate tools through code rather than through individual API round-trips, allowing for parallel tool execution.",
+    "kind": "text",
+    "context": "figcaption > div > div > div > figure"
+  },
+  {
+    "id": "seg-0106",
+    "source": "Here's what Claude's orchestration code looks like for the budget compliance task:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0107",
+    "source": "Claude's context receives only the final result: the two to three people who exceeded their budget. The 2,000+ line items, the intermediate sums, and the budget lookups do not affect Claude’s context, reducing consumption from 200KB of raw expense data to just 1KB of results.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0108",
+    "source": "The efficiency gains are substantial:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0109",
+    "source": "Token savings",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0110",
+    "source": ": By keeping intermediate results out of Claude's context, PTC dramatically reduces token consumption. Average usage dropped from 43,588 to 27,297 tokens, a 37% reduction on complex research tasks.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0111",
+    "source": "Reduced latency",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0112",
+    "source": ": Each API round-trip requires model inference (hundreds of milliseconds to seconds). When Claude orchestrates 20+ tool calls in a single code block, you eliminate 19+ inference passes. The API handles tool execution without returning to the model each time.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0113",
+    "source": "Improved accuracy",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0114",
+    "source": ": By writing explicit orchestration logic, Claude makes fewer errors than when juggling multiple tool results in natural language. Internal knowledge retrieval improved from 25.6% to 28.5%;",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0115",
+    "source": "GIA benchmarks",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0116",
+    "source": "from 46.5% to 51.2%.",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0117",
+    "source": "Production workflows involve messy data, conditional logic, and operations that need to scale. Programmatic Tool Calling lets Claude handle that complexity programmatically while keeping its focus on actionable results rather than raw data processing.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0118",
+    "source": "How Programmatic Tool Calling works",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0119",
+    "source": "1. Mark tools as callable from code",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0120",
+    "source": "Add code_execution to tools, and set allowed_callers to opt-in tools for programmatic execution:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0121",
+    "source": "The API converts these tool definitions into Python functions that Claude can call.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0122",
+    "source": "2. Claude writes orchestration code",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0123",
+    "source": "Instead of requesting tools one at a time, Claude generates Python code:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0124",
+    "source": "3. Tools execute without hitting Claude's context",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0125",
+    "source": "When the code calls get_expenses(), you receive a tool request with a caller field:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0126",
+    "source": "You provide the result, which is processed in the Code Execution environment rather than Claude's context. This request-response cycle repeats for each tool call in the code.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0127",
+    "source": "4. Only final output enters context",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0128",
+    "source": "When the code finishes running, only the results of the code are returned to Claude:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0129",
+    "source": "This is all Claude sees, not the 2000+ expense line items processed along the way.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0130",
+    "source": "When to use Programmatic Tool Calling",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0131",
+    "source": "Programmatic Tool Calling adds a code execution step to your workflow. This extra overhead pays off when the token savings, latency improvements, and accuracy gains are substantial.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0132",
+    "source": "Most beneficial when:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0133",
+    "source": "Processing large datasets where you only need aggregates or summaries",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0134",
+    "source": "Running multi-step workflows with three or more dependent tool calls",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0135",
+    "source": "Filtering, sorting, or transforming tool results before Claude sees them",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0136",
+    "source": "Handling tasks where intermediate data shouldn't influence Claude's reasoning",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0137",
+    "source": "Running parallel operations across many items (checking 50 endpoints, for example)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0138",
+    "source": "Making simple single-tool invocations",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0139",
+    "source": "Working on tasks where Claude should see and reason about all intermediate results",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0140",
+    "source": "Running quick lookups with small responses",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0141",
+    "source": "JSON Schema excels at defining structure–types, required fields, allowed enums–but it can't express usage patterns: when to include optional parameters, which combinations make sense, or what conventions your API expects.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0142",
+    "source": "Consider a support ticket API:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0143",
+    "source": "The schema defines what's valid, but leaves critical questions unanswered:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0144",
+    "source": "Format ambiguity:",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0145",
+    "source": "Should",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0146",
+    "source": "use \"2024-11-06\", \"Nov 6, 2024\", or \"2024-11-06T00:00:00Z\"?",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0147",
+    "source": "ID conventions:",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0148",
+    "source": "Is",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0149",
+    "source": "a UUID, \"USR-12345\", or just \"12345\"?",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0150",
+    "source": "Nested structure usage:",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0151",
+    "source": "When should Claude populate",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0152",
+    "source": "Parameter correlations:",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0153",
+    "source": "How do",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0154",
+    "source": "relate to priority?",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0155",
+    "source": "These ambiguities can lead to malformed tool calls and inconsistent parameter usage.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0156",
+    "source": "Tool Use Examples let you provide sample tool calls directly in your tool definitions. Instead of relying on schema alone, you show Claude concrete usage patterns:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0157",
+    "source": "From these three examples, Claude learns:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0158",
+    "source": "Format conventions",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0159",
+    "source": ": Dates use YYYY-MM-DD, user IDs follow USR-XXXXX, labels use kebab-case",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0160",
+    "source": "Nested structure patterns",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0161",
+    "source": ": How to construct the reporter object with its nested contact object",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0162",
+    "source": "Optional parameter correlations",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0163",
+    "source": ": Critical bugs have full contact info + escalation with tight SLAs; feature requests have reporter but no contact/escalation; internal tasks have title only",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0164",
+    "source": "In our own internal testing, tool use examples improved accuracy from 72% to 90% on complex parameter handling.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0165",
+    "source": "When to use Tool Use Examples",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0166",
+    "source": "Tool Use Examples add tokens to your tool definitions, so they’re most valuable when accuracy improvements outweigh the additional cost.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0167",
+    "source": "Complex nested structures where valid JSON doesn't imply correct usage",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0168",
+    "source": "Tools with many optional parameters and inclusion patterns matter",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0169",
+    "source": "APIs with domain-specific conventions not captured in schemas",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0170",
+    "source": "Similar tools where examples clarify which one to use (e.g.,",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0171",
+    "source": "vs",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0172",
+    "source": "Simple single-parameter tools with obvious usage",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0173",
+    "source": "Standard formats like URLs or emails that Claude already understands",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0174",
+    "source": "Validation concerns better handled by JSON Schema constraints",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0175",
+    "source": "Best practices",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0176",
+    "source": "Building agents that take real-world actions means handling scale, complexity, and precision simultaneously. These three features work together to solve different bottlenecks in tool use workflows. Here's how to combine them effectively.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0177",
+    "source": "Layer features strategically",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0178",
+    "source": "Not every agent needs to use all three features for a given task. Start with your biggest bottleneck:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0179",
+    "source": "Context bloat from tool definitions → Tool Search Tool",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0180",
+    "source": "Large intermediate results polluting context → Programmatic Tool Calling",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0181",
+    "source": "Parameter errors and malformed calls → Tool Use Examples",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0182",
+    "source": "This focused approach lets you address the specific constraint limiting your agent's performance, rather than adding complexity upfront.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0183",
+    "source": "Then layer additional features as needed. They're complementary: Tool Search Tool ensures the right tools are found, Programmatic Tool Calling ensures efficient execution, and Tool Use Examples ensure correct invocation.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0184",
+    "source": "Set up Tool Search Tool for better discovery",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0185",
+    "source": "Tool search matches against names and descriptions, so clear, descriptive definitions improve discovery accuracy.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0186",
+    "source": "Add system prompt guidance so Claude knows what's available:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0187",
+    "source": "Keep your three to five most-used tools always loaded, defer the rest. This balances immediate access for common operations with on-demand discovery for everything else.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0188",
+    "source": "Set up Programmatic Tool Calling for correct execution",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0189",
+    "source": "Since Claude writes code to parse tool outputs, document return formats clearly. This helps Claude write correct parsing logic:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0190",
+    "source": "See below for opt-in tools that benefit from programmatic orchestration:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0191",
+    "source": "Tools that can run in parallel (independent operations)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0192",
+    "source": "Operations safe to retry (idempotent)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0193",
+    "source": "Set up Tool Use Examples for parameter accuracy",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0194",
+    "source": "Craft examples for behavioral clarity:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0195",
+    "source": "Use realistic data (real city names, plausible prices, not \"string\" or \"value\")",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0196",
+    "source": "Show variety with minimal, partial, and full specification patterns",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0197",
+    "source": "Keep it concise: 1-5 examples per tool",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0198",
+    "source": "Focus on ambiguity (only add examples where correct usage isn't obvious from schema)",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0199",
+    "source": "Getting started",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0200",
+    "source": "These features are available in beta. To enable them, add the beta header and include the tools you need:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0201",
+    "source": "For detailed API documentation and SDK examples, see our:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0202",
+    "source": "D",
+    "kind": "text",
+    "context": "span > div > ul > li > a"
+  },
+  {
+    "id": "seg-0203",
+    "source": "ocumentation",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0204",
+    "source": "cookbook",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0205",
+    "source": "for Tool Search Tool",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0206",
+    "source": "Documentation",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0207",
+    "source": "for Programmatic Tool Calling",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0208",
+    "source": "for Tool Use Examples",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0209",
+    "source": "These features move tool use from simple function calling toward intelligent orchestration. As agents tackle more complex workflows spanning dozens of tools and large datasets, dynamic discovery, efficient execution, and reliable invocation become foundational.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0210",
+    "source": "We're excited to see what you build.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0211",
+    "source": "Acknowledgements",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0212",
+    "source": "Written by Bin Wu, with contributions from Adam Jones, Artur Renault, Henry Tay, Jake Noble, Noah Picard, Sam Jiang, and the Claude Developer Platform team. This work builds on foundational research by Chris Gorgolewski, Daniel Jiang, Jeremy Fox and Mike Lambert. We also drew inspiration from across the AI ecosystem, including",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0213",
+    "source": "Joel Pobar's LLMVM",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0214",
+    "source": "Cloudflare's Code Mode",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0215",
+    "source": "Code Execution as MCP",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0216",
+    "source": ". Special thanks to Andy Schumeister, Hamish Kerr, Keir Bradwell, Matt Bleifer and Molly Vorwerck for their support.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0217",
+    "source": "Get the developer newsletter",
+    "kind": "text",
+    "context": "h2 > div > div > div > div"
+  },
+  {
+    "id": "seg-0218",
+    "source": "Product updates, how-tos, community spotlights, and more. Delivered monthly to your inbox.",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0219",
+    "source": "Please provide your email address if you'd like to receive our monthly developer newsletter. You can unsubscribe at any time.",
+    "kind": "text",
+    "context": "p > div > div > div > form"
+  },
+  {
+    "id": "seg-0220",
+    "source": "Products",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0221",
+    "source": "Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0222",
+    "source": "Claude Code",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0223",
+    "source": "Claude Code Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0224",
+    "source": "Claude Cowork",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0225",
+    "source": "Claude Design",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0226",
+    "source": "Claude Science",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0227",
+    "source": "Claude Security",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0228",
+    "source": "Claude for Chrome",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0229",
+    "source": "Claude for Microsoft 365",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0230",
+    "source": "Skills",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0231",
+    "source": "Download app",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0232",
+    "source": "Pricing",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0233",
+    "source": "Log in to Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0234",
+    "source": "Models",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0235",
+    "source": "Mythos",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0236",
+    "source": "Fable",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0237",
+    "source": "Opus",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0238",
+    "source": "Sonnet",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0239",
+    "source": "Haiku",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0240",
+    "source": "Solutions",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0241",
+    "source": "AI agents",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0242",
+    "source": "Code modernization",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0243",
+    "source": "Coding",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0244",
+    "source": "Customer support",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0245",
+    "source": "Cybersecurity",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0246",
+    "source": "Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0247",
+    "source": "Financial services",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0248",
+    "source": "Government",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0249",
+    "source": "Healthcare",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0250",
+    "source": "Higher education",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0251",
+    "source": "K-12 teachers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0252",
+    "source": "Legal",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0253",
+    "source": "Life sciences",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0254",
+    "source": "Nonprofits",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0255",
+    "source": "Small business",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0256",
+    "source": "Claude Platform",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0257",
+    "source": "Overview",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0258",
+    "source": "Developer docs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0259",
+    "source": "Ecosystem",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0260",
+    "source": "Marketplace",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0261",
+    "source": "Regional compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0262",
+    "source": "Claude on AWS",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0263",
+    "source": "Google Cloud",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0264",
+    "source": "Microsoft Foundry",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0265",
+    "source": "Console login",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0266",
+    "source": "Resources",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0267",
+    "source": "Blog",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0268",
+    "source": "Claude partner network",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0269",
+    "source": "Community",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0270",
+    "source": "Connectors",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0271",
+    "source": "Courses",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0272",
+    "source": "Customer stories",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0273",
+    "source": "Events",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0274",
+    "source": "Plugins",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0275",
+    "source": "Powered by Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0276",
+    "source": "Service partners",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0277",
+    "source": "Tutorials",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0278",
+    "source": "Use cases",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0279",
+    "source": "Programs",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0280",
+    "source": "Startups",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0281",
+    "source": "Research Labs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0282",
+    "source": "Help and security",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0283",
+    "source": "Availability",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0284",
+    "source": "Status",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0285",
+    "source": "Support center",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0286",
+    "source": "Company",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0287",
+    "source": "Anthropic",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0288",
+    "source": "Careers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0289",
+    "source": "Economic Futures",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0290",
+    "source": "Claude’s Constitution",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0291",
+    "source": "Claude Corps",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0292",
+    "source": "Keep thinking",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0293",
+    "source": "Policy on the AI Exponential",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0294",
+    "source": "Responsible Scaling Policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0295",
+    "source": "Security and compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0296",
+    "source": "Transparency",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0297",
+    "source": "Terms and policies",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0298",
+    "source": "Privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0299",
+    "source": "Consumer health data privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0300",
+    "source": "Responsible disclosure policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0301",
+    "source": "Terms of service: Commercial",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0302",
+    "source": "Terms of service: Consumer",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0303",
+    "source": "Terms of Service: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0304",
+    "source": "Data Processing Agreement: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0305",
+    "source": "Usage policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0306",
+    "source": "© 2026 Anthropic PBC",
+    "kind": "text",
+    "context": "small > body > footer > div > div"
+  },
+  {
+    "id": "seg-0307",
+    "source": "Home",
+    "kind": "attribute:aria-label",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0308",
+    "source": "Navigation menu",
+    "kind": "attribute:aria-label",
+    "context": "button > body > header > div > div"
+  },
+  {
+    "id": "seg-0309",
+    "source": "Engineering Article Hero",
+    "kind": "attribute:aria-label",
+    "context": "section > [document] > html > body > main"
+  },
+  {
+    "id": "seg-0310",
+    "source": "Illustration for advanced tool use article.",
+    "kind": "attribute:alt",
+    "context": "img > section > div > div > div"
+  },
+  {
+    "id": "seg-0311",
+    "source": "Tool Search Tool diagram",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0312",
+    "source": "Copy code",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0313",
+    "source": "Programmatic tool calling flow",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0314",
+    "source": "Email address",
+    "kind": "attribute:aria-label",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0315",
+    "source": "Enter your email",
+    "kind": "attribute:placeholder",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0316",
+    "source": "Subscribe",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > form > div"
+  },
+  {
+    "id": "seg-0317",
+    "source": "Site footer",
+    "kind": "attribute:aria-label",
+    "context": "footer > [document] > html > body"
+  },
+  {
+    "id": "seg-0318",
+    "source": "Return to homepage",
+    "kind": "attribute:aria-label",
+    "context": "a > body > footer > div > div"
+  },
+  {
+    "id": "seg-0319",
+    "source": "Footer navigation",
+    "kind": "attribute:aria-label",
+    "context": "nav > html > body > footer > div"
+  },
+  {
+    "id": "seg-0320",
+    "source": "Social media links",
+    "kind": "attribute:aria-label",
+    "context": "ul > body > footer > div > div"
+  },
+  {
+    "id": "seg-0321",
+    "source": "Visit our LinkedIn page",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0322",
+    "source": "Visit our X (formerly Twitter) profile",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0323",
+    "source": "Visit our YouTube channel",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  }
+]

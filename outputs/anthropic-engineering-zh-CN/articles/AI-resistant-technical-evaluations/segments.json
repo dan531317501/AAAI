@@ -1,0 +1,1382 @@
+[
+  {
+    "id": "seg-0001",
+    "source": "Designing AI resistant technical evaluations \\ Anthropic",
+    "kind": "text",
+    "context": "title > [document] > html > head"
+  },
+  {
+    "id": "seg-0002",
+    "source": "Skip to main content",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0003",
+    "source": "Skip to footer",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0004",
+    "source": "Research",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0005",
+    "source": "Policy",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0006",
+    "source": "Commitments",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0007",
+    "source": "Learn",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0008",
+    "source": "News",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0009",
+    "source": "Try Claude",
+    "kind": "text",
+    "context": "a > header > div > div > div"
+  },
+  {
+    "id": "seg-0010",
+    "source": "Engineering at Anthropic",
+    "kind": "text",
+    "context": "a > html > body > main > section"
+  },
+  {
+    "id": "seg-0011",
+    "source": "Designing AI-resistant technical evaluations",
+    "kind": "text",
+    "context": "h1 > main > section > div > div"
+  },
+  {
+    "id": "seg-0012",
+    "source": "Published",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0013",
+    "source": "Jan 21, 2026",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0014",
+    "source": "What we learned from three iterations of a performance engineering take-home that Claude keeps beating.",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0015",
+    "source": "Written by Tristan Hume, a lead on Anthropic's performance optimization team. Tristan designed—and redesigned—the take-home test that's helped Anthropic hire dozens of performance engineers.",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0016",
+    "source": "Evaluating technical candidates becomes harder as AI capabilities improve. A take-home that distinguishes well between human skill levels today may be trivially solved by models tomorrow—rendering it useless for evaluation.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0017",
+    "source": "Since early 2024, our performance engineering team has used a take-home test where candidates optimize code for a simulated accelerator. Over 1,000 candidates have completed it, and dozens now work here, including engineers who brought up our Trainium cluster and shipped every model since Claude 3 Opus.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0018",
+    "source": "But each new Claude model has forced us to redesign the test. When given the same time limit, Claude Opus 4 outperformed most human applicants. That still allowed us to distinguish the strongest candidates—but then Claude Opus 4.5 matched even those. Humans can still outperform models when given unlimited time, but under the constraints of the take-home test, we no longer had a way to distinguish between the output of our top candidates and our most capable model.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0019",
+    "source": "I've now iterated through three versions of our take-home in an attempt to ensure it still carries signal. Each time, I’ve learned something new about what makes evaluations robust to AI assistance and what doesn't.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0020",
+    "source": "This post describes the original take-home design, how each Claude model defeated it, and the increasingly unusual approaches I've had to take to ensure our test stays ahead of our top model’s capabilities. While the work we do has evolved alongside our models, we still need more strong engineers—just increasingly creative ways to find them.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0021",
+    "source": "To that end, we're releasing the original take-home as an open challenge, since with unlimited time the best human performance still exceeds what Claude can achieve. If you can best Opus 4.5, we’d love to hear from you—details are at the bottom of this post.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0022",
+    "source": "The origin of the take-home",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0023",
+    "source": "In November 2023, we were preparing to train and launch Claude Opus 3. We’d secured new TPU and GPU clusters, our large Trainium cluster was coming, and we were spending considerably more than we had in the past on accelerators, but we didn't have enough performance engineers for our new scale. I",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0024",
+    "source": "posted on Twitter",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0025",
+    "source": "asking people to email us, which brought in more promising candidates than we could evaluate through our standard interview pipeline, a process that consumes significant time for staff and candidates",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0026",
+    "source": "We needed a way to evaluate candidates more efficiently. So, I took two weeks to design a take-home test that could adequately capture the demands of the role and identify the most capable applicants.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0027",
+    "source": "Design goals",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0028",
+    "source": "Take-homes have a bad reputation. Usually they’re filled with generic problems which engineers find boring, and which make for poor filters. My goal was different: create something genuinely engaging that would make candidates excited to participate and allow us to capture their technical skills at a high-level of resolution.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0029",
+    "source": "The format also offers advantages over live interviews for evaluating performance engineering skills:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0030",
+    "source": "Longer time horizon:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0031",
+    "source": "Engineers rarely face deadlines of less than an hour when coding. A 4-hour window (later reduced to 2 hours) better reflects the actual nature of the job. It's still shorter than most real tasks, but we need to balance that with how onerous it is.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0032",
+    "source": "Realistic environment:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0033",
+    "source": "No one watching or expecting narration. Candidates work in their own editor without distraction.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0034",
+    "source": "Time for comprehension and tooling:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0035",
+    "source": "Performance optimization requires understanding existing systems and sometimes building debugging tools. Both are hard to realistically evaluate in a normal 50 minute interview.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0036",
+    "source": "Compatibility with AI assistance:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0037",
+    "source": "Anthropic's",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0038",
+    "source": "general candidate guidance",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0039",
+    "source": "asks candidates to complete take-homes without AI unless indicated otherwise. For this take-home, we explicitly indicate otherwise.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0040",
+    "source": "Longer-horizon problems are harder for AI to solve completely, so candidates can use AI tools (as they would on the job) while still needing to demonstrate their own skills.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0041",
+    "source": "Beyond these format-specific goals, I applied the same principles I use when designing any interview to make the take-home:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0042",
+    "source": "Representative of real work:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0043",
+    "source": "The problem should give candidates a taste of what the job actually involves.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0044",
+    "source": "High signal:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0045",
+    "source": "The take-home should avoid problems that hinge on a single insight and ensure candidates have many chances to show their full abilities — leaving as little as possible to chance. It should also have a wide scoring distribution,and ensure enough depth that even strong candidates don't finish everything.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0046",
+    "source": "No specific domain knowledge:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0047",
+    "source": "People with good fundamentals can learn specifics on the job. Requiring narrow expertise unnecessarily limits the candidate pool.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0048",
+    "source": "Fun:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0049",
+    "source": "Fast development loops, interesting problems with depth, and room for creativity.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0050",
+    "source": "The simulated machine",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0051",
+    "source": "I built a Python simulator for a fake accelerator with characteristics that resemble TPUs. Candidates optimize code running on this machine, using a hot-reloading",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0052",
+    "source": "Perfetto",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0053",
+    "source": "trace that shows every instruction, similar to",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0054",
+    "source": "the tooling we have on Trainium",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0055",
+    "source": "The machine includes features that make accelerator optimization interesting: manually managed scratchpad memory (unlike CPUs, accelerators often require explicit memory management), VLIW (multiple execution units running in parallel each cycle, requiring efficient instruction packing), SIMD (vector operations on many elements per instruction), and multicore (distributing work across cores).",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0056",
+    "source": "The task is a parallel tree traversal, deliberately not deep learning flavored, since most performance engineers hadn't worked on deep learning yet and could learn domain specifics on the job. The problem was inspired by branchless SIMD decision tree inference, a classical ML optimization challenge as a nod to the past, which only a few candidates had encountered before.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0057",
+    "source": "Candidates start with a fully serial implementation and progressively exploit the machine's parallelism. The warmup is multicore parallelism, then candidates choose whether to tackle SIMD vectorization or VLIW instruction packing. The original version also included a bug that candidates needed to debug first, exercising their ability to build tooling.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0058",
+    "source": "Early results",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0059",
+    "source": "The initial take-home worked well. One person from the Twitter batch scored substantially higher than everyone else. He started in early February, two weeks after our first hires through the standard pipeline. The test proved predictive: He immediately began optimizing kernels and found a workaround for a launch-blocking compiler bug involving tensor indexing math overflowing 32 bits.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0060",
+    "source": "Over the next year and a half, about 1,000 candidates completed the take-home, and it helped us hire most of our current performance engineering team. It proved especially valuable for candidates with limited experience on paper: several of our highest-performing engineers came directly from undergrad but showed enough skill on the take-home for us to hire confidently.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0061",
+    "source": "Feedback was positive. Many candidates worked past the 4-hour limit because they were enjoying themselves. The strongest unlimited-time submissions included full optimizing mini-compilers and several clever optimizations I hadn't anticipated.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0062",
+    "source": "Then Claude Opus 4 defeated it",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0063",
+    "source": "By May 2025, Claude 3.7 Sonnet had already crept up to the point where over 50% of candidates would have been better off delegating to Claude Code entirely. I then tested a pre-release version of Claude Opus 4 on the take-home. It came up with a more optimized solution than almost all humans did within the 4-hour limit.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0064",
+    "source": "This wasn't my first interview defeated by a Claude model. I'd designed a live interview question in 2023 specifically because our questions at the time were based around common tasks that early Claude models had lots of knowledge of and so could solve easily. I tried to design a question that required more problem solving skill than knowledge, still based on a real (but niche) problem I'd solved at work. Claude 3 Opus beat part 1 of that question; Claude 3.5 Sonnet beat part 2. We still use it because our other live questions aren't AI-resistant either.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0065",
+    "source": "For the take-home, there was a straightforward fix. The problem had far more depth than anyone could explore in 4 hours, so I used Claude Opus 4 to identify where it started struggling. That became the new starting point for version 2. I wrote cleaner starter code, added new machine features for more depth, and removed multicore (which Claude had already solved, and which only slowed down development loops without adding signal).",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0066",
+    "source": "I also shortened the time limit from 4 hours to 2 hours. I'd originally chosen 4 hours based on candidate feedback preferring less risk of getting sunk if they got stuck for a bit on a bug or confusion, but the scheduling overhead was causing multi-week delays in our pipeline. Two hours is much easier to fit into a weekend.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0067",
+    "source": "Version 2 emphasized clever optimization insights over debugging and code volume. It served us well—for several months.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0068",
+    "source": "Then Claude Opus 4.5 defeated that",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0069",
+    "source": "When I tested a pre-release Claude Opus 4.5 checkpoint, I watched Claude Code work on the problem for 2 hours, gradually improving its solution. It solved the initial bottlenecks, implemented all the common micro-optimizations, and met our passing threshold in under an hour.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0070",
+    "source": "Then it stopped, convinced it had hit an insurmountable memory bandwidth bottleneck. Most humans reach the same conclusion. But there are clever tricks that exploit the problem structure to work around that bottleneck. When I told Claude the cycle count it was possible to achieve, it thought for a while and found the trick. It then debugged, tuned, and implemented further optimizations. By the 2-hour mark, its score matched the best human performance within that time limit—and that human had made heavy use of Claude 4 with steering.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0071",
+    "source": "We tried it out in our internal test-time compute harness for more rigor and confirmed it could both beat humans in 2 hours and continue climbing with time. Post-launch we even improved our harness in a generic way and got a higher score.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0072",
+    "source": "I had a problem. We were about to release a model where the best strategy on our take-home would be delegating to Claude Code.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0073",
+    "source": "Considering the options",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0074",
+    "source": "Some colleagues suggested banning AI assistance. I didn't want to do this. Beyond the enforcement challenges, I had a sense that given people continue to play a vital role in our work, I should be able to figure out",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0075",
+    "source": "some",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0076",
+    "source": "way for them to distinguish themselves in a setting",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0077",
+    "source": "with AI—",
+    "kind": "text",
+    "context": "em > article > div > div > p"
+  },
+  {
+    "id": "seg-0078",
+    "source": "like they'd have on the job. I didn't want to give in yet to the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0079",
+    "source": "idea",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0080",
+    "source": "that humans only have an advantage on tasks longer than a few hours.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0081",
+    "source": "Others suggested raising the bar to \"substantially outperform what Claude Code achieves alone.\" The concern here was that Claude works fast. Humans typically spend half the 2 hours reading and understanding the problem before they start optimizing. A human trying to steer Claude would likely be constantly behind, understanding what Claude did only after the fact. The dominant strategy might become sitting back and watching.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0082",
+    "source": "Nowadays performance engineers at Anthropic still have lots of work to do, but it looks more like tough debugging, systems design, performance analysis, figuring out how to verify the correctness of our systems, and figuring out how to make Claude's code simpler and more elegant. Unfortunately these things are tough to test in an objective way without a lot of time or common context. It's always been hard to design interviews that represent the job, but now it's harder than ever.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0083",
+    "source": "But I also worried if I invested in designing a new take-home, either Claude Opus 4.5 would solve that too, or it would become so challenging that it would be impossible for humans to complete in two hours.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0084",
+    "source": "Attempt 1: A different optimization problem",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0085",
+    "source": "I realized Claude could help me implement whatever I designed quickly, which motivated me to try developing a harder take-home. I chose a problem based on one of the trickier kernel optimizations I'd done at Anthropic: an efficient data",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0086",
+    "source": "transposition",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0087",
+    "source": "on 2D TPU registers while avoiding",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0088",
+    "source": "bank conflicts",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0089",
+    "source": ". I distilled it into a simpler problem on a simulated machine and had Claude implement the changes in under a day.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0090",
+    "source": "Claude Opus 4.5 found a great optimization I hadn't even thought of. Through careful analysis, it realized it could transpose the entire computation rather than figuring out how to transpose the data, and it rewrote the whole program accordingly.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0091",
+    "source": "In my real case, this wouldn't have worked, so I patched the problem to remove that approach. Claude then made progress but couldn't find the most efficient solution. It seemed like I had my new problem, now I just had to hope human candidates could get it fast enough. But I had some nagging doubt, so I double-checked using Claude Code's \"ultrathink\" feature with longer thinking budgets ... and it solved it. It even knew the tricks for fixing bank conflicts.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0092",
+    "source": "In hindsight, this wasn't the right problem to try. Engineers across many platforms have struggled with data transposition and bank conflicts, so Claude has substantial training data to draw on. While I'd found my solution from first principles, Claude could draw on a larger toolbox of experience.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0093",
+    "source": "Attempt 2: Going weirder",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0094",
+    "source": "I needed a problem where human reasoning could win over Claude's larger experience base: something sufficiently out of distribution. Unfortunately, this conflicted with my goal of being recognizably like the job.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0095",
+    "source": "I thought about the most unusual optimization problems I'd enjoyed and landed on",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0096",
+    "source": "Zachtronics games",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0097",
+    "source": ". These programming puzzle games use unusual, highly constrained instruction sets that force you to program in unconventional ways. For example, in",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0098",
+    "source": "Shenzhen I/O",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0099",
+    "source": ", programs are split across multiple communicating chips that each hold only about 10 instructions with one or two state registers. Clever optimization often involves encoding state into the instruction pointer or branch flags.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0100",
+    "source": "I designed a new take-home consisting of puzzles using a tiny, heavily constrained instruction set, optimizing solutions for minimal instruction count. I implemented one medium-hard puzzle and tested it on Claude Opus 4.5. It failed. I filled out more puzzles and had colleagues verify that people less steeped in the problem than me could still outperform Claude.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0101",
+    "source": "Unlike Zachtronics games, I intentionally provided no visualization or debugging tools. The starter code only checks whether solutions are valid. Building debugging tools is part of what's being tested: you can either insert well-crafted print statements or ask a coding model to generate an interactive debugger in a few minutes. Judgment about how to invest in tooling is part of the signal.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0102",
+    "source": "I'm reasonably happy with the new take-home. It might have lower variance than the original because it comprises more independent sub-problems. Early results are promising: scores correlate well with the caliber of candidates' past work, and one of my most capable colleagues scored higher than any candidate so far.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0103",
+    "source": "I'm still sad to have given up the realism and varied depth of the original. But realism may be a luxury we no longer have. The original worked because it resembled real work. The replacement works because it simulates novel work.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0104",
+    "source": "An open challenge",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0105",
+    "source": "We're releasing the original take-home for anyone to try with unlimited time. Human experts",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0106",
+    "source": "retain an advantage",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0107",
+    "source": "over current models at sufficiently long time horizons. The fastest human solution ever submitted substantially exceeds what Claude has achieved even with extensive test-time compute.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0108",
+    "source": "The released version starts from scratch (like version 1) but uses version 2's instruction set and single-core design, so cycle counts are comparable to version 2.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0109",
+    "source": "Performance benchmarks (measured in clock cycles from the simulated machine):",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0110",
+    "source": "2164 cycles",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0111",
+    "source": ": Claude Opus 4 after many hours in the test-time compute harness",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0112",
+    "source": "1790 cycles",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0113",
+    "source": ": Claude Opus 4.5 in a casual Claude Code session, approximately matching the best human performance in 2 hours",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0114",
+    "source": "1579 cycles",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0115",
+    "source": ": Claude Opus 4.5 after 2 hours in our test-time compute harness",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0116",
+    "source": "1548 cycles",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0117",
+    "source": ": Claude Sonnet 4.5 after many more than 2 hours of test-time compute",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0118",
+    "source": "1487 cycles",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0119",
+    "source": ": Claude Opus 4.5 after 11.5 hours in the harness",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0120",
+    "source": "1363 cycles",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0121",
+    "source": ": Claude Opus 4.5 in an improved test time compute harness after many hours",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0122",
+    "source": "Download it on GitHub",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0123",
+    "source": ". If you optimize below 1487 cycles, beating Claude's best performance at launch, email us at",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0124",
+    "source": "with your code and a resume.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0125",
+    "source": "Or you can",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0126",
+    "source": "apply through our typical process",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0127",
+    "source": ", which uses our (now) Claude-resistant take-home. We're curious how long it lasts.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0128",
+    "source": "Get the developer newsletter",
+    "kind": "text",
+    "context": "h2 > div > div > div > div"
+  },
+  {
+    "id": "seg-0129",
+    "source": "Product updates, how-tos, community spotlights, and more. Delivered monthly to your inbox.",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0130",
+    "source": "Please provide your email address if you'd like to receive our monthly developer newsletter. You can unsubscribe at any time.",
+    "kind": "text",
+    "context": "p > div > div > div > form"
+  },
+  {
+    "id": "seg-0131",
+    "source": "Products",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0132",
+    "source": "Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0133",
+    "source": "Claude Code",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0134",
+    "source": "Claude Code Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0135",
+    "source": "Claude Cowork",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0136",
+    "source": "Claude Design",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0137",
+    "source": "Claude Science",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0138",
+    "source": "Claude Security",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0139",
+    "source": "Claude for Chrome",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0140",
+    "source": "Claude for Microsoft 365",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0141",
+    "source": "Skills",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0142",
+    "source": "Download app",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0143",
+    "source": "Pricing",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0144",
+    "source": "Log in to Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0145",
+    "source": "Models",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0146",
+    "source": "Mythos",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0147",
+    "source": "Fable",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0148",
+    "source": "Opus",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0149",
+    "source": "Sonnet",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0150",
+    "source": "Haiku",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0151",
+    "source": "Solutions",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0152",
+    "source": "AI agents",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0153",
+    "source": "Code modernization",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0154",
+    "source": "Coding",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0155",
+    "source": "Customer support",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0156",
+    "source": "Cybersecurity",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0157",
+    "source": "Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0158",
+    "source": "Financial services",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0159",
+    "source": "Government",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0160",
+    "source": "Healthcare",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0161",
+    "source": "Higher education",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0162",
+    "source": "K-12 teachers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0163",
+    "source": "Legal",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0164",
+    "source": "Life sciences",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0165",
+    "source": "Nonprofits",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0166",
+    "source": "Small business",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0167",
+    "source": "Claude Platform",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0168",
+    "source": "Overview",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0169",
+    "source": "Developer docs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0170",
+    "source": "Ecosystem",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0171",
+    "source": "Marketplace",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0172",
+    "source": "Regional compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0173",
+    "source": "Claude on AWS",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0174",
+    "source": "Google Cloud",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0175",
+    "source": "Microsoft Foundry",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0176",
+    "source": "Console login",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0177",
+    "source": "Resources",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0178",
+    "source": "Blog",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0179",
+    "source": "Claude partner network",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0180",
+    "source": "Community",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0181",
+    "source": "Connectors",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0182",
+    "source": "Courses",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0183",
+    "source": "Customer stories",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0184",
+    "source": "Events",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0185",
+    "source": "Plugins",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0186",
+    "source": "Powered by Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0187",
+    "source": "Service partners",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0188",
+    "source": "Tutorials",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0189",
+    "source": "Use cases",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0190",
+    "source": "Programs",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0191",
+    "source": "Startups",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0192",
+    "source": "Research Labs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0193",
+    "source": "Help and security",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0194",
+    "source": "Availability",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0195",
+    "source": "Status",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0196",
+    "source": "Support center",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0197",
+    "source": "Company",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0198",
+    "source": "Anthropic",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0199",
+    "source": "Careers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0200",
+    "source": "Economic Futures",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0201",
+    "source": "Claude’s Constitution",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0202",
+    "source": "Claude Corps",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0203",
+    "source": "Keep thinking",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0204",
+    "source": "Policy on the AI Exponential",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0205",
+    "source": "Responsible Scaling Policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0206",
+    "source": "Security and compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0207",
+    "source": "Transparency",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0208",
+    "source": "Terms and policies",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0209",
+    "source": "Privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0210",
+    "source": "Consumer health data privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0211",
+    "source": "Responsible disclosure policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0212",
+    "source": "Terms of service: Commercial",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0213",
+    "source": "Terms of service: Consumer",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0214",
+    "source": "Terms of Service: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0215",
+    "source": "Data Processing Agreement: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0216",
+    "source": "Usage policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0217",
+    "source": "© 2026 Anthropic PBC",
+    "kind": "text",
+    "context": "small > body > footer > div > div"
+  },
+  {
+    "id": "seg-0218",
+    "source": "Home",
+    "kind": "attribute:aria-label",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0219",
+    "source": "Navigation menu",
+    "kind": "attribute:aria-label",
+    "context": "button > body > header > div > div"
+  },
+  {
+    "id": "seg-0220",
+    "source": "Engineering Article Hero",
+    "kind": "attribute:aria-label",
+    "context": "section > [document] > html > body > main"
+  },
+  {
+    "id": "seg-0221",
+    "source": "Email address",
+    "kind": "attribute:aria-label",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0222",
+    "source": "Enter your email",
+    "kind": "attribute:placeholder",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0223",
+    "source": "Subscribe",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > form > div"
+  },
+  {
+    "id": "seg-0224",
+    "source": "Site footer",
+    "kind": "attribute:aria-label",
+    "context": "footer > [document] > html > body"
+  },
+  {
+    "id": "seg-0225",
+    "source": "Return to homepage",
+    "kind": "attribute:aria-label",
+    "context": "a > body > footer > div > div"
+  },
+  {
+    "id": "seg-0226",
+    "source": "Footer navigation",
+    "kind": "attribute:aria-label",
+    "context": "nav > html > body > footer > div"
+  },
+  {
+    "id": "seg-0227",
+    "source": "Social media links",
+    "kind": "attribute:aria-label",
+    "context": "ul > body > footer > div > div"
+  },
+  {
+    "id": "seg-0228",
+    "source": "Visit our LinkedIn page",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0229",
+    "source": "Visit our X (formerly Twitter) profile",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0230",
+    "source": "Visit our YouTube channel",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  }
+]

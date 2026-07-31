@@ -1,0 +1,1598 @@
+[
+  {
+    "id": "seg-0001",
+    "source": "Claude Desktop Extensions: One-click MCP server installation for Claude Desktop \\ Anthropic",
+    "kind": "text",
+    "context": "title > [document] > html > head"
+  },
+  {
+    "id": "seg-0002",
+    "source": "Skip to main content",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0003",
+    "source": "Skip to footer",
+    "kind": "text",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0004",
+    "source": "Research",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0005",
+    "source": "Policy",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0006",
+    "source": "Commitments",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0007",
+    "source": "Learn",
+    "kind": "text",
+    "context": "span > nav > ul > li > button"
+  },
+  {
+    "id": "seg-0008",
+    "source": "News",
+    "kind": "text",
+    "context": "a > div > nav > ul > li"
+  },
+  {
+    "id": "seg-0009",
+    "source": "Try Claude",
+    "kind": "text",
+    "context": "a > header > div > div > div"
+  },
+  {
+    "id": "seg-0010",
+    "source": "Engineering at Anthropic",
+    "kind": "text",
+    "context": "a > html > body > main > section"
+  },
+  {
+    "id": "seg-0011",
+    "source": "Desktop Extensions: One-click MCP server installation for Claude Desktop",
+    "kind": "text",
+    "context": "h1 > main > section > div > div"
+  },
+  {
+    "id": "seg-0012",
+    "source": "Published",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0013",
+    "source": "Jun 26, 2025",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0014",
+    "source": "Desktop Extensions make installing MCP servers as easy as clicking a button. We share the technical architecture and tips for creating good extensions.",
+    "kind": "text",
+    "context": "p > main > section > div > div"
+  },
+  {
+    "id": "seg-0015",
+    "source": "File extension update",
+    "kind": "text",
+    "context": "p > ul > li > div > div"
+  },
+  {
+    "id": "seg-0016",
+    "source": "Sep 11, 2025",
+    "kind": "text",
+    "context": "p > ul > li > div > div"
+  },
+  {
+    "id": "seg-0017",
+    "source": "Claude Desktop Extensions now use the .mcpb (MCP Bundle) file extension instead of .dxt. Existing .dxt extensions will continue to work, but we recommend developers use .mcpb for new extensions going forward. All functionality remains the same - this is purely a naming convention update.",
+    "kind": "text",
+    "context": "p > div > ul > li > div"
+  },
+  {
+    "id": "seg-0018",
+    "source": "When we released the Model Context Protocol (MCP) last year, we saw developers build amazing local servers that gave Claude access to everything from file systems to databases. But we kept hearing the same feedback: installation was too complex. Users needed developer tools, had to manually edit configuration files, and often got stuck on dependency issues.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0019",
+    "source": "Today, we're introducing Desktop Extensions—a new packaging format that makes installing MCP servers as simple as clicking a button.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0020",
+    "source": "Addressing the MCP installation problem",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0021",
+    "source": "Local MCP servers unlock powerful capabilities for Claude Desktop users. They can interact with local applications, access private data, and integrate with development tools—all while keeping data on the user's machine. However, the current installation process creates significant barriers:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0022",
+    "source": "Developer tools required",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0023",
+    "source": ": Users need Node.js, Python, or other runtimes installed",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0024",
+    "source": "Manual configuration",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0025",
+    "source": ": Each server requires editing JSON configuration files",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0026",
+    "source": "Dependency management",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0027",
+    "source": ": Users must resolve package conflicts and version mismatches",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0028",
+    "source": "No discovery mechanism",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0029",
+    "source": ": Finding useful MCP servers requires searching GitHub",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0030",
+    "source": "Update complexity",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0031",
+    "source": ": Keeping servers current means manual reinstallation",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0032",
+    "source": "These friction points meant that MCP servers, despite their power, remained largely inaccessible to non-technical users.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0033",
+    "source": "Introducing Desktop Extensions",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0034",
+    "source": "Desktop Extensions (",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0035",
+    "source": "files) solve these problems by bundling an entire MCP server—including all dependencies—into a single installable package. Here's what changes for users:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0036",
+    "source": "Before:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0037",
+    "source": "Copy",
+    "kind": "text",
+    "context": "span > div > div > div > button"
+  },
+  {
+    "id": "seg-0038",
+    "source": "After:",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0039",
+    "source": "Download a",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0040",
+    "source": "file",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0041",
+    "source": "Double-click to open with Claude Desktop",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0042",
+    "source": "Click \"Install\"",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0043",
+    "source": "That's it. No terminal, no configuration files, no dependency conflicts.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0044",
+    "source": "Architecture overview",
+    "kind": "text",
+    "context": "h2 > div > article > div > div"
+  },
+  {
+    "id": "seg-0045",
+    "source": "A Desktop Extension is a zip archive containing the local MCP server as well as a",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0046",
+    "source": ", which describes everything Claude Desktop and other apps supporting desktop extensions need to know.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0047",
+    "source": "The only required file in a Desktop Extension is a manifest.json. Claude Desktop handles all the complexity:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0048",
+    "source": "Built-in runtime",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0049",
+    "source": ": We ship Node.js with Claude Desktop, eliminating external dependencies",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0050",
+    "source": "Automatic updates",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0051",
+    "source": ": Extensions update automatically when new versions are available",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0052",
+    "source": "Secure secrets",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0053",
+    "source": ": Sensitive configuration like API keys are stored in the OS keychain",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0054",
+    "source": "The manifest contains human-readable information (like the name, description, or author), a declaration of features (tools, prompts), user configuration, and runtime requirements. Most fields are optional, so the minimal version is quite short, although in practice, we expect all three supported extension types (Node.js, Python, and classic binaries/executables) to include files:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0055",
+    "source": "There are a number of convenience options",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0056",
+    "source": "available in the manifest spec",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0057",
+    "source": "that aim to make the installation and configuration of local MCP servers easier. The server configuration object can be defined in a way that makes room both for user-defined configuration in the form of template literals as well as platform-specific overrides. Extension developers can define, in detail, what kind of configuration they want to collect from users.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0058",
+    "source": "Let’s take a look at a concrete example of how the manifest aids with configuration. In the manifest below, the developer declares that the user needs to supply an",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0059",
+    "source": ". Claude will not enable the extension until the user has supplied that value, keep it automatically in the operating system’s secret vault, and transparently replace the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0060",
+    "source": "with the user-supplied value when launching the server. Similarly,",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0061",
+    "source": "will be replaced with the full path to the extension’s unpacked directory.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0062",
+    "source": "A full",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0063",
+    "source": "with most of the optional fields might look like this:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0064",
+    "source": "To see an extension and manifest, please refer",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0065",
+    "source": "to the examples in the MCPB repository",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0066",
+    "source": "The full specification for all required and optional fields in the",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0067",
+    "source": "can be found as part of our",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0068",
+    "source": "open-source toolchain",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0069",
+    "source": "Building your first extension",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0070",
+    "source": "Let's walk through packaging an existing MCP server as a Desktop Extension. We'll use a simple file system server as an example.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0071",
+    "source": "Step 1: Create the manifest",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0072",
+    "source": "First, initialize a manifest for your server:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0073",
+    "source": "This interactive tool asks about your server and generates a complete manifest.json. If you want to speed-run your way to the most basic manifest.json, you can run the command with a --yes parameter.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0074",
+    "source": "Step 2: Handle user configuration",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0075",
+    "source": "If your server needs user input (like API keys or allowed directories), declare it in the manifest:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0076",
+    "source": "Claude Desktop will:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0077",
+    "source": "Display a user-friendly configuration UI",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0078",
+    "source": "Validate inputs before enabling the extension",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0079",
+    "source": "Securely store sensitive values",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0080",
+    "source": "Pass configuration to your server either as arguments or environment variables, depending on developer configuration",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0081",
+    "source": "In the example below, we’re passing the user configuration as an environment variable, but it could also be an argument.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0082",
+    "source": "Step 3: Package the extension",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0083",
+    "source": "Bundle everything into a",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0084",
+    "source": "file:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0085",
+    "source": "This command:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0086",
+    "source": "Validates your manifest",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0087",
+    "source": "Generates the",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0088",
+    "source": "archive",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0089",
+    "source": "Step 4: Test locally",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0090",
+    "source": "Drag your",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0091",
+    "source": "file into Claude Desktop's Settings window. You'll see:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0092",
+    "source": "Human-readable information about your extension",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0093",
+    "source": "Required permissions and configuration",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0094",
+    "source": "A simple \"Install\" button",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0095",
+    "source": "Advanced features",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0096",
+    "source": "Cross-platform support",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0097",
+    "source": "Extensions can adapt to different operating systems:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0098",
+    "source": "Dynamic configuration",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0099",
+    "source": "Use template literals for runtime values:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0100",
+    "source": ": Extension's installation directory",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0101",
+    "source": ": User-provided configuration",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0102",
+    "source": ": System environment variables",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0103",
+    "source": "Feature declaration",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0104",
+    "source": "Help users understand capabilities upfront:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0105",
+    "source": "The extension directory",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0106",
+    "source": "We're launching with a curated directory of extensions built into Claude Desktop. Users can browse, search, and install with one click—no searching GitHub or vetting code.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0107",
+    "source": "While we expect both the Desktop Extension specification and the implementation in Claude for macOS and Windows to evolve over time, we look forward to seeing the many ways in which extensions can be used to expand the capabilities of Claude in creative ways.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0108",
+    "source": "To submit your extension:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0109",
+    "source": "Ensure it follows the guidelines found in the submission form",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0110",
+    "source": "Test across Windows and macOS",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0111",
+    "source": "Submit your extension",
+    "kind": "text",
+    "context": "a > div > div > ol > li"
+  },
+  {
+    "id": "seg-0112",
+    "source": "Our team reviews for quality and security",
+    "kind": "text",
+    "context": "li > article > div > div > ol"
+  },
+  {
+    "id": "seg-0113",
+    "source": "Building an open ecosystem",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0114",
+    "source": "We are committed to the open ecosystem around MCP servers and believe that its ability to be universally adopted by multiple applications and services has benefitted the community. In line with this commitment, we’re open-sourcing the Desktop Extension specification, toolchain, and the schemas and key functions used by Claude for macOS and Windows to implement its own support of Desktop Extensions. It is our hope that the MCPB format doesn’t just make local MCP servers more portable for Claude, but other AI desktop applications, too.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0115",
+    "source": "We're open-sourcing:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0116",
+    "source": "The complete MCPB specification",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0117",
+    "source": "Packaging and validation tools",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0118",
+    "source": "Reference implementation code",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0119",
+    "source": "TypeScript types and schemas",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0120",
+    "source": "This means:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0121",
+    "source": "For MCP server developers",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0122",
+    "source": ": Package once, run anywhere that supports MCPB",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0123",
+    "source": "For app developers",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0124",
+    "source": ": Add extension support without building from scratch",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0125",
+    "source": "For users",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0126",
+    "source": ": Consistent experience across all MCP-enabled applications",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0127",
+    "source": "The specification and toolchain is on purpose versioned as 0.1, as we are looking forward to working with the greater community on evolving and changing the format. We look forward to hearing from you.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0128",
+    "source": "Security and enterprise considerations",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0129",
+    "source": "We understand that extensions introduce new security considerations, particularly for enterprises. We've built in several safeguards with the preview release of Desktop Extensions:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0130",
+    "source": "Sensitive data stays in the OS keychain",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0131",
+    "source": "Ability to audit what extensions are installed",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0132",
+    "source": "For enterprises",
+    "kind": "text",
+    "context": "h4 > div > article > div > div"
+  },
+  {
+    "id": "seg-0133",
+    "source": "Group Policy (Windows) and MDM (macOS) support",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0134",
+    "source": "Ability to pre-install approved extensions",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0135",
+    "source": "Blocklist specific extensions or publishers",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0136",
+    "source": "Disable the extension directory entirely",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0137",
+    "source": "Deploy private extension directories",
+    "kind": "text",
+    "context": "li > article > div > div > ul"
+  },
+  {
+    "id": "seg-0138",
+    "source": "For more information about how to manage extensions within your organization, see our",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0139",
+    "source": "documentation",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0140",
+    "source": "Getting started",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0141",
+    "source": "Ready to build your own extension? Here's how to start:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0142",
+    "source": ": Review our",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0143",
+    "source": "developer documentation",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0144",
+    "source": "– or dive right in by running the following commands in your local MCP servers’ directory:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0145",
+    "source": "For Claude Desktop users",
+    "kind": "text",
+    "context": "strong > article > div > div > p"
+  },
+  {
+    "id": "seg-0146",
+    "source": ": Update to the latest version and look for the Extensions section in Settings",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0147",
+    "source": ": Review our enterprise documentation for deployment options",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0148",
+    "source": "Building with Claude Code",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0149",
+    "source": "Internally at Anthropic, we have found that Claude is great at building extensions with minimal intervention. If you too want to use Claude Code, we recommend that you briefly explain what you want your extension to do and then add the following context to the prompt:",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0150",
+    "source": "Conclusion",
+    "kind": "text",
+    "context": "h3 > div > article > div > div"
+  },
+  {
+    "id": "seg-0151",
+    "source": "Desktop Extensions represent a fundamental shift in how users interact with local AI tools. By removing installation friction, we're making powerful MCP servers accessible to everyone—not just developers.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0152",
+    "source": "Internally, we’re using desktop extensions to share highly experimental MCP servers - some fun, some useful.. One team experimented to see how far our models could make it when directly connected to a GameBoy, similar to our",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0153",
+    "source": "“Claude plays Pokémon” research",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0154",
+    "source": ". We used Desktop Extensions to package a single extension that opens up the popular",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0155",
+    "source": "PyBoy",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0156",
+    "source": "GameBoy emulator and lets Claude take control. We believe that countless opportunities exist to connect the model’s capabilities to the tools, data, and applications users already have on their local machines.",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0157",
+    "source": "We can't wait to see what you build. The same creativity that brought us thousands of MCP servers can now reach millions of users with just one click. Ready to share your MCP server?",
+    "kind": "text",
+    "context": "p > div > article > div > div"
+  },
+  {
+    "id": "seg-0158",
+    "source": "Submit your extension for review",
+    "kind": "text",
+    "context": "a > article > div > div > p"
+  },
+  {
+    "id": "seg-0159",
+    "source": "Looking to learn more?",
+    "kind": "text",
+    "context": "h3 > div > a > div > div"
+  },
+  {
+    "id": "seg-0160",
+    "source": "Explore courses",
+    "kind": "text",
+    "context": "span > div > a > div > div"
+  },
+  {
+    "id": "seg-0161",
+    "source": "Get the developer newsletter",
+    "kind": "text",
+    "context": "h2 > div > div > div > div"
+  },
+  {
+    "id": "seg-0162",
+    "source": "Product updates, how-tos, community spotlights, and more. Delivered monthly to your inbox.",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0163",
+    "source": "Please provide your email address if you'd like to receive our monthly developer newsletter. You can unsubscribe at any time.",
+    "kind": "text",
+    "context": "p > div > div > div > form"
+  },
+  {
+    "id": "seg-0164",
+    "source": "Products",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0165",
+    "source": "Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0166",
+    "source": "Claude Code",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0167",
+    "source": "Claude Code Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0168",
+    "source": "Claude Cowork",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0169",
+    "source": "Claude Design",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0170",
+    "source": "Claude Science",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0171",
+    "source": "Claude Security",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0172",
+    "source": "Claude for Chrome",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0173",
+    "source": "Claude for Microsoft 365",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0174",
+    "source": "Skills",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0175",
+    "source": "Download app",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0176",
+    "source": "Pricing",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0177",
+    "source": "Log in to Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0178",
+    "source": "Models",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0179",
+    "source": "Mythos",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0180",
+    "source": "Fable",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0181",
+    "source": "Opus",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0182",
+    "source": "Sonnet",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0183",
+    "source": "Haiku",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0184",
+    "source": "Solutions",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0185",
+    "source": "AI agents",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0186",
+    "source": "Code modernization",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0187",
+    "source": "Coding",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0188",
+    "source": "Customer support",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0189",
+    "source": "Cybersecurity",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0190",
+    "source": "Enterprise",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0191",
+    "source": "Financial services",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0192",
+    "source": "Government",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0193",
+    "source": "Healthcare",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0194",
+    "source": "Higher education",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0195",
+    "source": "K-12 teachers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0196",
+    "source": "Legal",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0197",
+    "source": "Life sciences",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0198",
+    "source": "Nonprofits",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0199",
+    "source": "Small business",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0200",
+    "source": "Claude Platform",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0201",
+    "source": "Overview",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0202",
+    "source": "Developer docs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0203",
+    "source": "Ecosystem",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0204",
+    "source": "Marketplace",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0205",
+    "source": "Regional compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0206",
+    "source": "Claude on AWS",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0207",
+    "source": "Google Cloud",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0208",
+    "source": "Microsoft Foundry",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0209",
+    "source": "Console login",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0210",
+    "source": "Resources",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0211",
+    "source": "Blog",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0212",
+    "source": "Claude partner network",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0213",
+    "source": "Community",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0214",
+    "source": "Connectors",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0215",
+    "source": "Courses",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0216",
+    "source": "Customer stories",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0217",
+    "source": "Events",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0218",
+    "source": "Plugins",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0219",
+    "source": "Powered by Claude",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0220",
+    "source": "Service partners",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0221",
+    "source": "Tutorials",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0222",
+    "source": "Use cases",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0223",
+    "source": "Programs",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0224",
+    "source": "Startups",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0225",
+    "source": "Research Labs",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0226",
+    "source": "Help and security",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0227",
+    "source": "Availability",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0228",
+    "source": "Status",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0229",
+    "source": "Support center",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0230",
+    "source": "Company",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0231",
+    "source": "Anthropic",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0232",
+    "source": "Careers",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0233",
+    "source": "Economic Futures",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0234",
+    "source": "Claude’s Constitution",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0235",
+    "source": "Claude Corps",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0236",
+    "source": "Keep thinking",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0237",
+    "source": "Policy on the AI Exponential",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0238",
+    "source": "Responsible Scaling Policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0239",
+    "source": "Security and compliance",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0240",
+    "source": "Transparency",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0241",
+    "source": "Terms and policies",
+    "kind": "text",
+    "context": "h3 > div > nav > div > div"
+  },
+  {
+    "id": "seg-0242",
+    "source": "Privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0243",
+    "source": "Consumer health data privacy policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0244",
+    "source": "Responsible disclosure policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0245",
+    "source": "Terms of service: Commercial",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0246",
+    "source": "Terms of service: Consumer",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0247",
+    "source": "Terms of Service: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0248",
+    "source": "Data Processing Agreement: US K-12",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0249",
+    "source": "Usage policy",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0250",
+    "source": "© 2026 Anthropic PBC",
+    "kind": "text",
+    "context": "small > body > footer > div > div"
+  },
+  {
+    "id": "seg-0251",
+    "source": "Home",
+    "kind": "attribute:aria-label",
+    "context": "a > html > body > header > div"
+  },
+  {
+    "id": "seg-0252",
+    "source": "Navigation menu",
+    "kind": "attribute:aria-label",
+    "context": "button > body > header > div > div"
+  },
+  {
+    "id": "seg-0253",
+    "source": "Engineering Article Hero",
+    "kind": "attribute:aria-label",
+    "context": "section > [document] > html > body > main"
+  },
+  {
+    "id": "seg-0254",
+    "source": "Copy code",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0255",
+    "source": "A desktop showing the PyBoy MCP with Super Mario Land start screen",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > figure"
+  },
+  {
+    "id": "seg-0256",
+    "source": "Interlocking puzzle piece with complex geometric shape and detailed surface texture",
+    "kind": "attribute:alt",
+    "context": "img > div > div > a > div"
+  },
+  {
+    "id": "seg-0257",
+    "source": "Email address",
+    "kind": "attribute:aria-label",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0258",
+    "source": "Enter your email",
+    "kind": "attribute:placeholder",
+    "context": "input > div > div > form > div"
+  },
+  {
+    "id": "seg-0259",
+    "source": "Subscribe",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > form > div"
+  },
+  {
+    "id": "seg-0260",
+    "source": "Site footer",
+    "kind": "attribute:aria-label",
+    "context": "footer > [document] > html > body"
+  },
+  {
+    "id": "seg-0261",
+    "source": "Return to homepage",
+    "kind": "attribute:aria-label",
+    "context": "a > body > footer > div > div"
+  },
+  {
+    "id": "seg-0262",
+    "source": "Footer navigation",
+    "kind": "attribute:aria-label",
+    "context": "nav > html > body > footer > div"
+  },
+  {
+    "id": "seg-0263",
+    "source": "Social media links",
+    "kind": "attribute:aria-label",
+    "context": "ul > body > footer > div > div"
+  },
+  {
+    "id": "seg-0264",
+    "source": "Visit our LinkedIn page",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0265",
+    "source": "Visit our X (formerly Twitter) profile",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0266",
+    "source": "Visit our YouTube channel",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > ul > li"
+  }
+]

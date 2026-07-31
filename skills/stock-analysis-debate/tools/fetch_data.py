@@ -35,9 +35,10 @@ import yfinance as yf
 from stockstats import wrap
 
 from news_filter import filter_noise, split_recent_and_history, dedup_by_title
-from longbridge_fetcher import (build_counter_id, fetch_business_historical,
-                                fetch_revenue_sankey, parse_business_historical,
-                                parse_revenue_sankey)
+from longbridge_fetcher import (fetch_range_klines, fetch_revenue_sankey,
+                                get_revenue_sankey_metadata,
+                                parse_range_klines, parse_revenue_sankey)
+from financial_audit import append_audit
 
 # Look-back windows
 PRICE_LOOKBACK_DAYS = 350  # ~230+ trading days, comfortable margin for 200 SMA
@@ -189,6 +190,84 @@ def _yf_hk_call(ticker: str, call_fn):
     return None
 
 
+def _latest_expected_weekday(end_date: str) -> pd.Timestamp:
+    """返回分析日当天，周末则返回此前最近的工作日。"""
+    expected = pd.Timestamp(end_date).normalize()
+    while expected.weekday() >= 5:
+        expected -= pd.Timedelta(days=1)
+    return expected
+
+
+def _normalize_price_index(data: pd.DataFrame) -> pd.DataFrame:
+    """将行情索引统一成无时区的日粒度 DatetimeIndex。"""
+    if data is None or data.empty:
+        return pd.DataFrame()
+    normalized = data.copy()
+    index = pd.to_datetime(normalized.index)
+    if index.tz is not None:
+        index = index.tz_localize(None)
+    index = index.normalize()
+    normalized.index = index
+    normalized.index.name = "Date"
+    return normalized[~normalized.index.duplicated(keep="last")].sort_index()
+
+
+def fetch_price_data(ticker: str, start_date: str, end_date: str,
+                     market: str = None) -> tuple:
+    """优先获取 yfinance 行情，缺少最新交易日时用长桥补全。"""
+    symbol = normalize_ticker(ticker)
+    if market is None:
+        market = detect_market(ticker)
+
+    # yfinance 的 end 为开区间；加一天才能包含分析日当天。
+    yf_end = (pd.Timestamp(end_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    try:
+        if market == "HK":
+            data = _yf_hk_call(
+                ticker,
+                lambda v: retry(
+                    lambda: yf.Ticker(v).history(start=start_date, end=yf_end)
+                ),
+            )
+        else:
+            data = retry(
+                lambda: yf.Ticker(symbol).history(start=start_date, end=yf_end)
+            )
+    except Exception as e:
+        print(f"  [yfinance OHLCV] error: {e}", file=sys.stderr)
+        data = None
+
+    data = _normalize_price_index(data)
+    expected_date = _latest_expected_weekday(end_date)
+    yf_latest = data.index.max() if not data.empty else None
+    source = "yfinance"
+
+    if yf_latest is None or yf_latest < expected_date:
+        payload = fetch_range_klines(ticker, market)
+        records = parse_range_klines(payload, market)
+        fallback = pd.DataFrame.from_records(records)
+        if not fallback.empty:
+            fallback["Date"] = pd.to_datetime(fallback["Date"])
+            fallback = fallback.set_index("Date")
+            fallback = _normalize_price_index(fallback)
+            start = pd.Timestamp(start_date)
+            end = pd.Timestamp(end_date)
+            fallback = fallback[(fallback.index >= start) & (fallback.index <= end)]
+
+            lb_latest = fallback.index.max() if not fallback.empty else None
+            if lb_latest is not None and (yf_latest is None or lb_latest > yf_latest):
+                # 同日记录以主数据源 yfinance 为准，只追加其缺失日期。
+                missing = fallback.index.difference(data.index)
+                data = pd.concat([data, fallback.loc[missing]]).sort_index()
+                source = (
+                    "yfinance + Longbridge fallback"
+                    if yf_latest is not None
+                    else "Longbridge fallback"
+                )
+
+    return data, source
+
+
 def fetch_ohlcv(ticker: str, start_date: str, end_date: str,
                  market: str = None) -> str:
     """Fetch OHLCV data and return as CSV string."""
@@ -196,21 +275,9 @@ def fetch_ohlcv(ticker: str, start_date: str, end_date: str,
     if market is None:
         market = detect_market(ticker)
 
-    if market == "HK":
-        data = _yf_hk_call(
-            ticker,
-            lambda v: retry(lambda: yf.Ticker(v).history(start=start_date, end=end_date)),
-        )
-        if data is None or data.empty:
-            return f"# No OHLCV data found for {ticker}\n"
-    else:
-        stock = yf.Ticker(symbol)
-        data = retry(lambda: stock.history(start=start_date, end=end_date))
-        if data.empty:
-            return f"# No OHLCV data found for {ticker}\n"
-
-    if data.index.tz is not None:
-        data.index = data.index.tz_localize(None)
+    data, source = fetch_price_data(ticker, start_date, end_date, market)
+    if data.empty:
+        return f"# No OHLCV data found for {ticker}\n"
 
     for col in ["Open", "High", "Low", "Close", "Adj Close"]:
         if col in data.columns:
@@ -222,6 +289,7 @@ def fetch_ohlcv(ticker: str, start_date: str, end_date: str,
         f"# Stock data for {symbol} from {start_date} to {end_date}\n"
         f"# Market: {market}\n"
         f"# Currency: {currency}\n"
+        f"# Price source: {source}\n"
         f"# Total records: {len(data)}\n\n"
     )
     return header + data.to_csv()
@@ -236,22 +304,9 @@ def fetch_indicators(ticker: str, curr_date: str, lookback_days: int = 30,
     curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
     start_date = (curr_date_dt - timedelta(days=PRICE_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
 
-    # Fetch OHLCV for stockstats
-    if market == "HK":
-        data = _yf_hk_call(
-            ticker,
-            lambda v: retry(lambda: yf.Ticker(v).history(start=start_date, end=curr_date)),
-        )
-        if data is None or data.empty:
-            return "# No price data available for indicators\n"
-    else:
-        stock = yf.Ticker(symbol)
-        data = retry(lambda: stock.history(start=start_date, end=curr_date))
-        if data.empty:
-            return "# No price data available for indicators\n"
-
-    if data.index.tz is not None:
-        data.index = data.index.tz_localize(None)
+    data, _ = fetch_price_data(ticker, start_date, curr_date, market)
+    if data.empty:
+        return "# No price data available for indicators\n"
 
     # Prepare data for stockstats
     df = data.reset_index()
@@ -1034,8 +1089,11 @@ def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
             trading_days += 1
             last_ohlcv_date = line.split(",")[0]
 
-    # Data freshness: is the latest OHLCV date == curr_date?
-    data_fresh = (last_ohlcv_date == curr_date) if last_ohlcv_date else False
+    # 周末以此前最近工作日为目标；交易所节假日仍保持保守告警。
+    expected_price_date = _latest_expected_weekday(curr_date).strftime("%Y-%m-%d")
+    data_fresh = (
+        last_ohlcv_date == expected_price_date
+    ) if last_ohlcv_date else False
     as_of_date = last_ohlcv_date or curr_date
 
     # Indicator sufficiency
@@ -1061,6 +1119,7 @@ def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
         "market": market,
         "analysis_date": curr_date,
         "data_as_of_date": as_of_date,
+        "expected_price_date": expected_price_date,
         "data_fresh": data_fresh,
         "trading_days": trading_days,
         "warning_no_200_sma": not indicator_rules["close_200_sma"]["sufficient"],
@@ -1072,7 +1131,8 @@ def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
     # Build warnings
     if not data_fresh:
         quality["notes"].append(
-            f"WARNING: OHLCV data ends at {as_of_date}, not {curr_date}. "
+            f"WARNING: OHLCV data ends at {as_of_date}, not the expected latest "
+            f"trading date {expected_price_date}. "
             f"All analysis prices are as-of {as_of_date}. Do NOT use {curr_date} prices "
             f"in the same report without explicitly noting the timestamp mismatch."
         )
@@ -1214,6 +1274,16 @@ def main():
         f.write(income_stmt)
     results["files"]["income_stmt"] = path
 
+    # Recompute valuation and operating-profit metrics from aligned local data.
+    # This prevents stale provider P/B snapshots, unit errors in EV/EBITDA, and
+    # confusion between GAAP reported and derived operating income.
+    fundamentals = append_audit(
+        fundamentals, balance_sheet, income_stmt, ohlcv
+    )
+    fundamentals_path = results["files"]["fundamentals"]
+    with open(fundamentals_path, "w") as f:
+        f.write(fundamentals)
+
     # 9. Insider transactions (best-effort)
     print("  [9/9] Fetching insider transactions...")
     insider = fetch_insider_transactions(yf_ticker)
@@ -1225,22 +1295,23 @@ def main():
     # 10. Segments (仅 HK/US)
     print("  [10] Fetching business segments...")
     if market in ("HK", "US"):
-        seg_path = os.path.join(ticker_dir, "segments_financials.json")
-        bh_raw = fetch_business_historical(ticker)
-        bh_parsed = parse_business_historical(bh_raw)
+        sankey_path = os.path.join(ticker_dir, "revenue_sankey.json")
         rs_raw = fetch_revenue_sankey(ticker)
         rs_parsed = parse_revenue_sankey(rs_raw)
-        seg_data = {"business_historical": bh_parsed, "revenue_sankey": rs_parsed}
-        with open(seg_path, "w") as f:
-            json.dump(seg_data, f, ensure_ascii=False, indent=2)
-        results["files"]["segments_financials"] = seg_path
+        sankey_data = {
+            "metadata": get_revenue_sankey_metadata(ticker),
+            "revenue_sankey": rs_parsed,
+        }
+        with open(sankey_path, "w") as f:
+            json.dump(sankey_data, f, ensure_ascii=False, indent=2)
+        results["files"]["revenue_sankey"] = sankey_path
 
         ticker_root = os.path.join(output_dir, ticker.replace(".", "_"))
         yaml_path = os.path.join(ticker_root, "segments.yaml")
         if not os.path.exists(yaml_path):
-            if not bh_parsed and not rs_parsed:
+            if not rs_parsed:
                 open(os.path.join(ticker_dir, "segments_fetch_failed.flag"), "w").close()
-                print("    longbridge returned no segment data -> segments_fetch_failed.flag", flush=True)
+                print("    longbridge returned no sankey data -> segments_fetch_failed.flag", flush=True)
             else:
                 open(os.path.join(ticker_dir, "segments_missing.flag"), "w").close()
                 print("    segments.yaml missing -> segments_missing.flag", flush=True)

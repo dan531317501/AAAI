@@ -9,7 +9,7 @@ description: Use when the user wants to analyze a stock (US/CN/HK markets) and g
 
 Conduct a professional stock analysis by orchestrating multiple AI agents in a structured debate. Agents play specialized roles — Market Analyst, News Analyst, Social Media Analyst, Fundamentals Analyst, Bull/Bear Researchers, Trader, Aggressive/Conservative/Neutral Risk Analysts, and Portfolio Manager — to produce a data-backed investment recommendation (Buy/Overweight/Hold/Underweight/Sell).
 
-Data is fetched from **yfinance** (OHLCV, news, fundamentals, financial statements) and **stockstats** (technical indicators), exactly matching the original TradingAgents data sources.
+Data is fetched primarily from **yfinance** (OHLCV, news, fundamentals, financial statements), with **Longbridge daily K-lines** filling missing latest OHLCV dates for US/HK/SH/SZ stocks, and **stockstats** computing technical indicators.
 
 ## Critical Execution Rules
 
@@ -81,8 +81,8 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 
 | File | Content | Source |
 |------|---------|--------|
-| `ohlcv.csv` | OHLCV price data (60 days) | yfinance |
-| `indicators.txt` | 13 technical indicators | stockstats via yfinance |
+| `ohlcv.csv` | OHLCV price data (60 days) | yfinance + Longbridge latest-date fallback |
+| `indicators.txt` | 13 technical indicators | stockstats via yfinance/Longbridge OHLCV |
 | `news.txt` | Company-specific news (30 days) | yfinance |
 | `global_news.txt` | Macro/global news | yfinance Search |
 | `fundamentals.txt` | 28 fundamental metrics | yfinance |
@@ -96,17 +96,17 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 
 | File | Content | Source |
 |------|---------|--------|
-| `segments_financials.json` | 长桥原始分部数据（季度+财年） | 长桥 API1+API2（Phase 1 抓取） |
-| `segments_financials.csv` | 预处理紧凑分部CSV | prepare_segments.py (Phase 1.5) |
-| `news_meta.txt` | 新闻抓取/去重/去噪审计 | fetch_data.py |
-| `segments_missing.flag` | 清单缺失标记（触发Phase 1.5生成） | fetch_data.py |
-| `segments_fetch_failed.flag` | 长桥抓取失败标记（降级） | fetch_data.py |
+| `revenue_sankey.json` | Longbridge quarterly Sankey data; preserves all original nodes and links and adds classification, QoQ/YoY, segment mix, consolidated reconciliation, and segment completeness checks | Longbridge revenue-sankey API (fetched in Phase 1) |
+| `revenue_sankey.csv` | Enhanced Sankey nodes for recent periods, used for business-segment and profit-structure analysis | prepare_segments.py (Phase 1.5) |
+| `news_meta.txt` | News fetch, deduplication, and noise-filtering audit | fetch_data.py |
+| `segments_missing.flag` | Missing segment-manifest marker that triggers Phase 1.5 generation | fetch_data.py |
+| `segments_fetch_failed.flag` | Longbridge fetch-failure marker used for graceful degradation | fetch_data.py |
 
 **Ticker-level (no date, reused across runs):**
 
 | File | Content | Source |
 |------|---------|--------|
-| `data/{TICKER}/segments.yaml` | 业务线清单（跨次复用） | prepare_segments.py --gen-yaml |
+| `data/{TICKER}/segments.yaml` | Reusable cross-run business-segment manifest | prepare_segments.py --gen-yaml |
 
 **After data is fetched**, immediately proceed to Phase 1.5 if applicable, otherwise go to Phase 2. Do not stop.
 
@@ -115,16 +115,20 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 **Skip conditions**: CN market, OR `segments_fetch_failed.flag` exists in the date dir.
 
 1. Check `skills/stock-analysis-debate/tools/data/{TICKER}/segments.yaml` (ticker-level, no date).
-   - If exists: read it, then run prepare_segments.py WITHOUT `--gen-yaml` to produce the day's `segments_financials.csv`:
+   - If exists: read it, then run prepare_segments.py WITHOUT `--gen-yaml` to produce the day's `revenue_sankey.csv`:
      ```bash
      python skills/stock-analysis-debate/tools/prepare_segments.py {TICKER} {DATE} --output-dir skills/stock-analysis-debate/tools/data
      ```
-   - If missing: run with `--gen-yaml` (generates both `segments.yaml` and the day's CSV):
+   - If missing: run with `--gen-yaml` (generates `segments.yaml` and `revenue_sankey.csv`):
      ```bash
      python skills/stock-analysis-debate/tools/prepare_segments.py {TICKER} {DATE} --output-dir skills/stock-analysis-debate/tools/data --gen-yaml
      ```
 2. Read `segments.yaml`. Record `multi_segment` for Phase 2 branching.
 3. Proceed immediately to Phase 2.
+
+See `prompts/segment_analyst.md` for data interpretation rules and `prepare_segments.py` plus `longbridge_fetcher.py` for tool-level processing logic.
+- `reconciliation_status=mismatch` → the tool raises an exception, Phase 1.5 fails, and no CSV is generated.
+- A non-empty `segment_completeness_status` → the analyst must disclose the incomplete data in the report.
 
 ## Phase 2: Analyst Reports (Parallel, Single Message)
 
@@ -150,7 +154,7 @@ The sub-agent discovers everything else by reading the files itself.
 
 ### Conditional 5th Analyst (HK/US + multi_segment only):
 
-**Segment Analyst** — Prompt: `skills/stock-analysis-debate/prompts/segment_analyst.md` — Data: `segments_financials.csv`, News Analyst's segment-hit summary (from `phase2_analyst_reports.md`).
+**Segment Analyst** — Prompt: `skills/stock-analysis-debate/prompts/segment_analyst.md` — Data: `revenue_sankey.csv`, News Analyst's segment-hit summary (from `phase2_analyst_reports.md`).
 
 Launch Segment Analyst IN PARALLEL with the other 4 only when `segments.yaml` has `multi_segment: true`. Otherwise run 4 analysts as before.
 
@@ -289,10 +293,13 @@ Read these files to refresh the complete analysis record:
 Before synthesizing, verify these numbers with actual computation:
 
 1. **Market Cap**: current_price × total_shares. Does it match the fundamentals.txt market cap? If discrepancy >10%, flag it.
-2. **Forward PE**: current_price / forward_EPS. Does it match the reported Forward PE? Report both computed and stated values.
-3. **Target Price**: For every target price in the debate, compute `(profit × PE) / total_shares` and verify it matches. If a debater claims "550亿 × 20x = 88元" but (550e8 × 20) / shares ≠ 88, this is a HARD ERROR. Flag and correct in the final report.
-4. **Revenue/Net Income period labels**: If fundamentals analyst cited "2025全年" figures, verify they are >= the sum of visible quarters. If a column labeled "2025-12-31" is a single quarter, correct the label to "Q4 2025" in the final report.
-5. **200 SMA**: If data_quality.json says `warning_no_200_sma: true`, any mention of "200 SMA" in analyst reports that uses a value other than N/A is invalid.
+2. **P/B**: use current_price ÷ (latest-quarter common stock equity ÷ ordinary shares from that same quarter). Do not use a stale provider Book Value or attribute the mismatch to share count.
+3. **EV/EBITDA**: use point-in-time market cap + latest total debt - latest cash and short-term investments, divided by TTM EBITDA in the same base currency. Preserve the numerator/denominator units and label simplified EV explicitly.
+4. **GAAP operating profit**: use `Total Operating Income As Reported`; reconcile `Operating Income`, restructuring/merger charges, and other operating adjustments. Longbridge `oper_inc` is a provider-defined Sankey subtotal and must not be relabeled as GAAP without reconciliation.
+5. **Forward PE**: current_price / forward_EPS. Does it match the reported Forward PE? Report both computed and stated values.
+6. **Target Price**: For every target price in the debate, compute `(profit × PE) / total_shares` and verify it matches. If a debater claims "CNY 55 billion × 20x = CNY 88 per share" but the formula produces a different value, this is a HARD ERROR. Flag and correct it in the final report.
+7. **Revenue/Net Income period labels**: If the Fundamentals Analyst cites a figure as "full-year 2025," verify that it is at least the sum of the visible quarters. If a column labeled "2025-12-31" is a single quarter, correct the label to "Q4 2025" in the final report.
+8. **200 SMA**: If data_quality.json says `warning_no_200_sma: true`, any mention of "200 SMA" in analyst reports that uses a value other than N/A is invalid.
 
 ### Step 2: Synthesize
 
@@ -341,7 +348,7 @@ In a SINGLE tool call batch, do:
 
 **Output B — Text**: A concise summary of the rating, price target, and key rationale so the user sees the result immediately.
 
-After both outputs complete, confirm: "分析报告已保存至 skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md"
+After both outputs complete, confirm: "The analysis report has been saved to skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md"
 
 ---
 
@@ -368,7 +375,7 @@ After both outputs complete, confirm: "分析报告已保存至 skills/stock-ana
 
 ## Common Mistakes
 
-- **Stopping between phases to ask the user**: This is the #1 failure mode. The user asked for a complete analysis. Run all phases back-to-back. If the user says "继续", you have ALREADY made this mistake — immediately proceed to the next unfinished phase.
+- **Stopping between phases to ask the user**: This is the #1 failure mode. The user asked for a complete analysis. Run all phases back-to-back. If the user asks you to continue, you have ALREADY made this mistake — immediately proceed to the next unfinished phase.
 - **Outputting Phase 7 text without calling Write on `analysis_report.md` in the SAME batch**: This is the #1 deliverable mistake. The Write call and the decision text MUST be part of the same tool call batch. If you output the decision text alone, the analysis is incomplete — it disappears when context scrolls. The `.md` file is the permanent record. If you catch yourself about to do this, STOP, add the Write call, send both together.
 - **Modifying prompts**: The prompt files contain the EXACT prompts from the original code. Do NOT paraphrase or improve them. Read the file and pass its content verbatim.
 - **Defaulting to Hold**: If both sides have valid points, pick the stronger argument. Hold is only for genuinely neutral situations.

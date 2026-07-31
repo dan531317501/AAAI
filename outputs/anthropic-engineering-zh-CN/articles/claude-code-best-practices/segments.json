@@ -1,0 +1,3026 @@
+[
+  {
+    "id": "seg-0001",
+    "source": "Best practices for Claude Code - Claude Code Docs",
+    "kind": "text",
+    "context": "title > [document] > html > head"
+  },
+  {
+    "id": "seg-0002",
+    "source": "Documentation Index",
+    "kind": "text",
+    "context": "h2 > [document] > html > body > blockquote"
+  },
+  {
+    "id": "seg-0003",
+    "source": "Fetch the complete documentation index at:",
+    "kind": "text",
+    "context": "p > [document] > html > body > blockquote"
+  },
+  {
+    "id": "seg-0004",
+    "source": "Use this file to discover all available pages before exploring further.",
+    "kind": "text",
+    "context": "p > [document] > html > body > blockquote"
+  },
+  {
+    "id": "seg-0005",
+    "source": "Skip to main content",
+    "kind": "text",
+    "context": "a > [document] > html > body > div"
+  },
+  {
+    "id": "seg-0006",
+    "source": "Claude Code Docs",
+    "kind": "text",
+    "context": "span > div > div > div > a"
+  },
+  {
+    "id": "seg-0007",
+    "source": "home page",
+    "kind": "text",
+    "context": "span > div > div > div > a"
+  },
+  {
+    "id": "seg-0008",
+    "source": "English",
+    "kind": "text",
+    "context": "span > div > div > div > button"
+  },
+  {
+    "id": "seg-0009",
+    "source": "Search...",
+    "kind": "text",
+    "context": "div > div > div > button > div"
+  },
+  {
+    "id": "seg-0010",
+    "source": "K",
+    "kind": "text",
+    "context": "span > div > div > div > button"
+  },
+  {
+    "id": "seg-0011",
+    "source": "Ask Assistant",
+    "kind": "text",
+    "context": "span > div > div > div > button"
+  },
+  {
+    "id": "seg-0012",
+    "source": "Claude Developer Platform",
+    "kind": "text",
+    "context": "span > nav > ul > li > a"
+  },
+  {
+    "id": "seg-0013",
+    "source": "Claude Code on the Web",
+    "kind": "text",
+    "context": "span > nav > ul > li > a"
+  },
+  {
+    "id": "seg-0014",
+    "source": "Navigation",
+    "kind": "text",
+    "context": "span > div > div > button > div"
+  },
+  {
+    "id": "seg-0015",
+    "source": "Use Claude Code",
+    "kind": "text",
+    "context": "span > div > button > div > div"
+  },
+  {
+    "id": "seg-0016",
+    "source": "Best practices for Claude Code",
+    "kind": "text",
+    "context": "div > div > div > button > div"
+  },
+  {
+    "id": "seg-0017",
+    "source": "Getting started",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0018",
+    "source": "Build with Claude Code",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0019",
+    "source": "Administration",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0020",
+    "source": "Configuration",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0021",
+    "source": "Reference",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0022",
+    "source": "Agent SDK",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0023",
+    "source": "What's New",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0024",
+    "source": "Resources",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0025",
+    "source": "Overview",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0026",
+    "source": "Quickstart",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0027",
+    "source": "Changelog",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0028",
+    "source": "Core concepts",
+    "kind": "text",
+    "context": "span > div > div > div > h3"
+  },
+  {
+    "id": "seg-0029",
+    "source": "How Claude Code works",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0030",
+    "source": "Extend Claude Code",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0031",
+    "source": "Explore the .claude directory",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0032",
+    "source": "Explore the context window",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0033",
+    "source": "Prompt caching",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0034",
+    "source": "Store instructions and memories",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0035",
+    "source": "Permission modes",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0036",
+    "source": "Manage sessions",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0037",
+    "source": "Common workflows",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0038",
+    "source": "Prompt library",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0039",
+    "source": "Best practices",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0040",
+    "source": "Platforms and integrations",
+    "kind": "text",
+    "context": "span > div > div > div > h3"
+  },
+  {
+    "id": "seg-0041",
+    "source": "Remote Control",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0042",
+    "source": "Claude Code on the web",
+    "kind": "text",
+    "context": "span > ul > li > button > div"
+  },
+  {
+    "id": "seg-0043",
+    "source": "Claude Code on desktop",
+    "kind": "text",
+    "context": "span > ul > li > button > div"
+  },
+  {
+    "id": "seg-0044",
+    "source": "Mobile",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0045",
+    "source": "Chrome extension",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0046",
+    "source": "Computer use (preview)",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0047",
+    "source": "Visual Studio Code",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0048",
+    "source": "JetBrains IDEs",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0049",
+    "source": "Code review & CI/CD",
+    "kind": "text",
+    "context": "span > ul > li > button > div"
+  },
+  {
+    "id": "seg-0050",
+    "source": "Claude Code in Slack",
+    "kind": "text",
+    "context": "span > li > a > div > div"
+  },
+  {
+    "id": "seg-0051",
+    "source": "On this page",
+    "kind": "text",
+    "context": "span > div > nav > h2 > button"
+  },
+  {
+    "id": "seg-0052",
+    "source": "Give Claude a way to verify its work",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0053",
+    "source": "Explore first, then plan, then code",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0054",
+    "source": "Provide specific context in your prompts",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0055",
+    "source": "Provide rich content",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0056",
+    "source": "Configure your environment",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0057",
+    "source": "Write an effective CLAUDE.md",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0058",
+    "source": "Configure permissions",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0059",
+    "source": "Use CLI tools",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0060",
+    "source": "Connect MCP servers",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0061",
+    "source": "Set up hooks",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0062",
+    "source": "Create skills",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0063",
+    "source": "Create custom subagents",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0064",
+    "source": "Install plugins",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0065",
+    "source": "Communicate effectively",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0066",
+    "source": "Ask codebase questions",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0067",
+    "source": "Let Claude interview you",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0068",
+    "source": "Manage your session",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0069",
+    "source": "Course-correct early and often",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0070",
+    "source": "Manage context aggressively",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0071",
+    "source": "Use subagents for investigation",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0072",
+    "source": "Rewind with checkpoints",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0073",
+    "source": "Resume conversations",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0074",
+    "source": "Automate and scale",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0075",
+    "source": "Run non-interactive mode",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0076",
+    "source": "Run multiple Claude sessions",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0077",
+    "source": "Fan out across files",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0078",
+    "source": "Run autonomously with auto mode",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0079",
+    "source": "Add an adversarial review step",
+    "kind": "text",
+    "context": "a > ul > li > ul > li"
+  },
+  {
+    "id": "seg-0080",
+    "source": "Avoid common failure patterns",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0081",
+    "source": "Develop your intuition",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0082",
+    "source": "Related resources",
+    "kind": "text",
+    "context": "a > nav > div > ul > li"
+  },
+  {
+    "id": "seg-0083",
+    "source": "Copy page",
+    "kind": "text",
+    "context": "span > div > button > div > span"
+  },
+  {
+    "id": "seg-0084",
+    "source": "Tips and patterns for getting the most out of Claude Code, from configuring your environment to scaling across parallel sessions.",
+    "kind": "text",
+    "context": "p > div > div > header > div"
+  },
+  {
+    "id": "seg-0085",
+    "source": "Claude Code is an agentic coding environment. Unlike a chatbot that answers questions and waits, Claude Code can read your files, run commands, make changes, and autonomously work through problems while you watch, redirect, or step away entirely.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0086",
+    "source": "This changes how you work. Instead of writing code yourself and asking Claude to review it, you describe what you want and Claude figures out how to build it. Claude explores, plans, and implements.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0087",
+    "source": "But this autonomy still comes with a learning curve. Claude works within certain constraints you need to understand.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0088",
+    "source": "This guide covers patterns that have proven effective across Anthropic’s internal teams and for engineers using Claude Code across various codebases, languages, and environments. For how the agentic loop works under the hood, see",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0089",
+    "source": "Most best practices are based on one constraint: Claude’s context window fills up fast, and performance degrades as it fills.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0090",
+    "source": "Claude’s context window holds your entire conversation, including every message, every file Claude reads, and every command output. However, this can fill up fast. A single debugging session or codebase exploration might generate and consume tens of thousands of tokens.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0091",
+    "source": "This matters since LLM performance degrades as context fills. When the context window is getting full, Claude may start “forgetting” earlier instructions or making more mistakes. The context window is the most important resource to manage. To see how a session fills up in practice,",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0092",
+    "source": "watch an interactive walkthrough",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0093",
+    "source": "of what loads at startup and what each file read costs. Track context usage continuously with a",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0094",
+    "source": "custom status line",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0095",
+    "source": ", and see",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0096",
+    "source": "Reduce token usage",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0097",
+    "source": "for strategies on reducing token usage.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0098",
+    "source": "Give Claude a check it can run: tests, a build, a screenshot to compare. It’s the difference between a session you watch and one you walk away from.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0099",
+    "source": "Claude stops when the work looks done. Without a check it can run, “looks done” is the only signal available, and you become the verification loop: every mistake waits for you to notice it. Give Claude something that produces a pass or fail, and the loop closes on its own. Claude does the work, runs the check, reads the result, and iterates until the check passes.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0100",
+    "source": "The check is anything that returns a signal Claude can read in the conversation: a test suite, a build exit code, a linter, a script that diffs output against a fixture, or a",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0101",
+    "source": "browser screenshot",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0102",
+    "source": "compared against a design.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0103",
+    "source": "Strategy",
+    "kind": "text",
+    "context": "th > div > table > thead > tr"
+  },
+  {
+    "id": "seg-0104",
+    "source": "Before",
+    "kind": "text",
+    "context": "th > div > table > thead > tr"
+  },
+  {
+    "id": "seg-0105",
+    "source": "After",
+    "kind": "text",
+    "context": "th > div > table > thead > tr"
+  },
+  {
+    "id": "seg-0106",
+    "source": "Provide verification criteria",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0107",
+    "source": "”implement a function that validates email addresses\"",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0108",
+    "source": "\"write a validateEmail function. example test cases:",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0109",
+    "source": "is true, invalid is false,",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0110",
+    "source": "is false. run the tests after implementing”",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0111",
+    "source": "Verify UI changes visually",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0112",
+    "source": "”make the dashboard look better\"",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0113",
+    "source": "\"[paste screenshot] implement this design. take a screenshot of the result and compare it to the original. list differences and fix them”",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0114",
+    "source": "Address root causes, not symptoms",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0115",
+    "source": "”the build is failing\"",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0116",
+    "source": "\"the build fails with this error: [paste error]. fix it and verify the build succeeds. address the root cause, don’t suppress the error”",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0117",
+    "source": "Once the check exists, decide how hard it gates the stop:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0118",
+    "source": "In one prompt",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0119",
+    "source": ": ask Claude to run the check and iterate in the same message, as in the table above.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0120",
+    "source": "Across a session",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0121",
+    "source": ": set the check as a",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0122",
+    "source": "condition",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0123",
+    "source": ". A separate evaluator re-checks it after every turn and Claude keeps working until it holds.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0124",
+    "source": "As a deterministic gate",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0125",
+    "source": ": a",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0126",
+    "source": "Stop hook",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0127",
+    "source": "runs your check as a script and blocks the turn from ending until it passes. Claude Code overrides the hook and ends the turn after 8 consecutive blocks.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0128",
+    "source": "By a second opinion",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0129",
+    "source": "verification subagent",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0130",
+    "source": "or a",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0131",
+    "source": "dynamic workflow",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0132",
+    "source": "that checks its own findings has a fresh model try to refute the result, so the agent doing the work isn’t the one grading it.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0133",
+    "source": "Each step trades setup for attention. The prompt version works on any task today. The",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0134",
+    "source": "and Stop hook versions are what let an unattended run finish correctly without you.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0135",
+    "source": "Have Claude show evidence rather than asserting success: the test output, the command it ran and what it returned, or a screenshot of the result. Reviewing evidence is faster than re-running the verification yourself, and it works for sessions you weren’t watching.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0136",
+    "source": "Separate research and planning from implementation to avoid solving the wrong problem.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0137",
+    "source": "Letting Claude jump straight to coding can produce code that solves the wrong problem. Use",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0138",
+    "source": "plan mode",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0139",
+    "source": "to separate exploration from execution.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0140",
+    "source": "The recommended workflow has four phases:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0141",
+    "source": "Explore",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0142",
+    "source": "Enter plan mode. Claude reads files and answers questions without making changes.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0143",
+    "source": "claude (plan mode)",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0144",
+    "source": "Plan",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0145",
+    "source": "Ask Claude to create a detailed implementation plan.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0146",
+    "source": "Press",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0147",
+    "source": "to open the plan in your text editor for direct editing before Claude proceeds.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0148",
+    "source": "Implement",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0149",
+    "source": "Switch out of plan mode and let Claude code, verifying against its plan.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0150",
+    "source": "claude (default mode)",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0151",
+    "source": "Commit",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0152",
+    "source": "Ask Claude to commit with a descriptive message and create a PR.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0153",
+    "source": "Plan mode is useful, but also adds overhead.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0154",
+    "source": "For tasks where the scope is clear and the fix is small (like fixing a typo, adding a log line, or renaming a variable) ask Claude to do it directly.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0155",
+    "source": "Planning is most useful when you’re uncertain about the approach, when the change modifies multiple files, or when you’re unfamiliar with the code being modified. If you could describe the diff in one sentence, skip the plan.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0156",
+    "source": "The more precise your instructions, the fewer corrections you’ll need.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0157",
+    "source": "Claude can infer intent, but it can’t read your mind. Reference specific files, mention constraints, and point to example patterns.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0158",
+    "source": "Scope the task.",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0159",
+    "source": "Specify which file, what scenario, and testing preferences.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0160",
+    "source": "”add tests for foo.py\"",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0161",
+    "source": "\"write a test for foo.py covering the edge case where the user is logged out. avoid mocks.”",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0162",
+    "source": "Point to sources.",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0163",
+    "source": "Direct Claude to the source that can answer a question.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0164",
+    "source": "”why does ExecutionFactory have such a weird api?\"",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0165",
+    "source": "\"look through ExecutionFactory’s git history and summarize how its api came to be”",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0166",
+    "source": "Reference existing patterns.",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0167",
+    "source": "Point Claude to patterns in your codebase.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0168",
+    "source": "”add a calendar widget\"",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0169",
+    "source": "\"look at how existing widgets are implemented on the home page to understand the patterns. HotDogWidget.php is a good example. follow the pattern to implement a new calendar widget that lets the user select a month and paginate forwards/backwards to pick a year. build from scratch without libraries other than the ones already used in the codebase.”",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0170",
+    "source": "Describe the symptom.",
+    "kind": "text",
+    "context": "strong > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0171",
+    "source": "Provide the symptom, the likely location, and what “fixed” looks like.",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0172",
+    "source": "”fix the login bug\"",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0173",
+    "source": "\"users report that login fails after session timeout. check the auth flow in src/auth/, especially token refresh. write a failing test that reproduces the issue, then fix it”",
+    "kind": "text",
+    "context": "em > table > tbody > tr > td"
+  },
+  {
+    "id": "seg-0174",
+    "source": "Vague prompts can be useful when you’re exploring and can afford to course-correct. A prompt like",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0175",
+    "source": "can surface things you wouldn’t have thought to ask about.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0176",
+    "source": "Use",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0177",
+    "source": "to reference files, paste screenshots/images, or pipe data directly.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0178",
+    "source": "You can provide rich data to Claude in several ways:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0179",
+    "source": "Reference files with",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0180",
+    "source": "instead of describing where code lives. Claude reads the file before responding.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0181",
+    "source": "Paste images directly",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0182",
+    "source": ". Copy/paste or drag and drop images into the prompt.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0183",
+    "source": "Give URLs",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0184",
+    "source": "for documentation and API references. Use",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0185",
+    "source": "to allowlist frequently-used domains.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0186",
+    "source": "Pipe in data",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0187",
+    "source": "by running",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0188",
+    "source": "to send file contents directly.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0189",
+    "source": "Let Claude fetch what it needs",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0190",
+    "source": ". Tell Claude to pull context itself using Bash commands, MCP tools, or by reading files.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0191",
+    "source": "A few setup steps make Claude Code significantly more effective across all your sessions. For a full overview of extension features and when to use each one, see",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0192",
+    "source": "Run",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0193",
+    "source": "to generate a starter CLAUDE.md file based on your current project structure, then refine over time.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0194",
+    "source": "CLAUDE.md is a special file that Claude reads at the start of every conversation. Include Bash commands, code style, and workflow rules. This gives Claude persistent context it can’t infer from code alone.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0195",
+    "source": "The",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0196",
+    "source": "command analyzes your codebase to detect build systems, test frameworks, and code patterns, giving you a solid foundation to refine.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0197",
+    "source": "There’s no required format for CLAUDE.md files, but keep it short and human-readable. For example:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0198",
+    "source": "CLAUDE.md",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0199",
+    "source": "to confirm Claude loaded the file. CLAUDE.md is loaded every session, so only include things that apply broadly. For domain knowledge or workflows that are only relevant sometimes, use",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0200",
+    "source": "skills",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0201",
+    "source": "instead. Claude loads them on demand without bloating every conversation.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0202",
+    "source": "Keep it concise. For each line, ask:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0203",
+    "source": "“Would removing this cause Claude to make mistakes?”",
+    "kind": "text",
+    "context": "em > div > div > div > span"
+  },
+  {
+    "id": "seg-0204",
+    "source": "If not, cut it. Bloated CLAUDE.md files cause Claude to ignore your actual instructions!",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0205",
+    "source": "✅ Include",
+    "kind": "text",
+    "context": "th > div > table > thead > tr"
+  },
+  {
+    "id": "seg-0206",
+    "source": "❌ Exclude",
+    "kind": "text",
+    "context": "th > div > table > thead > tr"
+  },
+  {
+    "id": "seg-0207",
+    "source": "Bash commands Claude can’t guess",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0208",
+    "source": "Anything Claude can figure out by reading code",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0209",
+    "source": "Code style rules that differ from defaults",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0210",
+    "source": "Standard language conventions Claude already knows",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0211",
+    "source": "Testing instructions and preferred test runners",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0212",
+    "source": "Detailed API documentation (link to docs instead)",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0213",
+    "source": "Repository etiquette (branch naming, PR conventions)",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0214",
+    "source": "Information that changes frequently",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0215",
+    "source": "Architectural decisions specific to your project",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0216",
+    "source": "Long explanations or tutorials",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0217",
+    "source": "Developer environment quirks (required env vars)",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0218",
+    "source": "File-by-file descriptions of the codebase",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0219",
+    "source": "Common gotchas or non-obvious behaviors",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0220",
+    "source": "Self-evident practices like “write clean code”",
+    "kind": "text",
+    "context": "td > div > table > tbody > tr"
+  },
+  {
+    "id": "seg-0221",
+    "source": "If Claude keeps doing something you don’t want despite having a rule against it, the file is probably too long and the rule is getting lost. If Claude asks you questions that are answered in CLAUDE.md, the phrasing might be ambiguous. Treat CLAUDE.md like code: review it when things go wrong, prune it regularly, and test changes by observing whether Claude’s behavior actually shifts.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0222",
+    "source": "You can tune instructions by adding emphasis (e.g., “IMPORTANT” or “YOU MUST”) to improve adherence. Check CLAUDE.md into git so your team can contribute. The file compounds in value over time.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0223",
+    "source": "CLAUDE.md files can import additional files using",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0224",
+    "source": "syntax:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0225",
+    "source": "You can place CLAUDE.md files in several locations:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0226",
+    "source": "Home folder (",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0227",
+    "source": ": applies to all Claude sessions",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0228",
+    "source": "Project root (",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0229",
+    "source": ": check into git to share with your team",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0230",
+    "source": ": personal project-specific notes; add this file to your",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0231",
+    "source": "so it isn’t shared with your team",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0232",
+    "source": "Parent directories",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0233",
+    "source": ": useful for monorepos where both",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0234",
+    "source": "and",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0235",
+    "source": "are pulled in automatically",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0236",
+    "source": "Child directories",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0237",
+    "source": ": Claude pulls in child CLAUDE.md files on demand when it reads a file in those directories",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0238",
+    "source": "auto mode",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0239",
+    "source": "to let a classifier handle approvals,",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0240",
+    "source": "to allowlist specific commands, or",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0241",
+    "source": "for OS-level isolation. Each reduces interruptions while keeping you in control.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0242",
+    "source": "By default, Claude Code requests permission for actions that might modify your system: file writes, Bash commands, MCP tools, etc. This is safe but tedious. After the tenth approval you’re not really reviewing anymore, you’re just clicking through. There are three ways to reduce these interruptions:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0243",
+    "source": "Auto mode",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0244",
+    "source": ": a separate classifier model reviews commands and blocks only what looks risky: scope escalation, unknown infrastructure, or hostile-content-driven actions. Best when you trust the general direction of a task but don’t want to click through every step",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0245",
+    "source": "Permission allowlists",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0246",
+    "source": ": permit specific tools you know are safe, like",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0247",
+    "source": "or",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0248",
+    "source": "Sandboxing",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0249",
+    "source": ": enable OS-level isolation that restricts filesystem and network access, allowing Claude to work more freely within defined boundaries",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0250",
+    "source": "Read more about",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0251",
+    "source": "permission modes",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0252",
+    "source": "permission rules",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0253",
+    "source": ", and",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0254",
+    "source": "sandboxing",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0255",
+    "source": "Tell Claude Code to use CLI tools like",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0256",
+    "source": "when interacting with external services.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0257",
+    "source": "CLI tools are the most context-efficient way to interact with external services. If you use GitHub, install the",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0258",
+    "source": "CLI. Claude knows how to use it for creating issues, opening pull requests, and reading comments. Without",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0259",
+    "source": ", Claude can still use the GitHub API, but unauthenticated requests often hit rate limits.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0260",
+    "source": "Claude is also effective at learning CLI tools it doesn’t already know. Try prompts like",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0261",
+    "source": "to connect external tools like Notion, Figma, or your database.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0262",
+    "source": "With",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0263",
+    "source": "MCP servers",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0264",
+    "source": ", you can ask Claude to implement features from issue trackers, query databases, analyze monitoring data, integrate designs from Figma, and automate workflows.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0265",
+    "source": "Use hooks for actions that must happen every time with zero exceptions.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0266",
+    "source": "Hooks",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0267",
+    "source": "run scripts automatically at specific points in Claude’s workflow. Unlike CLAUDE.md instructions which are advisory, hooks are deterministic and guarantee the action happens.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0268",
+    "source": "Claude can write hooks for you. Try prompts like",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0269",
+    "source": "“Write a hook that runs eslint after every file edit”",
+    "kind": "text",
+    "context": "em > div > div > div > span"
+  },
+  {
+    "id": "seg-0270",
+    "source": "“Write a hook that blocks writes to the migrations folder.”",
+    "kind": "text",
+    "context": "em > div > div > div > span"
+  },
+  {
+    "id": "seg-0271",
+    "source": "Edit",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0272",
+    "source": "directly to configure hooks by hand, and run",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0273",
+    "source": "to browse what’s configured.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0274",
+    "source": "Create",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0275",
+    "source": "files in",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0276",
+    "source": "to give Claude domain knowledge and reusable workflows.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0277",
+    "source": "Skills",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0278",
+    "source": "extend Claude’s knowledge with information specific to your project, team, or domain. Claude applies them automatically when relevant, or you can invoke them directly with",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0279",
+    "source": "Create a skill by adding a directory with a",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0280",
+    "source": "to",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0281",
+    "source": "Skills can also define repeatable workflows you invoke directly:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0282",
+    "source": "to invoke it. Use",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0283",
+    "source": "for workflows with side effects that you want to trigger manually.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0284",
+    "source": "Define specialized assistants in",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0285",
+    "source": "that Claude can delegate to for isolated tasks.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0286",
+    "source": "Subagents",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0287",
+    "source": "run in their own context with their own set of allowed tools. They’re useful for tasks that read many files or need specialized focus without cluttering your main conversation.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0288",
+    "source": "Tell Claude to use subagents explicitly:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0289",
+    "source": "“Use a subagent to review this code for security issues.”",
+    "kind": "text",
+    "context": "em > div > div > div > span"
+  },
+  {
+    "id": "seg-0290",
+    "source": "to browse the marketplace. Plugins add skills, tools, and integrations without configuration.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0291",
+    "source": "Plugins",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0292",
+    "source": "bundle skills, hooks, subagents, and MCP servers into a single installable unit from the community and Anthropic. If you work with a typed language, install a",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0293",
+    "source": "code intelligence plugin",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0294",
+    "source": "to give Claude precise symbol navigation and automatic error detection after edits.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0295",
+    "source": "For guidance on choosing between skills, subagents, hooks, and MCP, see",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0296",
+    "source": "The way you communicate with Claude Code significantly impacts the quality of results.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0297",
+    "source": "Ask Claude questions you’d ask a senior engineer.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0298",
+    "source": "When onboarding to a new codebase, use Claude Code for learning and exploration. You can ask Claude the same sorts of questions you would ask another engineer:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0299",
+    "source": "How does logging work?",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0300",
+    "source": "How do I make a new API endpoint?",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0301",
+    "source": "What does",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0302",
+    "source": "do on line 134 of",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0303",
+    "source": "What edge cases does",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0304",
+    "source": "handle?",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0305",
+    "source": "Why does this code call",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0306",
+    "source": "instead of",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0307",
+    "source": "on line 333?",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0308",
+    "source": "Using Claude Code this way is an effective onboarding workflow, improving ramp-up time and reducing load on other engineers. No special prompting required: ask questions directly.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0309",
+    "source": "For larger features, have Claude interview you first. Start with a minimal prompt and ask Claude to interview you using the",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0310",
+    "source": "tool.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0311",
+    "source": "Claude asks about things you might not have considered yet, including technical implementation, UI/UX, edge cases, and tradeoffs. Replace",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0312",
+    "source": "with your feature before sending the prompt.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0313",
+    "source": "Once the spec is complete, start a fresh session to execute it. The new session has clean context focused entirely on implementation, and you have a written spec to reference.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0314",
+    "source": "The most useful specs are self-contained: they name the files and interfaces involved, state what is out of scope, and end with an end-to-end verification step that proves the feature works. Time spent making the spec precise pays off more than time spent watching the implementation.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0315",
+    "source": "Conversations are persistent and reversible. Use this to your advantage!",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0316",
+    "source": "Correct Claude as soon as you notice it going off track.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0317",
+    "source": "The best results come from tight feedback loops. Though Claude occasionally solves problems perfectly on the first attempt, correcting it quickly generally produces better solutions faster.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0318",
+    "source": ": stop Claude mid-action with the",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0319",
+    "source": "key. Context is preserved, so you can redirect.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0320",
+    "source": ": press",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0321",
+    "source": "twice or run",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0322",
+    "source": "to open the rewind menu and restore previous conversation and code state, or summarize from a selected message.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0323",
+    "source": ": have Claude revert its changes.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0324",
+    "source": ": reset context between unrelated tasks. Long sessions with irrelevant context can reduce performance.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0325",
+    "source": "If you’ve corrected Claude more than twice on the same issue in one session, the context is cluttered with failed approaches. Run",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0326",
+    "source": "and start fresh with a more specific prompt that incorporates what you learned. A clean session with a better prompt almost always outperforms a long session with accumulated corrections.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0327",
+    "source": "between unrelated tasks to reset context.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0328",
+    "source": "Claude Code automatically compacts conversation history when you approach context limits, which preserves important code and decisions while freeing space.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0329",
+    "source": "During long sessions, Claude’s context window can fill with irrelevant conversation, file contents, and commands. This can reduce performance and sometimes distract Claude.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0330",
+    "source": "frequently between tasks to reset the context window entirely",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0331",
+    "source": "When auto compaction triggers, Claude summarizes what matters most, including code patterns, file states, and key decisions",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0332",
+    "source": "For more control, run",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0333",
+    "source": ", like",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0334",
+    "source": "To compact only part of the conversation, use",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0335",
+    "source": ", select a message checkpoint, and choose",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0336",
+    "source": "Summarize from here",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0337",
+    "source": "Summarize up to here",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0338",
+    "source": ". The first condenses messages from that point forward while keeping earlier context intact; the second condenses earlier messages while keeping recent ones in full. See",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0339",
+    "source": "the rewind menu’s summarize options",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0340",
+    "source": "Customize compaction behavior in CLAUDE.md with instructions like",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0341",
+    "source": "to ensure critical context survives summarization",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0342",
+    "source": "For quick questions that don’t need to stay in context, use",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0343",
+    "source": ". The answer appears in a dismissible overlay and never enters conversation history, so you can check a detail without growing context.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0344",
+    "source": "Delegate research with",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0345",
+    "source": ". They explore in a separate context, keeping your main conversation clean for implementation.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0346",
+    "source": "Since context is your fundamental constraint, subagents are one of the most powerful tools available. When Claude researches a codebase it reads lots of files, all of which consume your context. Subagents run in separate context windows and report back summaries:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0347",
+    "source": "The subagent explores the codebase, reads relevant files, and reports back with findings, all without cluttering your main conversation.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0348",
+    "source": "You can also use subagents for verification after Claude implements something:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0349",
+    "source": "Every prompt you send creates a checkpoint. You can restore conversation, code, or both to any previous checkpoint.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0350",
+    "source": "Claude automatically snapshots files before each change so a checkpoint can restore them. Double-tap",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0351",
+    "source": "or run",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0352",
+    "source": "to open the rewind menu. You can restore conversation only, restore code only, restore both, or summarize from a selected message. See",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0353",
+    "source": "Checkpointing",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0354",
+    "source": "for details.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0355",
+    "source": "Instead of carefully planning every move, you can tell Claude to try something risky. If it doesn’t work, rewind and try a different approach. Checkpoints are saved with the conversation, so you can close your terminal, resume the session later, and still rewind.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0356",
+    "source": "Checkpoints only track changes made through Claude’s file editing tools. Changes made through Bash commands or external processes are not captured. This isn’t a replacement for git.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0357",
+    "source": "Name sessions with",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0358",
+    "source": "and treat them like branches: each workstream gets its own persistent context.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0359",
+    "source": "Claude Code saves conversations locally, so when a task spans multiple sittings you don’t have to re-explain the context. Run",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0360",
+    "source": "to pick up the most recent session, or",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0361",
+    "source": "to choose from a list. Give sessions descriptive names like",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0362",
+    "source": "so you can find them later. See",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0363",
+    "source": "for the full set of resume, branch, and naming controls.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0364",
+    "source": "Once you’re effective with one Claude, multiply your output with parallel sessions, non-interactive mode, and fan-out patterns.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0365",
+    "source": "Everything so far assumes one human, one Claude, and one conversation. But Claude Code scales horizontally. The techniques in this section show how you can get more done.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0366",
+    "source": "in CI, pre-commit hooks, or scripts. Add",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0367",
+    "source": "for streaming JSON output.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0368",
+    "source": ", you can run Claude non-interactively, without an interactive prompt. The run still creates a resumable session unless you pass",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0369",
+    "source": "Non-interactive mode",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0370",
+    "source": "is how you integrate Claude into CI pipelines, pre-commit hooks, or any automated workflow. The output formats let you parse results programmatically: plain text, JSON, or streaming JSON.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0371",
+    "source": "The first command prints plain text. The",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0372",
+    "source": "format returns a single JSON object with a",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0373",
+    "source": "field. The",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0374",
+    "source": "format prints one JSON object per line, starting with an init event.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0375",
+    "source": "Run multiple Claude sessions in parallel to speed up development, run isolated experiments, or start complex workflows.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0376",
+    "source": "Pick the parallel approach that fits how much coordination you want to do yourself:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0377",
+    "source": "Worktrees",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0378",
+    "source": ": run separate CLI sessions in isolated git checkouts so edits don’t collide",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0379",
+    "source": "Desktop app",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0380",
+    "source": ": manage multiple local sessions visually, each in its own worktree",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0381",
+    "source": ": run sessions on Anthropic-managed cloud infrastructure in isolated VMs",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0382",
+    "source": "Agent teams",
+    "kind": "text",
+    "context": "a > div > div > ul > li"
+  },
+  {
+    "id": "seg-0383",
+    "source": ": automated coordination of multiple sessions with shared tasks, messaging, and a team lead",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0384",
+    "source": "Beyond parallelizing work, multiple sessions enable quality-focused workflows. A fresh context improves code review since Claude won’t be biased toward code it just wrote.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0385",
+    "source": "For example, use a Writer/Reviewer pattern:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0386",
+    "source": "Session A (Writer)",
+    "kind": "text",
+    "context": "th > div > table > thead > tr"
+  },
+  {
+    "id": "seg-0387",
+    "source": "Session B (Reviewer)",
+    "kind": "text",
+    "context": "th > div > table > thead > tr"
+  },
+  {
+    "id": "seg-0388",
+    "source": "You can do something similar with tests: have one Claude write tests, then another write code to pass them.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0389",
+    "source": "Loop through tasks calling",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0390",
+    "source": "for each. Use",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0391",
+    "source": "to scope permissions for batch operations.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0392",
+    "source": "For large migrations or analyses, you can distribute work across many parallel Claude invocations:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0393",
+    "source": "Generate a task list",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0394",
+    "source": "Have Claude list all files that need migrating (e.g.,",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0395",
+    "source": "Write a script to loop through the list",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0396",
+    "source": "Test on a few files, then run at scale",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0397",
+    "source": "Refine your prompt based on what goes wrong with the first 2-3 files, then run on the full set. The",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0398",
+    "source": "flag restricts what Claude can do, which matters when you’re running unattended.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0399",
+    "source": "You can also integrate Claude into existing data/processing pipelines:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0400",
+    "source": "for debugging during development, and turn it off in production.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0401",
+    "source": "For uninterrupted execution with background safety checks, use",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0402",
+    "source": ". A classifier model reviews commands before they run, blocking scope escalation, unknown infrastructure, and hostile-content-driven actions while letting routine work proceed without prompts.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0403",
+    "source": "For non-interactive runs with the",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0404",
+    "source": "flag, auto mode aborts if the classifier repeatedly blocks actions, since there is no user to fall back to. See",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0405",
+    "source": "when auto mode falls back",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0406",
+    "source": "for thresholds.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0407",
+    "source": "Before treating a task as done, have a subagent review the diff in a fresh context and report gaps.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0408",
+    "source": "The longer Claude works unattended, the more an independent check matters before you count the work as done. A reviewer running in a fresh",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0409",
+    "source": "subagent",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0410",
+    "source": "context sees only the diff and the criteria you give it, not the reasoning that produced the change, so it evaluates the result on its own terms.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0411",
+    "source": "For a correctness check, run the bundled",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0412",
+    "source": "skill",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0413",
+    "source": ", which reviews the current diff for bugs in a fresh subagent and returns findings to the session. To check the diff against your plan instead, write the review prompt yourself. Name the work to check, the plan to check it against, and what counts as a finding:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0414",
+    "source": "Because the reviewer runs as a subagent, the implementing session receives the gaps directly and can fix them and re-review without you copying findings between windows. For longer autonomous runs, an",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0415",
+    "source": "agent team",
+    "kind": "text",
+    "context": "a > div > div > div > span"
+  },
+  {
+    "id": "seg-0416",
+    "source": "can keep this loop going across many tasks while you spot-check the recorded findings.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0417",
+    "source": "A reviewer prompted to find gaps will usually report some, even when the work is sound, because that is what it was asked to do. Chasing every finding leads to over-engineering: extra abstraction layers, defensive code, and tests for cases that can’t happen. Tell the reviewer to flag only gaps that affect correctness or the stated requirements, and treat the rest as optional.",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0418",
+    "source": "These are common mistakes. Recognizing them early saves time:",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0419",
+    "source": "The kitchen sink session.",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0420",
+    "source": "You start with one task, then ask Claude something unrelated, then go back to the first task. Context is full of irrelevant information.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0421",
+    "source": "Fix",
+    "kind": "text",
+    "context": "strong > ul > li > blockquote > span"
+  },
+  {
+    "id": "seg-0422",
+    "source": "between unrelated tasks.",
+    "kind": "text",
+    "context": "span > div > ul > li > blockquote"
+  },
+  {
+    "id": "seg-0423",
+    "source": "Correcting over and over.",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0424",
+    "source": "Claude does something wrong, you correct it, it’s still wrong, you correct again. Context is polluted with failed approaches.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0425",
+    "source": ": After two failed corrections,",
+    "kind": "text",
+    "context": "span > div > ul > li > blockquote"
+  },
+  {
+    "id": "seg-0426",
+    "source": "and write a better initial prompt incorporating what you learned.",
+    "kind": "text",
+    "context": "span > div > ul > li > blockquote"
+  },
+  {
+    "id": "seg-0427",
+    "source": "The over-specified CLAUDE.md.",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0428",
+    "source": "If your CLAUDE.md is too long, Claude ignores half of it because important rules get lost in the noise.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0429",
+    "source": ": Ruthlessly prune. If Claude already does something correctly without the instruction, delete it or convert it to a hook.",
+    "kind": "text",
+    "context": "span > div > ul > li > blockquote"
+  },
+  {
+    "id": "seg-0430",
+    "source": "The trust-then-verify gap.",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0431",
+    "source": "Claude produces a plausible-looking implementation that doesn’t handle edge cases.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0432",
+    "source": ": Always provide verification (tests, scripts, screenshots). If you can’t verify it, don’t ship it.",
+    "kind": "text",
+    "context": "span > div > ul > li > blockquote"
+  },
+  {
+    "id": "seg-0433",
+    "source": "The infinite exploration.",
+    "kind": "text",
+    "context": "strong > div > div > ul > li"
+  },
+  {
+    "id": "seg-0434",
+    "source": "You ask Claude to “investigate” something without scoping it. Claude reads hundreds of files, filling the context.",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0435",
+    "source": ": Scope investigations narrowly or use subagents so the exploration doesn’t consume your main context.",
+    "kind": "text",
+    "context": "span > div > ul > li > blockquote"
+  },
+  {
+    "id": "seg-0436",
+    "source": "The patterns in this guide aren’t set in stone. They’re starting points that work well in general, but might not be optimal for every situation.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0437",
+    "source": "Sometimes you",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0438",
+    "source": "should",
+    "kind": "text",
+    "context": "em > div > div > div > span"
+  },
+  {
+    "id": "seg-0439",
+    "source": "let context accumulate because you’re deep in one complex problem and the history is valuable. Sometimes you should skip planning and let Claude figure it out because the task is exploratory. Sometimes a vague prompt is exactly right because you want to see how Claude interprets the problem before constraining it.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0440",
+    "source": "Pay attention to what works. When Claude produces great output, notice what you did: the prompt structure, the context you provided, the mode you were in. When Claude struggles, ask why. Was the context too noisy? The prompt too vague? The task too big for one pass?",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0441",
+    "source": "Over time, you’ll develop intuition that no guide can capture. You’ll know when to be specific and when to be open-ended, when to plan and when to explore, when to clear context and when to let it accumulate.",
+    "kind": "text",
+    "context": "span > main > div > div > div"
+  },
+  {
+    "id": "seg-0442",
+    "source": ": the agentic loop, tools, and context management",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0443",
+    "source": ": skills, hooks, MCP, subagents, and plugins",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0444",
+    "source": ": step-by-step recipes for debugging, testing, PRs, and more",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0445",
+    "source": ": store project conventions and persistent context",
+    "kind": "text",
+    "context": "li > div > div > div > ul"
+  },
+  {
+    "id": "seg-0446",
+    "source": "Was this page helpful?",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0447",
+    "source": "Yes",
+    "kind": "text",
+    "context": "small > div > div > div > button"
+  },
+  {
+    "id": "seg-0448",
+    "source": "No",
+    "kind": "text",
+    "context": "small > div > div > div > button"
+  },
+  {
+    "id": "seg-0449",
+    "source": "I",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0450",
+    "source": "x",
+    "kind": "text",
+    "context": "span > div > div > div > a"
+  },
+  {
+    "id": "seg-0451",
+    "source": "linkedin",
+    "kind": "text",
+    "context": "span > div > div > div > a"
+  },
+  {
+    "id": "seg-0452",
+    "source": "Company",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0453",
+    "source": "Anthropic",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0454",
+    "source": "Careers",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0455",
+    "source": "Economic Futures",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0456",
+    "source": "Research",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0457",
+    "source": "News",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0458",
+    "source": "Trust center",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0459",
+    "source": "Transparency",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0460",
+    "source": "Help and security",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0461",
+    "source": "Availability",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0462",
+    "source": "Status",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0463",
+    "source": "Support center",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0464",
+    "source": "Learn",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0465",
+    "source": "Courses",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0466",
+    "source": "MCP connectors",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0467",
+    "source": "Customer stories",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0468",
+    "source": "Engineering blog",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0469",
+    "source": "Events",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0470",
+    "source": "Powered by Claude",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0471",
+    "source": "Service partners",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0472",
+    "source": "Startups program",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0473",
+    "source": "Terms and policies",
+    "kind": "text",
+    "context": "p > div > div > div > div"
+  },
+  {
+    "id": "seg-0474",
+    "source": "Privacy choices",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0475",
+    "source": "Privacy policy",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0476",
+    "source": "Disclosure policy",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0477",
+    "source": "Usage policy",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0478",
+    "source": "Commercial terms",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0479",
+    "source": "Consumer terms",
+    "kind": "text",
+    "context": "a > div > div > div > div"
+  },
+  {
+    "id": "seg-0480",
+    "source": "Assistant",
+    "kind": "text",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0481",
+    "source": "Responses are generated using AI and may contain mistakes.",
+    "kind": "text",
+    "context": "div > div > div > div > div"
+  },
+  {
+    "id": "seg-0482",
+    "source": "light logo",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > a"
+  },
+  {
+    "id": "seg-0483",
+    "source": "dark logo",
+    "kind": "attribute:alt",
+    "context": "img > div > div > div > a"
+  },
+  {
+    "id": "seg-0484",
+    "source": "Open search",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0485",
+    "source": "Toggle assistant panel",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0486",
+    "source": "Main",
+    "kind": "attribute:aria-label",
+    "context": "nav > div > div > div > div"
+  },
+  {
+    "id": "seg-0487",
+    "source": "Change theme preference",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0488",
+    "source": "More actions",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0489",
+    "source": "Pages",
+    "kind": "attribute:aria-label",
+    "context": "nav > div > div > div > div"
+  },
+  {
+    "id": "seg-0490",
+    "source": "Copy page",
+    "kind": "attribute:aria-label",
+    "context": "button > header > div > div > div"
+  },
+  {
+    "id": "seg-0491",
+    "source": "Navigate to header",
+    "kind": "attribute:aria-label",
+    "context": "a > div > div > h2 > div"
+  },
+  {
+    "id": "seg-0492",
+    "source": "Tip",
+    "kind": "attribute:aria-label",
+    "context": "div > main > div > div > div"
+  },
+  {
+    "id": "seg-0493",
+    "source": "Scrollable table",
+    "kind": "attribute:aria-label",
+    "context": "div > div > div > div > div"
+  },
+  {
+    "id": "seg-0494",
+    "source": "claude (plan mode)",
+    "kind": "attribute:title",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0495",
+    "source": "Report incorrect code",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0496",
+    "source": "Copy the contents from the code block",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0497",
+    "source": "Ask Assistant",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0498",
+    "source": "claude (default mode)",
+    "kind": "attribute:title",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0499",
+    "source": "CLAUDE.md",
+    "kind": "attribute:title",
+    "context": "span > div > div > div > div"
+  },
+  {
+    "id": "seg-0500",
+    "source": "Warning",
+    "kind": "attribute:aria-label",
+    "context": "div > main > div > div > div"
+  },
+  {
+    "id": "seg-0501",
+    "source": "Send message",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0502",
+    "source": "Maximize assistant panel",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0503",
+    "source": "Close assistant panel",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  },
+  {
+    "id": "seg-0504",
+    "source": "Add attachment",
+    "kind": "attribute:aria-label",
+    "context": "button > div > div > div > div"
+  }
+]
