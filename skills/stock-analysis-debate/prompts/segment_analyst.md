@@ -37,3 +37,13 @@ Also append:
 | Profit-structure metric | Latest value | Prior value | YoY | Consolidated margin | Interpretation |
 
 End with: `PRIMARY DRIVER: <segment> — <positive/negative> <one-line reason>`
+
+## Summary block (MANDATORY)
+
+Your report must START with the fixed-format summary block below. The orchestrator extracts it with a tool and places it in the final report — no LLM re-summarization. Keep the labels exactly as written (they are fixed); omit a line only if the field does not apply:
+
+```
+<!-- SUMMARY:BEGIN -->
+{3-8 lines in your own voice: primary driver, inflection flags, profit-structure change}
+<!-- SUMMARY:END -->
+```

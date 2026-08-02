@@ -35,3 +35,13 @@ Write a comprehensive report of the current news state relevant for trading. Pro
 | Segment | # high-signal items | Net direction (pos/neg/neutral) |
 
 Direction = whether the news is positive/negative/neutral for that segment's growth and thus the stock price. Include market-specific notes: A-share (涨跌停/停牌/分红送转/ST), HK (配股/回购/Stock Connect 南向资金).
+
+## Summary block (MANDATORY)
+
+Your report must START with the fixed-format summary block below. The orchestrator extracts it with a tool and places it in the final report — no LLM re-summarization. Keep the labels exactly as written (they are fixed); omit a line only if the field does not apply:
+
+```
+<!-- SUMMARY:BEGIN -->
+{3-8 lines in your own voice: net news direction, key catalysts with [Nxxx] IDs, macro risks}
+<!-- SUMMARY:END -->
+```

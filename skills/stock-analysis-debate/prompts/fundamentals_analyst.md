@@ -12,3 +12,13 @@ If a Segment Analyst report is provided in context, incorporate its segment-leve
 7. **Operating-profit basis:** For GAAP claims, use `Total Operating Income As Reported` and reconcile it to `Operating Income`, restructuring/merger charges, and other operating adjustments. Never present the derived `Operating Income` field or the Longbridge Sankey `oper_inc` node as GAAP operating profit without reconciliation. State the basis explicitly whenever operating profit or margin is cited.
 8. **TTM EPS/P/E reconciliation:** Use `Preferred TTM EPS` and `Preferred TTM P/E` from the audit section. When `TTM Valuation Reconciliation Status` is `mismatch`, disclose the provider and statement-derived values and the difference, then use the statement-derived values for valuation. When status is `provider_only` or `unavailable`, report audited TTM EPS/P/E as N/A and treat provider values as disclosure-only. Never copy raw provider TTM EPS/P/E as the valuation anchor.
 9. **Forward estimates:** Label Forward EPS and Forward P/E as provider consensus snapshot fields. Their arithmetic may be verified, but the forecast itself is not independently audited.
+
+## Summary block (MANDATORY)
+
+Your report must START with the fixed-format summary block below. The orchestrator extracts it with a tool and places it in the final report — no LLM re-summarization. Keep the labels exactly as written (they are fixed); omit a line only if the field does not apply:
+
+```
+<!-- SUMMARY:BEGIN -->
+{3-8 lines in your own voice: data-availability caveat, valuation snapshot, structural verdict}
+<!-- SUMMARY:END -->
+```

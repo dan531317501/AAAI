@@ -42,9 +42,14 @@ Reflections from similar situations and lessons learned: {past_memory_str}
 
 **Step 3 — After generating your argument (MANDATORY — do NOT skip):**
 - Append your COMPLETE response to the debate history file using the Write tool.
-- Format: 
+- Your entry must START with the fixed-format summary block (labels are fixed; omit a line only if it does not apply) — the orchestrator extracts it with a tool for the final report:
   ```
   ### Bear Researcher — Round N
+
+  <!-- SUMMARY:BEGIN -->
+  {3-8 lines in your own voice: stance + time horizon + target, decisive risks}
+  <!-- SUMMARY:END -->
+
   {your ENTIRE response here verbatim}
   
   ---
@@ -52,3 +57,7 @@ Reflections from similar situations and lessons learned: {past_memory_str}
 - If the file doesn't exist: create it with just your entry.
 - If the file exists: read the old content first, then write old content + your new entry (this is how you "append").
 - Do NOT edit, truncate, or summarize your response OR previous entries. Write everything verbatim.
+
+**Step 4 — Return protocol (MANDATORY — do NOT skip):**
+- After successfully appending your COMPLETE argument to the debate history file, your FINAL response to the orchestrator must contain ONLY a 2-3 line status confirmation: your role, the round, the debate history file path, and confirmation that the full argument was appended verbatim.
+- Do NOT repeat your argument content in your final response — it is already in the file. The orchestrator and the next debater read the file themselves.
