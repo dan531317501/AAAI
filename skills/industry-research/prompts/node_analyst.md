@@ -22,31 +22,33 @@ Read ALL specified data files before writing your report. The main session does 
 - `{metrics_file}` — Quantitative indicators (prices, volumes, capacities etc.)
 - `{chain_file}` — Full industry chain model for context on your node's neighbors
 
+**Heading convention**: Open with a single `##` heading (this becomes the final report's chapter title when concatenated verbatim); use `###` for all internal sections; never use `#`.
+
 **Output structure** (follow this EXACTLY):
 
-### {node_name} 分析报告
+## {node_name} 分析报告
 
-#### 1. 当前状态
+### 1. 当前状态
 - Key indicators and their current values
 - Direction of change over the past 3 months (↑/↓/→) with estimated magnitude
 - Cite specific data points from the files you read
 
-#### 2. 驱动因素分析
+### 2. 驱动因素分析
 - **Primary drivers**: What's moving this node right now? Rank by impact.
 - **Emerging factors**: New developments that could become significant
 - **Weakening factors**: Previously important factors losing relevance
 
-#### 3. 传导效应
+### 3. 传导效应
 - **Upstream pull**: What demand/supply signal does this node send upstream?
 - **Downstream push**: What cost/capacity signal does this node push downstream?
 - **Estimated time lag**: How long before these signals materialize?
 
-#### 4. 风险与不确定性
+### 4. 风险与不确定性
 - **Short-term risks (3-6 months)** with specific scenarios
 - **Medium/long-term risks (1-3 years)** with structural shifts
 - **Monitoring signals**: Specific data points to watch (with thresholds if applicable)
 
-#### 5. 景气度评分
+### 5. 景气度评分
 - Score: X/10
 - Confidence: 高/中/低
 - One-sentence justification

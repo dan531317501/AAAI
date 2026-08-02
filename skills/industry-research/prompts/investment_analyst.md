@@ -27,7 +27,11 @@ Based on the industry chain analysis already completed by multiple specialist an
 1. Full report → `skills/industry-research/data/{INDUSTRY}/reports/{DATE}/analyst_reports/investment_analyst.md`
 2. Register in reference.md → append `- [投资与商业研判](analyst_reports/investment_analyst.md)` under `## Phase 4.5: Investment Analysis`
 
+**Heading convention**: Open with a single `##` heading (this becomes the final report's chapter title when concatenated verbatim); use `###` for all internal sections; never use `#`.
+
 **CRITICAL — this must be analyst-grade, not generic:**
+
+## 投资与商业研判
 
 ### 1. 行业景气度总评 (Industry Prosperity Assessment)
 

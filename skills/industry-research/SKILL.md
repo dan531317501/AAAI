@@ -11,18 +11,22 @@ Conduct a deep industry chain analysis by:
 1. Discovering the complete industry chain (recursive: upstream to raw materials, downstream to end consumers)
 2. Registering reliable data sources for each chain node's key factors
 3. Collecting quantitative metrics and news via search
-4. Dispatching parallel analyst agents for each node + specialization
-5. Synthesizing cross-node impact propagation
-6. Comparing against historical analyses to detect trend shifts
-7. Producing a final report with both information synthesis and actionable recommendations
+4. Dispatching analyst sub-agents by a **dependency DAG**: no-dependency topics launched in parallel in ONE message; dependent topics dispatched separately AFTER their dependencies complete
+5. Each sub-agent writes its full report to its **own standalone file** (no truncation, no main-session rewriting)
+6. Synthesizing cross-node impact propagation (a dependent topic)
+7. Comparing against historical analyses to detect trend shifts
+8. Producing a final report = **overall trend summary (written by main session) + sub-agent reports concatenated VERBATIM as topic chapters**
 
 ## Critical Execution Rules
 
 1. **NEVER ask the user for permission between phases.** Run all phases continuously.
-2. **Phase 3 agents are ALL launched in a SINGLE message as parallel Agent calls.** Do not use `run_in_background`.
-3. **Phase 5-6 run in the main session**, not as sub-agents.
-4. **Phase 6 MUST produce TWO outputs in ONE batch: Write (report.md) + Write (latest_report.md) + text summary.**
-5. **Historical data is for COMPARISON only — never for current analysis.**
+2. **Independent topics (no dependencies) are ALL launched in a SINGLE message as parallel Agent calls.** Do not use `run_in_background`.
+3. **Dependent topics are dispatched AFTER their dependencies complete** — never in the same batch as their dependencies.
+4. **Each sub-agent writes its full report to its own file.** The main session does not summarize, trim, or rewrite sub-agent output.
+5. **Phase 5-6 run in the main session**, not as sub-agents.
+6. **Phase 6 produces TWO Write outputs in ONE batch: Write (report.md) + Write (latest_report.md), plus a text summary.**
+7. **Phase 6 final report = overall trend summary (main session) + sub-agent reports concatenated VERBATIM as topic chapters.** Never trim or rewrite sub-agent content.
+8. **Historical data is for COMPARISON only — never for current analysis.**
 
 ## Parameters
 
@@ -123,6 +127,13 @@ Context compression will truncate long agent outputs. To prevent information los
 
 **Reference file**: `skills/industry-research/data/{INDUSTRY}/reports/{DATE}/reference.md`
 
+### Sub-agent report heading convention
+
+Each sub-agent report MUST follow these heading rules so it can be concatenated **verbatim** into the final report as one chapter:
+1. Open with a **single `##` heading** for its topic title (e.g. `## AI算力芯片 分析报告`, `## 投资与商业研判`). This heading becomes the final report's chapter title.
+2. All internal sections use **`###`** — never `#` (reserved for the final report title only).
+3. Do NOT include a date/industry metadata block in the report body (the final report header already covers it).
+
 ### Reference file format
 
 ```markdown
@@ -156,9 +167,11 @@ Phase 4 and Phase 4.5 agents read `reference.md` to discover available reports, 
 
 ---
 
-### Phase 3: Parallel Multi-Agent Analysis
+### Phase 3: Parallel Multi-Agent Analysis (Batch 1 — no dependencies)
 
-**CRITICAL**: Launch ALL analyst agents in a SINGLE message as parallel Agent tool calls. Do NOT use `run_in_background`.
+**Dependency note**: Every topic in this phase depends ONLY on data already collected in Phases 1-2 (chain.yaml, news.json, metrics.json). They have NO upstream/downstream dependencies on each other, so ALL are launched in one batch.
+
+**CRITICAL**: Launch ALL of them in a SINGLE message as parallel Agent tool calls. Do NOT use `run_in_background`.
 
 Read `chain.yaml` to get the full list of nodes and supports. Then launch:
 
@@ -185,7 +198,9 @@ Read `chain.yaml` to get the full list of nodes and supports. Then launch:
 
 **After all agents return**: The reference.md file now contains links to all individual reports. Immediately go to Phase 4.
 
-### Phase 4: Cross-Impact Synthesis
+### Phase 4: Cross-Impact Synthesis (dependent topic)
+
+**Dependency note**: This topic DEPENDS on all Phase 3 reports (node analysts + policy + competition). Dispatch it ONLY after every Batch 1 agent has returned — never in the same batch as its dependencies.
 
 Launch 1 agent (serial, after Phase 3):
 
@@ -199,7 +214,9 @@ Launch 1 agent (serial, after Phase 3):
 
 After it returns, immediately go to Phase 4.5.
 
-### Phase 4.5: Investment & Business Assessment (NEW — dedicated sub-agent)
+### Phase 4.5: Investment & Business Assessment (dependent topic)
+
+**Dependency note**: This topic DEPENDS on the Phase 4 synthesis (and selectively on Phase 3 reports). Dispatch it ONLY after Phase 4 completes.
 
 Launch 1 agent (serial, after Phase 4):
 
@@ -224,15 +241,19 @@ After it returns, immediately go to Phase 5.
 
 **This phase runs in the MAIN SESSION (not a sub-agent).**
 
+> **Timing tip**: The READ part (steps 1-3: list earlier reports, read, extract scores/variables) has NO dependency on any sub-agent — do it right after dispatching Batch 1 while the agents run. Only the comparison + write (step 4) must wait for Phase 3-4.5 results.
+
 1. List `skills/industry-research/data/{INDUSTRY}/reports/` for earlier dated directories.
 2. If earlier reports exist, read the most recent one's `report.md`.
 3. Extract from the old report:
    - Per-node prosperity scores
    - Top key variables
    - Overall direction
-4. Compare with current Phase 3-4.5 results and write `phase5_trend_diff.md` to the report directory:
+4. Compare with current Phase 3-4.5 results and write `phase5_trend_diff.md` to the report directory (heading must be `## 历史趋势对比` so it becomes a proper chapter when concatenated):
    ```markdown
-   ## 趋势变化对比
+   ## 历史趋势对比
+   
+   ### 趋势变化对比
    
    | 维度 | 上次 (date) | 本次 (date) | 变化 |
    |------|------------|------------|------|
@@ -242,7 +263,7 @@ After it returns, immediately go to Phase 5.
    ### 弱化/消失因素
    ### 趋势拐点信号
    ```
-5. If this is the first analysis, write "首次分析，暂无历史对比" and proceed.
+5. If this is the first analysis, write `## 历史趋势对比\n\n首次分析，暂无历史对比` and proceed.
 
 After writing phase5_trend_diff.md, immediately go to Phase 6.
 
@@ -250,27 +271,49 @@ After writing phase5_trend_diff.md, immediately go to Phase 6.
 
 **This phase runs in the MAIN SESSION.**
 
-Read these files:
-- `reference.md` — to discover all report files
-- `phase4_synthesis.md` — cross-impact summary
-- `analyst_reports/investment_analyst.md` — investment analysis
-- `phase5_trend_diff.md` — historical comparison
-- `chain.yaml` — industry structure
-- `data_quality.json` — data quality
-- Prompt template: `skills/industry-research/prompts/report_synthesizer.md`
+**Report format**: final report = **overall trend summary** (written by the main session) + **sub-agent reports concatenated VERBATIM as topic chapters** (no trimming, no rewriting).
 
-**Produce THREE outputs in ONE Write batch:**
+**Dependency note**: This phase DEPENDS on every sub-agent report (Phase 3-4.5) and `phase5_trend_diff.md`.
 
-**Output A** — Write `skills/industry-research/data/{INDUSTRY}/reports/{DATE}/report.md`:
-Follow the structure in `report_synthesizer.md`. Reference each analyst report by its title — do NOT paste full reports verbatim into the final report (they are already in `analyst_reports/`). Instead:
-- For each node: give a concise 1-paragraph summary + reference link to the full report
-- For cross-impact: embed the phase4_synthesis.md content
-- For investment: embed the investment_analyst.md content IN FULL (this is the most valuable section)
+1. Read `reference.md` to discover all sub-agent report files. Follow the structure in `skills/industry-research/prompts/report_synthesizer.md`.
+2. Read enough of each sub-agent report to write the overall summary — its topic heading + key sections (scores, top findings, risks). You do NOT need every line: the reports are embedded verbatim below the summary anyway.
+3. **Write the chain overview** to `chain_overview.md` — a `## 产业链全景` chapter rendered as a **mermaid flowchart** (diagram, NOT text), generated from chain.yaml:
+   - Group nodes by `layer` ascending; one `subgraph` per layer, titled `Layer {N}: {上游/中游/下游}` (layer<0=上游, layer==0=中游, layer>0=下游)
+   - One mermaid node per chain node: `{node_id}["{node_name}"]`
+   - One mermaid edge per chain edge: `{from} --> {to}`
+   - Below the diagram: one line of stats (node count, edge count) + a short bullet list of `supports`
+4. **Write the overall summary** to `analyst_reports/00_overall_summary.md`, opening with `## 行业趋势调研总结`. It MUST contain:
+   - **关键发现 TOP 5** — table (`# | 发现 | 支撑数据 | 影响`), each row citing "per {话题} 报告"
+   - **综合景气度** — score X/10 + direction + confidence, with anchoring rationale
+   - **投资要点与风险速览** — 3-5 key takeaways + TOP 3 risks (with triggers)
+   - **章节导读** — one-sentence guide per chapter, in final report order
+5. **Write the appendix** to `appendix.md` (数据质量 from data_quality.json, 分析师报告索引 from reference.md, 执行统计).
+6. **Concatenate VERBATIM in fixed chapter order** with Bash (never re-type sub-agent content by hand — manual copying risks truncation and hallucinated edits):
+   Chapter order: `chain overview → overall summary → nodes (by layer, upstream → downstream) → policy → competition → cross-impact → investment → historical comparison → appendix`
+   ```bash
+   cd skills/industry-research/data/{INDUSTRY}/reports/{DATE} && {
+     {
+       printf '# %s 产业趋势调研报告\n\n**日期**: %s | **数据截止**: %s | **版本**: chain.yaml v%s\n\n---\n\n' '{INDUSTRY}' '{DATE}' '{DATA_AS_OF}' '{CHAIN_VERSION}'
+       cat chain_overview.md
+       printf '\n---\n\n'
+       cat analyst_reports/00_overall_summary.md
+       for f in <sub-agent report files in topic order>; do
+         printf '\n---\n\n'
+         cat "$f"
+       done
+       printf '\n---\n\n'
+       cat phase5_trend_diff.md
+       printf '\n---\n\n'
+       cat appendix.md
+     } > report.md
+     cp report.md ../../latest_report.md
+   }
+   ```
+   (If this is the first analysis, `phase5_trend_diff.md` contains "首次分析，暂无历史对比" — include it as-is.)
 
-**Output B** — Write `skills/industry-research/data/{INDUSTRY}/latest_report.md`:
-Same content as Output A (the industry-level latest report).
-
-**Output C** — Text: Brief summary of key findings and the overall prosperity score.
+**Output A** — `report.md` (produced by the Bash step above).
+**Output B** — `latest_report.md` (same content, copied by `cp`).
+**Output C** — Text: brief summary of key findings and the overall prosperity score.
 
 After all 3 outputs, confirm: "分析报告已保存至 skills/industry-research/data/{INDUSTRY}/reports/{DATE}/report.md"
 
@@ -295,7 +338,10 @@ After all 3 outputs, confirm: "分析报告已保存至 skills/industry-research
 | `data/{INDUSTRY}/reports/{DATE}/metadata.json` | Collection audit |
 | `data/{INDUSTRY}/reports/{DATE}/data_quality.json` | Quality report |
 | `data/{INDUSTRY}/reports/{DATE}/reference.md` | **Report index** — maps agent_name → file path + title |
+| `data/{INDUSTRY}/reports/{DATE}/chain_overview.md` | Chain overview chapter with mermaid diagram (Phase 6, written by main session) |
 | `data/{INDUSTRY}/reports/{DATE}/analyst_reports/` | **Individual analyst reports** (Phase 3 + Phase 4.5) |
+| `data/{INDUSTRY}/reports/{DATE}/analyst_reports/00_overall_summary.md` | Overall trend summary (Phase 6, written by main session) |
+| `data/{INDUSTRY}/reports/{DATE}/appendix.md` | Appendix: data quality + report index + execution stats (Phase 6) |
 | `data/{INDUSTRY}/reports/{DATE}/phase4_synthesis.md` | Cross-impact synthesis (Phase 4) |
 | `data/{INDUSTRY}/reports/{DATE}/phase5_trend_diff.md` | Historical comparison (Phase 5) |
 | `data/{INDUSTRY}/reports/{DATE}/report.md` | Final report (Phase 6) |
@@ -303,8 +349,10 @@ After all 3 outputs, confirm: "分析报告已保存至 skills/industry-research
 ## Common Mistakes
 
 - **Stopping between phases to ask the user**: The user asked for a complete analysis. Run all phases continuously.
-- **Forgetting to parallelize Phase 3 agents**: ALL agents must be launched in ONE message.
-- **Phase 3 agents not writing to `analyst_reports/` + `reference.md`**: Each agent MUST write its output to a standalone file AND register in the reference index. This is the #1 data loss prevention mechanism.
-- **Phase 6 summarizing investment analysis instead of pasting verbatim**: The investment_analyst.md report is the most valuable section. Paste it in full.
+- **Forgetting to parallelize independent topics**: ALL no-dependency agents (Phase 3 batch) must be launched in ONE message.
+- **Dispatching dependent topics in the same batch as their dependencies**: Cross-impact (Phase 4) MUST wait for ALL Phase 3 reports; Investment (Phase 4.5) MUST wait for Phase 4. Dispatch each only after its dependencies complete.
+- **Sub-agents not writing to `analyst_reports/` + `reference.md`**: Each agent MUST write its output to a standalone file AND register in the reference index. This is the #1 data loss prevention mechanism.
+- **Phase 6 trimming or rewriting sub-agent reports**: Concatenate VERBATIM — never summarize, trim, or rephrase sub-agent content in the final report.
+- **Phase 6 re-typing sub-agent content by hand**: Use Bash `cat` to concatenate — manual re-typing risks truncation and hallucinated edits.
 - **Phase 6 text-only output without Write call**: The report MUST be written to disk. Text output alone is not deliverable.
 - **Using historical data for current analysis**: Historical reports are ONLY for Phase 5 comparison.

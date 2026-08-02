@@ -14,6 +14,13 @@ As the Neutral Risk Analyst, provide a balanced assessment weighing both upside 
 4. **Recommended Adjustments**: 2-4 specific, actionable adjustments to the trader's plan.
 5. **Conclusion**: 2-3 sentences.
 
+## Position-plan integrity (MANDATORY)
+
+- If you recommend changing any position weight or entry stage, output the complete revised schedule with Stage, Trigger, Incremental Weight, and Cumulative Weight.
+- Rebalance all later stages; the sum of incremental entry weights must equal the final cumulative weight and must not exceed the plan's maximum position weight.
+- Do not recommend another entry after the maximum position has already been reached.
+- If you do not change the allocation, state that the trader's verified schedule remains unchanged.
+
 Here is the trader's decision:
 {trader_decision}
 

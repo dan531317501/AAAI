@@ -24,7 +24,7 @@ Data is fetched primarily from **yfinance** (OHLCV, news, fundamentals, financia
 6. **CN market skips Phase 1.5 and Segment Analyst entirely.** No `segments.yaml`, no segment data. Run 4 analysts.
 7. **If `segments_fetch_failed.flag` exists**, treat as CN: skip Phase 1.5 and Segment Analyst, run 4 analysts. Note the missing segment view in the final report.
 
-8. **DATA QUALITY CHECK (Phase 1.1):** After data is fetched, read `data_quality.json`. If `data_fresh: false`, use `data_as_of_date` as the report's effective date throughout. If `warning_no_200_sma: true`, 200 SMA must be reported as N/A.
+8. **REPORT DATE:** `{DATE}` is the execution/analysis date and is the ONLY date allowed in the report title and output directory. Treat `data_as_of_date` only as the market-data cutoff and disclose it separately. Even when `data_fresh: false`, write exactly one report to `data/{TICKER}/{DATE}/analysis_report.md`; never create or copy another report under `data_as_of_date`. If `warning_no_200_sma: true`, 200 SMA must be reported as N/A.
 9. **ARITHMETIC VERIFICATION (Phase 7):** Before writing the final report, verify TTM EPS/P/E reconciliation, target_price = (profit × PE) / total_shares, forward_PE = current_price / forward_EPS, and market_cap = current_price × total_shares. If values conflict beyond the stated tolerance, disclose and correct them before producing the rating.
 10. **NEWS/SENTIMENT EVIDENCE:** Treat `news.txt` evidence IDs and content levels as hard boundaries. If `Social Data Available: false`, social sentiment is Not Rated and must not affect the rating, target price, position sizing, or risk limits.
 
@@ -34,7 +34,7 @@ Data is fetched primarily from **yfinance** (OHLCV, news, fundamentals, financia
    - Foreground, synchronous; wait for it to return before proceeding.
 
 1.1. **Phase 1.1: Data Quality Check** — Read `data_quality.json` from the output directory
-   - Check `data_as_of_date`: this is the effective date for all analysis. If different from the requested `date`, use `data_as_of_date` as the report timestamp.
+   - Keep the requested execution `date` as the report date and output-directory date. Use `data_as_of_date` only for statements about how current the market data is. If the dates differ, disclose both explicitly and do not generate a second report.
    - Check `trading_days`: note how many trading days are available for indicators.
    - Check `warning_no_200_sma`: if true, 200 SMA is NOT computable.
    - Check `indicator_sufficiency`: each indicator has a `sufficient` boolean and `min_days` threshold.
@@ -198,6 +198,7 @@ After Phase 3, proceed immediately to Phase 4.
 - **Prompt**: `skills/stock-analysis-debate/prompts/trader.md`
 - **Context in prompt**: Paste the Research Manager's full investment plan verbatim. Include instrument context. Paste the available analyst report summaries if helpful.
 - Must end output with: `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`
+- For staged entries, require the Trader to output incremental and cumulative weights and verify that their sum does not exceed the maximum position. Include portfolio capital in context only when known; otherwise dollar amounts and share counts must be N/A.
 - **After it returns**: Save the Trader's output to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/trader_plan.md`. Immediately go to Phase 6.
 
 ---
@@ -249,6 +250,7 @@ Before synthesizing, verify these numbers with actual computation:
 9. **200 SMA**: If data_quality.json says `warning_no_200_sma: true`, any mention of "200 SMA" in analyst reports that uses a value other than N/A is invalid.
 10. **News evidence**: Every material company-news claim must cite `[Nxxx]`. A `title_only` item supports only the literal headline; do not upgrade secondary reporting to an official confirmation or treat media rewrites as independent corroboration.
 11. **Social sentiment**: If `news.txt` says `Social Data Available: false`, report social sentiment as Not Rated. Remove unsupported mention counts, sentiment scores, community trends, user positioning, and ticker comparisons from downstream outputs. These claims must not influence the rating, target price, position sizing, or risk limits.
+12. **Position sizing**: For every staged entry plan, verify that cumulative weight equals the sum of incremental entry weights and does not exceed the stated maximum position. If any risk-debate proposal changes a stage, recompute all later stages, capital, and shares. Remove entry stages that occur after the maximum is reached. If portfolio capital or entry price is unavailable, report capital and shares as N/A.
 
 ### Step 2: Synthesize
 
@@ -268,6 +270,8 @@ In a SINGLE tool call batch, do:
 
 ```
 # Stock Analysis Report: {TICKER} ({DATE})
+
+**Report Date**: {DATE} | **Market Data As Of**: {data_as_of_date}
 
 ## 1. Analyst Research
 ### Market Analysis
@@ -300,6 +304,8 @@ In a SINGLE tool call batch, do:
 **Output B — Text**: A concise summary of the rating, price target, and key rationale so the user sees the result immediately.
 
 After both outputs complete, confirm: "The analysis report has been saved to skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md"
+
+**Date guardrail**: `{DATE}` above is always the execution/analysis date. Do not replace it with `data_as_of_date`, and do not write or copy `analysis_report.md` to any second date directory.
 
 ---
 

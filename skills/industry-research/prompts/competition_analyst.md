@@ -12,33 +12,35 @@ Read ALL specified data files before writing your report.
 - `{news_file}` — News across all nodes
 - `{chain_file}` — Full industry chain model
 
+**Heading convention**: Open with a single `##` heading (this becomes the final report's chapter title when concatenated verbatim); use `###` for all internal sections; never use `#`.
+
 **Output structure**:
 
-### 竞争格局分析报告
+## 竞争格局分析报告
 
-#### 1. 市场结构总览
+### 1. 市场结构总览
 - For each major node in the chain, describe the competitive structure:
   - Concentration (fragmented / oligopoly / monopoly)
   - Top players and estimated market share
   - Recent share shifts
 
-#### 2. 竞争动态
+### 2. 竞争动态
 - **Price competition**: Where is price pressure most intense?
 - **Non-price competition**: Technology, branding, distribution, service
 - **New entrants**: Who entered, in which node, with what advantage?
 - **Exits/consolidation**: Who left, mergers, acquisitions
 
-#### 3. 跨环节竞争
+### 3. 跨环节竞争
 - **Vertical integration moves**: Are players expanding up/down the chain?
 - **Substitution threats**: Are adjacent nodes/products threatening this one?
 - **Platform plays**: Are any players building platforms that could reshape the chain?
 
-#### 4. 竞争风险
+### 4. 竞争风险
 - **Concentration risk**: Nodes where supplier/customer power is dangerous
 - **Disruption risk**: Technology or business model shifts that could change the game
 - **Geopolitical risk**: Trade restrictions, sanctions, localization requirements
 
-#### 5. 竞争烈度评分
+### 5. 竞争烈度评分
 - Overall intensity: X/10 (10 = extremely fierce)
 - Direction: Intensifying / Stabilizing / Easing
 - Confidence: 高/中/低
