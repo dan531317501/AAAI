@@ -21,8 +21,8 @@ Data is fetched primarily from **yfinance** (OHLCV, news, fundamentals, financia
 4. **Phase 7 is the final phase (NOT a sub-agent). It MUST produce TWO outputs in ONE message batch: (A) Write `analysis_report.md` via the Write tool, and (B) the final decision text. If either is missing, the analysis is incomplete. Do NOT output the decision text without also calling Write.**
 5. **The workflow is complete ONLY when the report file has been written to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md` AND confirmed to the user.**
 
-6. **CN market skips Phase 1.5 and Segment Analyst entirely.** No `segments.yaml`, no segment data. Run 4 analysts.
-7. **If `segments_fetch_failed.flag` exists**, treat as CN: skip Phase 1.5 and Segment Analyst, run 4 analysts. Note the missing segment view in the final report.
+6. **CN market skips Phase 1 Step 3 (Segment Setup) and Segment Analyst entirely.** No `segments.yaml`, no segment data. Run 4 analysts.
+7. **If `segments_fetch_failed.flag` exists**, treat as CN: skip Phase 1 Step 3 (Segment Setup) and Segment Analyst, run 4 analysts. Note the missing segment view in the final report.
 
 8. **REPORT DATE:** `{DATE}` is the execution/analysis date and is the ONLY date allowed in the report title and output directory. Treat `data_as_of_date` only as the market-data cutoff and disclose it separately. Even when `data_fresh: false`, write exactly one report to `data/{TICKER}/{DATE}/analysis_report.md`; never create or copy another report under `data_as_of_date`. If `warning_no_200_sma: true`, 200 SMA must be reported as N/A.
 9. **ARITHMETIC VERIFICATION (Phase 7):** Before writing the final report, verify TTM EPS/P/E reconciliation, target_price = (profit × PE) / total_shares, forward_PE = current_price / forward_EPS, and market_cap = current_price × total_shares. If values conflict beyond the stated tolerance, disclose and correct them before producing the rating.
@@ -36,19 +36,7 @@ Data is fetched primarily from **yfinance** (OHLCV, news, fundamentals, financia
 
 ## Workflow
 
-1. **Phase 1: Data Collection** — Bash: `fetch_data.py`
-   - Foreground, synchronous; wait for it to return before proceeding.
-
-1.1. **Phase 1.1: Data Quality Check** — Read `data_quality.json` from the output directory
-   - Keep the requested execution `date` as the report date and output-directory date. Use `data_as_of_date` only for statements about how current the market data is. If the dates differ, disclose both explicitly and do not generate a second report.
-   - Check `trading_days`: note how many trading days are available for indicators.
-   - Check `warning_no_200_sma`: if true, 200 SMA is NOT computable.
-   - Check `indicator_sufficiency`: each indicator has a `sufficient` boolean and `min_days` threshold.
-   - Record any `notes` warnings for inclusion in the final report.
-
-1.5. **Phase 1.5: Segment Setup** (HK/US only) — Bash: `prepare_segments.py --gen-yaml`
-   - Skipped for CN market. Skipped if `segments_fetch_failed.flag` exists.
-   - Foreground, synchronous.
+1. **Phase 1: Data Collection & Validation** — Bash `fetch_data.py`, then read `data_quality.json`, then (HK/US only) segment setup via `prepare_segments.py`. All foreground, synchronous; wait for each to return before proceeding. Details in the Phase 1 section below (Steps 1-3).
 
 2. **Phase 2: Analyst Reports** — 4 or 5 Agent calls
    - Parallel: launch all in a SINGLE message, foreground (no `run_in_background`).
@@ -71,9 +59,11 @@ Data is fetched primarily from **yfinance** (OHLCV, news, fundamentals, financia
    - **MUST produce TWO outputs in ONE batch: Write tool (analysis_report.md) + decision text.**
    - Workflow is complete ONLY when both are done.
 
-## Phase 1: Data Collection
+## Phase 1: Data Collection & Validation
 
-Run synchronously via Bash:
+Three sequential steps, all foreground and synchronous (wait for each to return before proceeding):
+
+**Step 1: Fetch data.** Run synchronously via Bash:
 
 ```bash
 python skills/stock-analysis-debate/tools/fetch_data.py <TICKER> <DATE> --output-dir skills/stock-analysis-debate/tools/data
@@ -104,8 +94,8 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 | File | Content | Source |
 |------|---------|--------|
 | `revenue_sankey.json` | Longbridge quarterly Sankey data; preserves all original nodes and links and adds classification, QoQ/YoY, segment mix, consolidated reconciliation, and segment completeness checks | Longbridge revenue-sankey API (fetched in Phase 1) |
-| `revenue_sankey.csv` | Enhanced Sankey nodes for recent periods, used for business-segment and profit-structure analysis | prepare_segments.py (Phase 1.5) |
-| `segments_missing.flag` | Missing segment-manifest marker that triggers Phase 1.5 generation | fetch_data.py |
+| `revenue_sankey.csv` | Enhanced Sankey nodes for recent periods, used for business-segment and profit-structure analysis | prepare_segments.py (Phase 1 Step 3) |
+| `segments_missing.flag` | Missing segment-manifest marker that triggers Phase 1 Step 3 generation | fetch_data.py |
 | `segments_fetch_failed.flag` | Longbridge fetch-failure marker used for graceful degradation | fetch_data.py |
 
 **Ticker-level (no date, reused across runs):**
@@ -114,9 +104,14 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 |------|---------|--------|
 | `data/{TICKER}/segments.yaml` | Reusable cross-run business-segment manifest | prepare_segments.py --gen-yaml |
 
-**After data is fetched**, immediately proceed to Phase 1.5 if applicable, otherwise go to Phase 2. Do not stop.
+**Step 2: Data quality check.** Read `data_quality.json` from the output directory:
+- Keep the requested execution `date` as the report date and output-directory date. Use `data_as_of_date` only for statements about how current the market data is. If the dates differ, disclose both explicitly and do not generate a second report.
+- Check `trading_days`: note how many trading days are available for indicators.
+- Check `warning_no_200_sma`: if true, 200 SMA is NOT computable.
+- Check `indicator_sufficiency`: each indicator has a `sufficient` boolean and `min_days` threshold.
+- Record any `notes` warnings for inclusion in the final report.
 
-## Phase 1.5: Segment Setup (HK/US only)
+**Step 3: Segment Setup (HK/US only)**
 
 **Skip conditions**: CN market, OR `segments_fetch_failed.flag` exists in the date dir.
 
@@ -133,7 +128,7 @@ Output is saved to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/` co
 3. Proceed immediately to Phase 2.
 
 See `prompts/segment_analyst.md` for data interpretation rules and `prepare_segments.py` plus `longbridge_fetcher.py` for tool-level processing logic.
-- `reconciliation_status=mismatch` → the tool raises an exception, Phase 1.5 fails, and no CSV is generated.
+- `reconciliation_status=mismatch` → the tool raises an exception, Phase 1 Step 3 fails, and no CSV is generated.
 - A non-empty `segment_completeness_status` → the analyst must disclose the incomplete data in the report.
 
 ## Phase 2: Analyst Reports (Parallel, Single Message)
@@ -143,7 +138,7 @@ See `prompts/segment_analyst.md` for data interpretation rules and `prepare_segm
 **IMPORTANT — Main session must NOT read prompt files or data files before dispatching analysts.** Each sub-agent reads its own prompt file and data files via the Read tool — the main session reading them too is pure context waste. The main session only tells each agent:
 - Full absolute file paths to: its prompt file + all required data files
 - Instrument context: ticker, market, currency, current price
-- Phase 1.1 findings: data_as_of_date, trading_days, warning_no_200_sma flag, indicator_sufficiency summary
+- Phase 1 quality-check findings: data_as_of_date, trading_days, warning_no_200_sma flag, indicator_sufficiency summary
 - For Segment Analyst: also mention the segment list from `segments.yaml`
 
 The sub-agent discovers everything else by reading the files itself.
@@ -241,16 +236,18 @@ Read only the files whose content the main session has NOT seen yet (rule 11). T
 - `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/debate_history.md` — full Bull vs Bear debate (Phase 3 agents only returned status confirmations)
 - `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/risk_debate_history.md` — full risk debate (Phase 6 agents only returned short summaries)
 - `skills/stock-analysis-debate/prompts/portfolio_manager.md` — output structure template (Rating scale, Executive Summary, Investment Thesis)
+- `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/fundamentals.txt` — raw provider + audited valuation fields, cash/debt components, and use-rules; the main session has never seen this raw data (sub-agents read it themselves), so read it here for Step 2 re-verification
+- `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/indicators.txt` — latest technical indicator values (close, SMA/EMA, VWMA, ATR, MACD, RSI, MFI, Bollinger) for Step 2 re-verification
 
 **Must NOT Read (already in the main context):**
 - `phase2_analyst_reports.md` — written by the main session from the analysts' returned reports (Phase 2)
 - `research_plan.md` — written from the Research Manager's returned plan (Phase 4)
 - `trader_plan.md` — written from the Trader's returned proposal (Phase 5)
-- `data_quality.json` — read in Phase 1.1
+- `data_quality.json` — read in Phase 1
 
-### Step 1.5: Arithmetic Sanity Check (MANDATORY — do NOT skip)
+### Step 2: Arithmetic Sanity Check (MANDATORY — do NOT skip)
 
-Before synthesizing, verify these numbers with actual computation:
+Before synthesizing, verify these numbers with actual computation against the raw data files read in Step 1 (fundamentals.txt, indicators.txt):
 
 1. **Market Cap**: current_price × total_shares. Does it match the fundamentals.txt market cap? If discrepancy >10%, flag it.
 2. **P/B**: use current_price ÷ (latest-quarter common stock equity ÷ ordinary shares from that same quarter). Do not use a stale provider Book Value or attribute the mismatch to share count.
@@ -264,8 +261,11 @@ Before synthesizing, verify these numbers with actual computation:
 10. **News evidence**: Every material company-news claim must cite `[Nxxx]`. A `title_only` item supports only the literal headline; do not upgrade secondary reporting to an official confirmation or treat media rewrites as independent corroboration.
 11. **Social sentiment**: If `news.txt` says `Social Data Available: false`, report social sentiment as Not Rated. Remove unsupported mention counts, sentiment scores, community trends, user positioning, and ticker comparisons from downstream outputs. These claims must not influence the rating, target price, position sizing, or risk limits.
 12. **Position sizing**: For every staged entry plan, verify that cumulative weight equals the sum of incremental entry weights and does not exceed the stated maximum position. If any risk-debate proposal changes a stage, recompute all later stages, capital, and shares. Remove entry stages that occur after the maximum is reached. If portfolio capital or entry price is unavailable, report capital and shares as N/A.
+13. **Drawdown/return percentages**: Recompute every "drawdown X%" / "up Yx from 52-week low" claim from `fundamentals.txt` 52-week high/low and the latest close in `indicators.txt`/`ohlcv.csv`. Percentages sourced from news headlines/summaries are as-of their writing date (media basis) and must not be repeated as current facts — restate the recomputed value, or explicitly label the media figure and its date.
+14. **Forward EPS/P/E labeling**: Label Forward P/E as a provider consensus snapshot and state that the forecast is not independently audited (per fundamentals.txt use-rules). Do not drop this caveat when summarizing debate arguments.
+15. **Cash/debt basis**: State net cash as (cash and short-term investments − total debt) and label that basis. When the provider cash figure differs from the company-reported "cash + marketable investments + restricted cash" figure, disclose the difference instead of silently picking one.
 
-### Step 2: Synthesize
+### Step 3: Synthesize
 
 Produce the Portfolio Manager's final decision in the main session:
 
@@ -273,7 +273,7 @@ Produce the Portfolio Manager's final decision in the main session:
 - **Executive Summary**: Entry strategy, position sizing, risk levels, time horizon
 - **Investment Thesis**: Reasoning anchored in specific evidence from the files above
 
-### Step 3: Write Report + Output Decision
+### Step 4: Write Report + Output Decision
 
 **This is the mandatory deliverable. The analysis is incomplete until the file is on disk.**
 
