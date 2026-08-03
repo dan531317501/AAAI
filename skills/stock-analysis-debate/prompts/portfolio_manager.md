@@ -18,11 +18,16 @@ Use the execution date from the instrument context as the report date. Treat the
 - Trader's transaction proposal: **{trader_plan}**
 - Lessons from past decisions: **{past_memory_str}**
 
-**Required Output Structure:**
-1. **Rating**: State one of Buy / Overweight / Hold / Underweight / Sell.
-2. **Executive Summary**: A concise action plan covering entry strategy, position sizing, key risk levels, and time horizon.
-3. **Investment Thesis**: Detailed reasoning anchored in the analysts' debate and past reflections.
-4. **Final Position Plan**: If staged entries are proposed, provide Stage, Trigger, Incremental Weight, Cumulative Weight, Entry Price, Capital, and Shares.
+**Required Output Structure (the Final Decision must be a fully-argued conclusion, not a summary — every claim anchored to specific evidence: figures, [Nxxx] IDs, analyst verdicts, debate passages):**
+1. **Rating**: State one of Buy / Overweight / Hold / Underweight / Sell, with a one-line verdict and one line on the key reason for choosing this rating over its nearest alternatives.
+2. **Executive Summary**: One coherent paragraph — the business case in a sentence or two with figures, entry strategy, position sizing, key risk levels (including thesis-level invalidation), a tactical reference band if computable, time horizon.
+3. **Decision Logic Chain**: Why this rating and not the other four — address at minimum why not the next-lower-conviction choice and why not the next-higher (e.g., why not Sell/Underweight, why not Hold, why not a one-shot full position). Each justification must cite data.
+4. **Investment Thesis**: 3-6 numbered arguments; each = claim + concrete evidence + rebuttal of the opposing view on that point. May be grouped as directional anchors vs caution anchors when the residual disagreement splits that way.
+5. **Debate Adjudication**: What the bull side won on, what the bear side won on, which arguments were dismissed and why, the facts neither side disputed (uncontested consensus), and the net ruling leading to this rating.
+6. **Scenarios & Target Price Derivation**: Base/optimistic/pessimistic scenarios with their conditions; the arithmetic chain behind the target price (multiple × TTM EBITDA → EV → equity value ÷ shares) cross-checked against technical measures (e.g., measured move) and the debate's own targets.
+7. **Risk Levels & Verification Nodes**: Two layers — thesis-level invalidation (the sustained condition that overturns the thesis, with its evidence threshold) and tactical stop/reference levels (ATR-calibrated, structure-based); plus the upcoming verification event.
+8. **Final Position Plan**: If staged entries are proposed, provide Stage, Trigger, Incremental Weight, Cumulative Weight, Entry Price, Capital, and Shares — plus the reasoning that selected this maximum position weight among the risk-debate proposals (which proposal won and why), and, if the risk debate revised the trader's initial schedule, the initial → final evolution and the evidence reason for each change.
+9. **Data Caveats**: Not Rated items (social, options, macro), TTM/forward valuation conflicts and which anchor was used, missing statements.
 
 **Position-plan integrity (MANDATORY):**
 - Treat risk-debate allocation changes as proposals, not arithmetic-ready plans. Recalculate the complete final schedule after accepting any change.

@@ -21,6 +21,9 @@ Output:
         cashflow.csv        # Cash flow statement
         income_stmt.csv     # Income statement
         insider.txt         # Insider transactions
+        options.txt         # Options flow (put/call ratios, IV skew; US only)
+        macro_indicators.txt # FRED macro series (rates, inflation, labor)
+        prediction_markets.txt # Polymarket event probabilities
         summary.json        # Metadata summary
 """
 
@@ -40,6 +43,9 @@ from longbridge_fetcher import (fetch_range_klines, fetch_revenue_sankey,
                                 get_revenue_sankey_metadata,
                                 parse_range_klines, parse_revenue_sankey)
 from financial_audit import append_audit
+from options_flow import fetch_options_report
+from macro_data import fetch_macro_report
+from prediction_markets import fetch_prediction_markets
 
 # Look-back windows
 PRICE_LOOKBACK_DAYS = 350  # ~230+ trading days, comfortable margin for 200 SMA
@@ -1072,6 +1078,20 @@ def fetch_cn_global_news(curr_date: str, lookback_days: int = 7) -> str:
     return "\n".join(lines)
 
 
+def _latest_close_from_ohlcv(ohlcv_text: str) -> float | None:
+    """Parse the latest Close from an ohlcv.csv text block (header comments ignored)."""
+    import io
+
+    try:
+        df = pd.read_csv(io.StringIO(ohlcv_text), comment="#")
+    except Exception:
+        return None
+    if df.empty or "Close" not in df.columns:
+        return None
+    close = df["Close"].dropna()
+    return float(close.iloc[-1]) if not close.empty else None
+
+
 def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
                           ohlcv_text: str, market: str) -> dict:
     """Compute data quality metadata: trading days, indicator sufficiency, period labels.
@@ -1204,6 +1224,29 @@ def main():
         f.write(ohlcv)
     results["files"]["ohlcv"] = path
 
+    # 1b. Options flow (US only — yfinance option chains are reliable only
+    # for US-listed equities; HK coverage is sparse and CN has none)
+    print("  [1b] Fetching options flow...")
+    if market == "US":
+        options_text = fetch_options_report(
+            yf_ticker,
+            curr_date,
+            spot_price=_latest_close_from_ohlcv(ohlcv),
+        )
+        path = os.path.join(ticker_dir, "options.txt")
+        with open(path, "w") as f:
+            f.write(options_text)
+        results["files"]["options"] = path
+    else:
+        options_text = (
+            f"<options data unavailable for {ticker}: option chains are not "
+            f"fetched for {market} market — Options Flow not rated>"
+        )
+        path = os.path.join(ticker_dir, "options.txt")
+        with open(path, "w") as f:
+            f.write(options_text)
+        results["files"]["options"] = path
+
     # 2. Technical indicators
     print("  [2/8] Computing technical indicators...")
     indicators = fetch_indicators(yf_ticker, curr_date, market=market)
@@ -1239,6 +1282,23 @@ def main():
     with open(path, "w") as f:
         f.write(global_news)
     results["files"]["global_news"] = path
+
+    # 4b. FRED macro indicators (all markets; degrades to placeholder
+    # when FRED_API_KEY is unset)
+    print("  [4b] Fetching FRED macro indicators...")
+    macro_text = fetch_macro_report(curr_date)
+    path = os.path.join(ticker_dir, "macro_indicators.txt")
+    with open(path, "w") as f:
+        f.write(macro_text)
+    results["files"]["macro_indicators"] = path
+
+    # 4c. Polymarket prediction markets (all markets; no API key needed)
+    print("  [4c] Fetching Polymarket prediction markets...")
+    pm_text = fetch_prediction_markets()
+    path = os.path.join(ticker_dir, "prediction_markets.txt")
+    with open(path, "w") as f:
+        f.write(pm_text)
+    results["files"]["prediction_markets"] = path
 
     # 5. Fundamentals
     print("  [5/8] Fetching fundamentals...")
