@@ -6,16 +6,6 @@ Proposed Investment Plan: {investment_plan}
 
 Leverage these insights to make an informed and strategic decision.
 
-## Summary block (MANDATORY)
-
-Your output must START with the fixed-format summary block below. The orchestrator extracts it with a tool and places it in the final report — no LLM re-summarization. Keep the labels exactly as written (they are fixed); omit a line only if the field does not apply:
-
-```
-<!-- SUMMARY:BEGIN -->
-{3-8 lines in your own voice: direction, staged plan essentials, triggers, invalidation levels}
-<!-- SUMMARY:END -->
-```
-
 ## Position-plan integrity (MANDATORY)
 
 - Recalculate the complete plan instead of copying allocation numbers from the Research Manager.

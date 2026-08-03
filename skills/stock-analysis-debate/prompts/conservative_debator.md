@@ -43,14 +43,9 @@ Last neutral argument: {current_neutral_response}
 
 **Step 3 — After generating your argument (MANDATORY — do NOT skip):**
 - Append your COMPLETE response to the risk debate history file using the Write tool.
-- Your entry must START with the fixed-format summary block (labels are fixed; omit a line only if it does not apply) — the orchestrator extracts it with a tool for the final report:
+- Format: 
   ```
   ### Conservative Risk Analyst — Round N
-
-  <!-- SUMMARY:BEGIN -->
-  {3-8 lines in your own voice: verdict on the trader's plan, revised position plan if any, core arguments}
-  <!-- SUMMARY:END -->
-
   {your ENTIRE response here verbatim}
   
   ---
@@ -60,5 +55,8 @@ Last neutral argument: {current_neutral_response}
 - Do NOT edit, truncate, or summarize your response OR previous entries. Write everything verbatim.
 
 **Step 4 — Return protocol (MANDATORY — do NOT skip):**
-- After successfully appending your COMPLETE assessment to the risk debate history file, your FINAL response to the orchestrator must be the SAME content as your summary block (copy it verbatim), i.e. a SHORT summary only: one-line stance, revised position plan (stage triggers, incremental/cumulative weight, max position), and 3-5 core argument bullets.
+- After successfully appending your COMPLETE assessment to the risk debate history file, your FINAL response to the orchestrator must be a SHORT summary ONLY (≤15 lines), containing:
+  1. One-line stance (e.g. "Reject SELL; revised plan: long, 10% cap, 2 stages, post-earnings only").
+  2. Revised position plan: stage triggers, incremental weight, cumulative weight, max position weight (or state that the trader's schedule is unchanged).
+  3. 3-5 core argument bullets, one line each.
 - Do NOT repeat your full assessment text — it is already in the file. The orchestrator uses this summary for Phase 7 synthesis.

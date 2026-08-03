@@ -26,13 +26,3 @@ Here are your past reflections on mistakes:
 Here is the debate:
 Debate History:
 {history}
-
-## Summary block (MANDATORY)
-
-Your output must START with the fixed-format summary block below. The orchestrator extracts it with a tool and places it in the final report — no LLM re-summarization. Keep the labels exactly as written (they are fixed); omit a line only if the field does not apply:
-
-```
-<!-- SUMMARY:BEGIN -->
-{3-8 lines in your own voice: decisive BUY/SELL/HOLD stance, target, key rationale, strategic actions}
-<!-- SUMMARY:END -->
-```

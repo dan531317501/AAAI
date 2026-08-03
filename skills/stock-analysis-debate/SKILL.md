@@ -28,12 +28,11 @@ Data is fetched primarily from **yfinance** (OHLCV, news, fundamentals, financia
 9. **ARITHMETIC VERIFICATION (Phase 7):** Before writing the final report, verify TTM EPS/P/E reconciliation, target_price = (profit × PE) / total_shares, forward_PE = current_price / forward_EPS, and market_cap = current_price × total_shares. If values conflict beyond the stated tolerance, disclose and correct them before producing the rating.
 10. **NEWS/SENTIMENT EVIDENCE:** Treat `news.txt` evidence IDs and content levels as hard boundaries. If `Social Data Available: false`, social sentiment is Not Rated and must not affect the rating, target price, position sizing, or risk limits.
 
-11. **CONTEXT HYGIENE (main session):** The main session's context is reserved for orchestration, decision synthesis, and deliverables. Full texts live in files and never enter the main context twice:
+11. **CONTEXT HYGIENE (main session):** The main session's context is reserved for orchestration, decision synthesis, and deliverables:
     - Debate/risk agents write their own files (File I/O protocol) and return only short confirmations/summaries — never their full arguments.
     - Downstream agents (Research Manager, Trader) read files themselves via the paths given in their prompts — never paste file contents into agent prompts.
-    - The final report is assembled with Bash `cat` from the phase files — the report contents never need to be Read into the main session.
-    - Never Read a file whose content is already in the main context (own Write output, earlier Phase 1.1 reads, agent-returned content saved to disk).
-    - Never Read a file whose content only feeds a Bash `cat` assembly (debate histories, analyst reports at Phase 7).
+    - Never Read a file whose content is already in the main context (own Write output, agent-returned content saved to disk).
+    - At Phase 7, the main session Reads only the files whose content it has NOT seen (debate history, risk debate history) — it writes the report summaries itself. Files it wrote itself (`phase2_analyst_reports.md`, `research_plan.md`, `trader_plan.md`) are NOT re-read; their content is already in context.
 
 ## Workflow
 
@@ -165,8 +164,6 @@ The sub-agent discovers everything else by reading the files itself.
 
 Launch Segment Analyst IN PARALLEL with the other 4 only when `segments.yaml` has `multi_segment: true`. Otherwise run 4 analysts as before.
 
-Each analyst report must START with a fixed-format summary block (see Summary Block Protocol). If an agent returned no block, still save its full report but note the missing block.
-
 **After all launched agents return**: Extract every complete report from the agent responses. Save the 4 or 5 role results to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/phase2_analyst_reports.md` using the Write tool, under role-specific headings. If an agent failed or returned no content, write an explicit failure marker for that role instead. Verify that the file exists, is non-empty, and contains a report or failure marker for every launched analyst. Then IMMEDIATELY proceed to Phase 3. Do NOT ask the user.
 
 ## Debate History File Protocol
@@ -180,29 +177,6 @@ Multi-round debates use **files as shared memory**. Each sub-agent reads/writes 
 
 The main session only tells each agent: the file path, its role, the round number, and paths to the data files it needs.
 
-## Summary Block Protocol
-
-Every phase file carries a **fixed-format summary block** at a known location so the orchestrator can extract it with Bash `awk` — never re-summarize with an LLM.
-
-**Format (fixed markers — do NOT rename; content is FREE-FORM):**
-
-```
-<!-- SUMMARY:BEGIN -->
-{3-8 lines, written in the role's OWN voice and structure. Each role decides its own fields —
-the Bull leads with stance + target, the Conservative with the risk cap, the analyst with the
-data-availability caveat. No fixed field labels.}
-<!-- SUMMARY:END -->
-```
-
-The block must be self-contained (readable standalone in the final report) and carry the role's most decision-relevant output: verdict/stance plus supporting points.
-
-**Placement:**
-- Analyst reports (`phase2_analyst_reports.md`), `research_plan.md`, `trader_plan.md`: the block is the FIRST thing in the report/output.
-- Debate entries (`debate_history.md`, `risk_debate_history.md`): the block is the FIRST thing inside each `### {Role} — Round N` entry, right after the heading.
-- Risk debators: the Step 4 return summary must be the same content as their summary block (copy it).
-
-**Extraction and assembly** are done by the tool `skills/stock-analysis-debate/tools/assemble_report.py` — two subcommands: `extract` (blocks → `{DATE}/summaries/*.summary.md`, counts only on stdout) and `build` (assembles `analysis_report.md`, Final Decision first). See Phase 7 for invocation. The full phase files never enter the main session's context.
-
 ---
 
 ## Phase 3: Bull vs Bear Debate
@@ -211,7 +185,7 @@ Run **`debate_rounds`** rounds (default 2). Each round: Bull → Bear, sequentia
 
 For each agent, tell it: role, round N of total, debate history file path, and analyst reports file path. Include instrument context.
 
-**Return protocol**: Each debate agent appends its full argument to the debate history file — its entry STARTS with a fixed-format summary block (see Summary Block Protocol) — and returns ONLY a one-line status confirmation (role, round, file write succeeded) per the Step 4 protocol in its prompt. The main session must NOT read `debate_history.md` during Phase 3 — it is shared memory between debate agents, read later by the Research Manager (which reads it itself); its summary blocks are extracted via Bash `awk` at Phase 7.
+**Return protocol**: Each debate agent appends its full argument to the debate history file and returns ONLY a one-line status confirmation (role, round, file write succeeded) per the Step 4 protocol in its prompt. The main session must NOT read `debate_history.md` during Phase 3 — it is shared memory between debate agents and read later by the Research Manager (which reads it itself) and at Phase 7 (when the main session reads it to write the report summaries).
 
 Debate history file: `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/debate_history.md`
 Data file: `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/phase2_analyst_reports.md`
@@ -224,7 +198,7 @@ After Phase 3, proceed immediately to Phase 4.
 - **Prompt**: `skills/stock-analysis-debate/prompts/research_manager.md`
 - **Context in prompt**: Full absolute file paths to `debate_history.md` and `phase2_analyst_reports.md` (the agent Reads both itself — do NOT paste their contents). Include instrument context (market type, currency, ticker, e.g. "601988.SH is a CN stock on Shanghai Stock Exchange, currency: CNY, ±10% price limit, T+1 settlement").
 - **Task**: Judge the debate. Make definitive Buy/Sell/Hold decision. Produce investment plan with rationale + strategic actions.
-- **After it returns**: The full plan comes back in the agent's response (it is needed once, for the file write; Phase 7 uses its summary block, extracted via Bash `awk` — do not re-read the file later). The plan must START with a fixed-format summary block (see Summary Block Protocol). Save it to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/research_plan.md`. Immediately go to Phase 5.
+- **After it returns**: The full plan comes back in the agent's response — save it to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/research_plan.md` (its content is already in context; Phase 7 must NOT re-read it). Immediately go to Phase 5.
 
 ## Phase 5: Trader
 
@@ -233,7 +207,7 @@ After Phase 3, proceed immediately to Phase 4.
 - **Context in prompt**: Full absolute file paths to `research_plan.md` and `phase2_analyst_reports.md` (the agent Reads them itself — do NOT paste their contents). Include instrument context.
 - Must end output with: `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`
 - For staged entries, require the Trader to output incremental and cumulative weights and verify that their sum does not exceed the maximum position. Include portfolio capital in context only when known; otherwise dollar amounts and share counts must be N/A.
-- **After it returns**: The full proposal comes back in the agent's response (needed once, for the file write; Phase 7 uses its summary block, extracted via Bash `awk` — do not re-read the file later). The proposal must START with a fixed-format summary block (see Summary Block Protocol), placed before the body, and still end with `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`. Save it to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/trader_plan.md`. Immediately go to Phase 6.
+- **After it returns**: The full proposal comes back in the agent's response — save it to `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/trader_plan.md` (its content is already in context; Phase 7 must NOT re-read it). The proposal must still end with `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`. Immediately go to Phase 6.
 
 ---
 
@@ -243,7 +217,7 @@ Run **`risk_discuss_rounds`** rounds (default 2). Each round: Aggressive → Con
 
 For each agent, tell it: role, round N of total, risk debate history file path, trader plan file path, and analyst reports file path. Include instrument context.
 
-**Return protocol**: Each risk debator appends its full assessment to the risk debate history file — its entry STARTS with a fixed-format summary block (see Summary Block Protocol) — and returns ONLY a short summary (final stance, revised position plan with incremental/cumulative weights, 3-5 core argument bullets) per the Step 4 protocol in its prompt; the return must be the same content as its summary block. The main session uses these returns for Phase 7 synthesis and extracts all blocks via Bash `awk` for the report — never Read the full `risk_debate_history.md` into the main session. If a detail is missing at Phase 7, extract just that section via Bash `grep` on a known anchor.
+**Return protocol**: Each risk debator appends its full assessment to the risk debate history file and returns ONLY a short summary (final stance, revised position plan with incremental/cumulative weights, 3-5 core argument bullets) per the Step 4 protocol in its prompt. The main session uses these returns during Phase 3-6 and at Phase 7 Reads `risk_debate_history.md` itself to write the report summaries.
 
 Risk debate history file: `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/risk_debate_history.md`
 Trader plan: `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/trader_plan.md`
@@ -261,17 +235,18 @@ After Phase 6, proceed immediately to Phase 7.
 
 ### Step 1: Gather
 
-Refresh the analysis record from the fixed-format summary blocks (see Summary Block Protocol) — run the `extract` subcommand; it writes the blocks to `{DATE}/summaries/*.summary.md` and reports only counts on stdout (block contents do NOT enter the tool result):
+Read only the files whose content the main session has NOT seen yet (rule 11). The main session writes the report summaries itself — it does NOT need agents to pre-generate summaries:
 
-```bash
-python skills/stock-analysis-debate/tools/assemble_report.py {TICKER} {DATE} --output-dir skills/stock-analysis-debate/tools/data extract
-```
+**Must Read (never seen by the main session):**
+- `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/debate_history.md` — full Bull vs Bear debate (Phase 3 agents only returned status confirmations)
+- `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/risk_debate_history.md` — full risk debate (Phase 6 agents only returned short summaries)
+- `skills/stock-analysis-debate/prompts/portfolio_manager.md` — output structure template (Rating scale, Executive Summary, Investment Thesis)
 
-Then, for decision synthesis, Read the extracted summary files with the Read tool (they are small — ~10-20 lines per file — and ARE the decision input; this is the one sanctioned exception to "don't read phase files"):
-
-- `skills/stock-analysis-debate/prompts/portfolio_manager.md` — output structure template (Rating scale, Executive Summary, Investment Thesis). Read this — it is not yet in context.
-- `data_quality.json` — already read in Phase 1.1. Do NOT re-read.
-- The extracted summary files under `{DATE}/summaries/` — these carry the analysts' conclusions, debate stances, plans, and risk-debate positions. Do NOT Read the full phase files; if a specific detail is missing, extract just that section via Bash `grep` on a known anchor.
+**Must NOT Read (already in the main context):**
+- `phase2_analyst_reports.md` — written by the main session from the analysts' returned reports (Phase 2)
+- `research_plan.md` — written from the Research Manager's returned plan (Phase 4)
+- `trader_plan.md` — written from the Trader's returned proposal (Phase 5)
+- `data_quality.json` — read in Phase 1.1
 
 ### Step 1.5: Arithmetic Sanity Check (MANDATORY — do NOT skip)
 
@@ -302,11 +277,9 @@ Produce the Portfolio Manager's final decision in the main session:
 
 **This is the mandatory deliverable. The analysis is incomplete until the file is on disk.**
 
-In ONE continuous sequence (Write, then Bash, then text — same turn), do:
+In ONE continuous sequence (Write, then text — same turn), do:
 
-**Output A1 — Write tool**: Call Write to create `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/final_decision.md` containing the portfolio manager's full decision (Step 2 above). This is the permanent decision record and the first section of the report.
-
-**Output A2 — Tool assembly**: Run the `build` subcommand — it concatenates the header (Report Date + Market Data As Of from `data_quality.json`), the Final Decision (from `final_decision.md`), each section's summary blocks (re-extracted from the phase files), and per-section links to the full phase files. **Final Decision is FIRST by construction.** Structure (fixed):
+**Output A — Write tool**: Call Write to create `skills/stock-analysis-debate/tools/data/{TICKER}/{DATE}/analysis_report.md` with ALL sections populated. The main session writes the report summaries ITSELF (based on Step 1's Gather) — natural-language summaries, one short paragraph or bullet list per section. **Final Decision is FIRST.** Structure (fixed):
 
 ```
 # Stock Analysis Report: {TICKER} ({DATE})
@@ -314,38 +287,32 @@ In ONE continuous sequence (Write, then Bash, then text — same turn), do:
 **Report Date**: {DATE} | **Market Data As Of**: {data_as_of_date}
 
 ## Final Decision
-{final_decision.md content}
+{portfolio manager's full decision — first}
 
 ## 1. Analyst Research
-{summary blocks extracted from phase2_analyst_reports.md}
+{summary of the analyst reports — key verdict, levels, signals}
 
 完整报告: [phase2_analyst_reports.md](./phase2_analyst_reports.md)
 
 ## 2. Bull vs Bear Debate
-{summary blocks extracted from debate_history.md}
+{summary of the debate — each side's stance, key arguments, convergence points}
 
 完整辩论: [debate_history.md](./debate_history.md)
 
 ## 3. Investment Plan
-{summary block extracted from research_plan.md}
+{summary of the research manager's plan}
 
 完整计划: [research_plan.md](./research_plan.md)
 
 ## 4. Trading Proposal
-{summary block extracted from trader_plan.md}
+{summary of the trader's proposal}
 
 完整提案: [trader_plan.md](./trader_plan.md)
 
 ## 5. Risk Assessment Debate
-{summary blocks extracted from risk_debate_history.md}
+{summary of the risk debate — each role's stance, position plans, convergence}
 
 完整辩论: [risk_debate_history.md](./risk_debate_history.md)
-```
-
-Command (verify with its stdout report):
-
-```bash
-python skills/stock-analysis-debate/tools/assemble_report.py {TICKER} {DATE} --output-dir skills/stock-analysis-debate/tools/data build
 ```
 
 **Output B — Text**: A concise summary of the rating, price target, and key rationale so the user sees the result immediately.
@@ -356,7 +323,7 @@ After both outputs complete, confirm: "The analysis report has been saved to ski
 
 ---
 
-**Guardrail**: If you catch yourself about to output the decision text without also calling Write on `final_decision.md` (which the Bash assembly then places first in `analysis_report.md`), STOP. You are about to make the #1 deliverable mistake. Add the Write call, then send both together. A text-only output is not a deliverable — it disappears when context scrolls. The file is the permanent record.
+**Guardrail**: If you catch yourself about to output the decision text without also calling Write on `analysis_report.md`, STOP. You are about to make the #1 deliverable mistake. Add the Write call, then send both together. A text-only output is not a deliverable — it disappears when context scrolls. The file is the permanent record.
 
 **If any analyst agent failed or returned no content**, note it in the report but do NOT stop.
 
@@ -382,4 +349,4 @@ After both outputs complete, confirm: "The analysis report has been saved to ski
 - **Modifying prompts**: Prompt files contain the exact prompts. Do NOT paraphrase or improve them. Pass verbatim.
 - **Defaulting to Hold**: If both sides have valid points, pick the stronger argument. Hold only for genuinely neutral situations.
 - **Forgetting instrument context**: Every debate/judgment agent needs market (US/CN/HK), currency, ticker format, and trading rules.
-- **Context bloat**: Do NOT paste file contents into agent prompts, do NOT re-read files already in context, do NOT Read files whose contents only feed the Bash `cat` report assembly (debate histories, analyst reports). See rule 11.
+- **Context bloat**: Do NOT paste file contents into agent prompts, do NOT re-read files already in the main context (own Write output, agent-returned content). At Phase 7, Read only `debate_history.md` and `risk_debate_history.md` (the only files the main session has not seen). See rule 11.

@@ -37,13 +37,3 @@ Note: HK has variable lot sizes (board lot per stock; commonly 100, 200, 500, or
 - Check the `data_quality.json` file for available trading days and indicator sufficiency flags before analyzing any indicator.
 
 Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read.
-
-## Summary block (MANDATORY)
-
-Your report must START with the fixed-format summary block below. The orchestrator extracts it with a tool and places it in the final report — no LLM re-summarization. Keep the labels exactly as written (they are fixed); omit a line only if the field does not apply:
-
-```
-<!-- SUMMARY:BEGIN -->
-{3-8 lines in your own voice: trend verdict, key levels, decisive indicator readings}
-<!-- SUMMARY:END -->
-```

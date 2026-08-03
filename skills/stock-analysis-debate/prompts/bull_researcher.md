@@ -41,14 +41,9 @@ Reflections from similar situations and lessons learned: {past_memory_str}
 
 **Step 3 — After generating your argument (MANDATORY — do NOT skip):**
 - Append your COMPLETE response to the debate history file using the Write tool.
-- Your entry must START with the fixed-format summary block (labels are fixed; omit a line only if it does not apply) — the orchestrator extracts it with a tool for the final report:
+- Format: 
   ```
   ### Bull Researcher — Round N
-
-  <!-- SUMMARY:BEGIN -->
-  {3-8 lines in your own voice: stance + time horizon + target, decisive theses}
-  <!-- SUMMARY:END -->
-
   {your ENTIRE response here verbatim}
   
   ---

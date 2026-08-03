@@ -32,7 +32,7 @@
 
 编排采用 context 卫生原则：辩论/风险 Agent 按文件 I/O 协议自写历史文件并仅返回状态确认或精简摘要；主会话只传递文件路径、不向 Agent prompt 粘贴文件内容；主会话 context 仅保留编排与决策所需内容，避免全文重复驻留。
 
-各阶段文件以固定标记 `<!-- SUMMARY:BEGIN -->...<!-- SUMMARY:END -->` 承载摘要块（由各 Agent 生成时写入，无需 LLM 重新总结）；`tools/assemble_report.py` 提供 `extract`（摘要块提取到 `summaries/`，供主会话决策阅读）与 `build`（组装报告）两个子命令；最终 `analysis_report.md` 以 **Final Decision 置顶**，其余章节只含摘要块与原报告链接。
+最终 `analysis_report.md` 以 **Final Decision 置顶**，其余章节由主会话在 Phase 7 自行读取报告后撰写自然语言摘要（只读取主会话未见过内容的文件，如辩论历史；主会话自己写入的 phase2/research/trader 文件不重复读取），并附带各完整报告链接。
 
 **数据源**：yfinance（OHLCV/基本面/财报/港股新闻）、长桥证券 API（A/H/美股最新日 K 兜底、HK/US 分部收入）、stockstats（技术指标）、新浪财经（CN 新闻 + HK 降级备用，翻页抓全）、东方财富（CN 公告）。
 
