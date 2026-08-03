@@ -12,6 +12,7 @@ from longbridge_fetcher import (
     get_revenue_sankey_metadata,
     normalize_revenue_sankey,
 )
+from output_layout import resolve_ticker_paths
 
 
 def _sankey_period(item: dict) -> str:
@@ -168,7 +169,17 @@ def main():
     parser = argparse.ArgumentParser(description="长桥桑基数据预处理")
     parser.add_argument("ticker", help="Ticker (e.g. 09988.HK, AAPL)")
     parser.add_argument("date", help="Analysis date YYYY-MM-DD")
-    parser.add_argument("--output-dir", default=None)
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
+        "--output-dir",
+        default=None,
+        help="Base output directory; appends TICKER/DATE",
+    )
+    output_group.add_argument(
+        "--ticker-data-dir",
+        default=None,
+        help="Exact ticker-level data directory; appends DATE only",
+    )
     parser.add_argument("--recent-n", type=int, default=8)
     parser.add_argument(
         "--gen-yaml",
@@ -177,13 +188,18 @@ def main():
     )
     args = parser.parse_args()
 
+    ticker = args.ticker.upper()
     output_dir = args.output_dir or os.path.join(
         os.path.dirname(__file__),
         "..",
         "data",
     )
-    ticker = args.ticker.upper()
-    day_dir = os.path.join(output_dir, ticker.replace(".", "_"), args.date)
+    ticker_root, day_dir = resolve_ticker_paths(
+        ticker,
+        args.date,
+        base_output_dir=output_dir,
+        ticker_data_dir=args.ticker_data_dir,
+    )
     json_path = os.path.join(day_dir, "revenue_sankey.json")
 
     if not os.path.exists(json_path):
@@ -214,7 +230,6 @@ def main():
         if yaml_struct is None:
             print("No segment data to derive yaml", flush=True)
             return 1
-        ticker_root = os.path.join(output_dir, ticker.replace(".", "_"))
         yaml_path = os.path.join(ticker_root, "segments.yaml")
         with open(yaml_path, "w") as handle:
             yaml.dump(yaml_struct, handle, allow_unicode=True, sort_keys=False)

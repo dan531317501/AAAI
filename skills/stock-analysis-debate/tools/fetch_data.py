@@ -5,6 +5,7 @@ Fetches all required data for a given ticker and date via yfinance + stockstats.
 
 Usage:
     python fetch_data.py <TICKER> <DATE> [--output-dir <dir>]
+    python fetch_data.py <TICKER> <DATE> --ticker-data-dir <dir>
 
 Example:
     python fetch_data.py AAPL 2024-01-10
@@ -25,6 +26,9 @@ Output:
         macro_indicators.txt # FRED macro series (rates, inflation, labor)
         prediction_markets.txt # Polymarket event probabilities
         summary.json        # Metadata summary
+
+    With --ticker-data-dir:
+    {ticker_data_dir}/{DATE}/
 """
 
 import argparse
@@ -32,6 +36,8 @@ import json
 import os
 import sys
 from datetime import datetime, timedelta
+
+from output_layout import resolve_ticker_paths
 
 import pandas as pd
 import yfinance as yf
@@ -1172,7 +1178,17 @@ def main():
     parser = argparse.ArgumentParser(description="Fetch stock data for TradingAgents analysis")
     parser.add_argument("ticker", help="Ticker symbol (e.g., AAPL, 600519.SH, 00700.HK)")
     parser.add_argument("date", help="Analysis date in YYYY-MM-DD format")
-    parser.add_argument("--output-dir", default=None, help="Output directory (default: ./data)")
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
+        "--output-dir",
+        default=None,
+        help="Base output directory; appends TICKER/DATE (default: ./data)",
+    )
+    output_group.add_argument(
+        "--ticker-data-dir",
+        default=None,
+        help="Exact ticker-level data directory; appends DATE only",
+    )
     args = parser.parse_args()
 
     ticker = args.ticker.strip().upper()
@@ -1186,8 +1202,17 @@ def main():
         sys.exit(1)
 
     # Setup output directory
-    output_dir = args.output_dir or os.path.join(os.path.dirname(__file__), "..", "data")
-    ticker_dir = os.path.join(output_dir, ticker.replace(".", "_"), curr_date)
+    output_dir = args.output_dir or os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "data",
+    )
+    ticker_root, ticker_dir = resolve_ticker_paths(
+        ticker,
+        curr_date,
+        base_output_dir=output_dir,
+        ticker_data_dir=args.ticker_data_dir,
+    )
     os.makedirs(ticker_dir, exist_ok=True)
 
     print(f"Fetching data for {ticker} on {curr_date}...")
@@ -1367,7 +1392,6 @@ def main():
             json.dump(sankey_data, f, ensure_ascii=False, indent=2)
         results["files"]["revenue_sankey"] = sankey_path
 
-        ticker_root = os.path.join(output_dir, ticker.replace(".", "_"))
         yaml_path = os.path.join(ticker_root, "segments.yaml")
         if not os.path.exists(yaml_path):
             if not rs_parsed:

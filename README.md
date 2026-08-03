@@ -26,7 +26,7 @@
 
 多智能体辩论式股票分析 skill。编排 Market/News/Social/Fundamentals 分析师 + Bull/Bear 辩论 + 风险辩论 + 组合经理，产出 Buy/Hold/Sell 建议。
 
-报告日期固定使用本次执行日期，行情截止日期单独披露；每次执行只在对应日期目录生成一份 `analysis_report.md`，不会因行情数据滞后而在 `data_as_of_date` 目录重复输出。
+每次分析严格分离数据与报告：原始/派生数据写入 `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`，分析报告和流程产物写入 `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/`。报告日期固定使用本次执行日期，行情截止日期单独披露；每次执行只在报告目录生成一份 `analysis_report.md`，不会因行情数据滞后而在 `data_as_of_date` 目录重复输出。
 
 分阶段交易计划统一输出新增仓位和累计仓位；任何风险辩论调整都必须重算后续阶段，最终累计仓位不得超过上限。未提供组合本金时不虚构资金和股数。
 
@@ -57,7 +57,7 @@
 
 - **Phase 1.5**：`prepare_segments.py --gen-yaml` 以长桥 `revenue-sankey?report=qf` 为唯一分部数据源，生成 `revenue_sankey.json`、`revenue_sankey.csv` 和 ticker 级 `segments.yaml`。CSV 完整保留桑基节点，并按 `node_key` 本地计算 QoQ/YoY，补充节点分类、抵销前分部构成、合并勾稽和 Level-1 分部缺失检测；不再抓取或保存 `business_historical`。
 - **Segment Analyst**：条件触发（`multi_segment: true`），与其他 Phase 2 分析师独立并行，读取增强后的 `revenue_sankey.csv` 和 `income_stmt.csv`，识别业务线增长/衰退拐点及长桥桑基口径下的利润结构变化，判断对集团股价综合方向；不依赖 News Analyst 的中间结果。
-- **Phase 2 产物**：所有适用分析师返回后，由主会话将 4 或 5 份完整响应统一写入并校验 `phase2_analyst_reports.md`，再进入辩论阶段。
+- **Phase 2 产物**：每个适用分析师子代理将完整结果直接写入 `reposrts/{TICKER}/reports/{DATE}/` 下的独立 `*_analyst.md` 文件，并只向主会话返回写入确认；不再生成聚合或总结文件。Phase 3-7 根据当前职责按需读取独立报告和原始数据。
 - **CN 市场不走业务线分析**（长桥无 A 股分部数据），退化为 4 分析师流程。
 - **降级**：长桥抓取失败时生成 `segments_fetch_failed.flag`，跳过分部视角，不阻断分析。
 
