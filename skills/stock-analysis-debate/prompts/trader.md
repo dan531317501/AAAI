@@ -6,6 +6,8 @@ Proposed Investment Plan: {investment_plan}
 
 Leverage these insights to make an informed and strategic decision.
 
+When `price_action_attribution_analyst.md` is available in the supplied report directory, use its verified continuation/reversal conditions and evidence grades to define staged triggers. Do not turn its attribution hypotheses into a rating, and do not use Plausible or Not Rated flow/actor/priced-in claims as entry or exit triggers.
+
 ## Position-plan integrity (MANDATORY)
 
 - Recalculate the complete plan instead of copying allocation numbers from the Research Manager.

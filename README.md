@@ -24,7 +24,7 @@
 
 ## skills/stock-analysis-debate
 
-多智能体辩论式股票分析 skill。编排 Market/News/Social/Fundamentals 分析师 + Bull/Bear 辩论 + 风险辩论 + 组合经理，产出 Buy/Hold/Sell 建议。
+多智能体辩论式股票分析 skill。编排 Market/News/Social/Fundamentals 基础分析师、Price Action Attribution（价格行为归因）分析师、Bull/Bear 辩论、风险辩论和组合经理，解释近期涨跌并产出 Buy/Hold/Sell 建议。
 
 每次分析严格分离数据与报告：原始/派生数据写入 `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`，分析报告和流程产物写入 `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/`。报告日期固定使用本次执行日期，行情截止日期单独披露；每次执行只在报告目录生成一份 `analysis_report.md`，不会因行情数据滞后而在 `data_as_of_date` 目录重复输出。
 
@@ -32,9 +32,19 @@
 
 编排采用 context 卫生原则：辩论/风险 Agent 按文件 I/O 协议自写历史文件并仅返回状态确认或精简摘要；主会话只传递文件路径、不向 Agent prompt 粘贴文件内容；主会话 context 仅保留编排与决策所需内容，避免全文重复驻留。
 
-最终 `analysis_report.md` 以 **Final Decision 置顶**，其余章节由主会话在 Phase 7 自行读取报告后撰写自然语言摘要（只读取主会话未见过内容的文件，如辩论历史；主会话自己写入的 phase2/research/trader 文件不重复读取），并附带各完整报告链接。
+最终 `analysis_report.md` 以 **Final Decision 置顶**，并单列价格行为归因章节；Phase 7 按最终主张读取必要的独立分析师报告、辩论历史和原始证据，完成算术与归因证据复核后撰写摘要，并附带各完整报告链接。
 
-**数据源**：yfinance（OHLCV/基本面/财报/港股新闻）、长桥证券 API（A/H/美股最新日 K 兜底、HK/US 分部收入）、stockstats（技术指标）、新浪财经（CN 新闻 + HK 降级备用，翻页抓全）、东方财富（CN 公告）。
+**数据源**：yfinance（OHLCV、大盘/行业代理、历史财报预期差、评级行动、基本面/财报/港股新闻）、长桥证券 API（A/H/美股最新日 K 兜底、HK/US 分部收入）、stockstats（技术指标）、新浪财经（CN 新闻 + HK 降级备用，翻页抓全）、东方财富（CN 公告）。
+
+### 价格行为归因
+
+- **两步编排**：Phase 2 Step 1 并行运行基础分析师并分别落盘；所有可用报告完成后，Step 2 顺序运行 Price Action Attribution Analyst，输出 `price_action_attribution_analyst.md`，然后才进入 Bull/Bear 辩论。
+- **归因链路**：按 `Expectation Baseline → Trigger/Surprise → Transmission/Amplifier → Observed Price Move → Fundamental Anchor → Conditional Outlook` 分析，区分事前预期、新信息、资金/市场结构放大和基本面持续性。
+- **相对表现**：`price_context.json` 提供目标股票与大盘/行业代理的 1/5/20 个交易时段绝对收益、超额收益和最近 60 个交易时段对齐序列；主要同行仅在能够说明可比关系并取得同窗口行情时补充，否则标为 `Not Rated`；单个代理获取失败时独立降级。
+- **预期证据**：`expectations.txt` 保存 yfinance 财报预期差记录、近 90 日评级行动和抓取时点一致预期快照；抓取时点快照不得反向充当历史事件前预期，缺少事前一致预期时“超预期/已计价”结论必须 `Not Rated`。
+- **证据分级**：候选原因按 Strongly Supported / Supported / Plausible / Rejected / Not Rated 排序，必须同时列支持证据、反证、缺失证据和至少一个竞争解释。
+- **因果边界**：超买/超卖只是状态；RSI、价格和成交量不能识别买卖方；强平、逼空、外资/机构流向必须有对应杠杆、借券或资金流证据。该角色不输出评级、目标价、仓位或交易建议。
+- **前瞻输出**：分别给出未来 1 周、1—2 个月、3—12 个月的延续/反转条件、验证节点、失效条件与置信等级，由后续 Bull/Bear、Research Manager 和 Portfolio Manager 挑战和裁决。
 
 ### 新闻处理流水（数据层去噪 + 分析层打分）
 
@@ -57,15 +67,16 @@
 
 - **Phase 1.5**：`prepare_segments.py --gen-yaml` 以长桥 `revenue-sankey?report=qf` 为唯一分部数据源，生成 `revenue_sankey.json`、`revenue_sankey.csv` 和 ticker 级 `segments.yaml`。CSV 完整保留桑基节点，并按 `node_key` 本地计算 QoQ/YoY，补充节点分类、抵销前分部构成、合并勾稽和 Level-1 分部缺失检测；不再抓取或保存 `business_historical`。
 - **Segment Analyst**：条件触发（`multi_segment: true`），与其他 Phase 2 分析师独立并行，读取增强后的 `revenue_sankey.csv` 和 `income_stmt.csv`，识别业务线增长/衰退拐点及长桥桑基口径下的利润结构变化，判断对集团股价综合方向；不依赖 News Analyst 的中间结果。
-- **Phase 2 产物**：每个适用分析师子代理将完整结果直接写入 `reposrts/{TICKER}/reports/{DATE}/` 下的独立 `*_analyst.md` 文件，并只向主会话返回写入确认；不再生成聚合或总结文件。Phase 3-7 根据当前职责按需读取独立报告和原始数据。
-- **CN 市场不走业务线分析**（长桥无 A 股分部数据），退化为 4 分析师流程。
+- **Phase 2 产物**：每个适用分析师子代理将完整结果直接写入 `reposrts/{TICKER}/reports/{DATE}/` 下的独立 `*_analyst.md` 文件，并只向主会话返回写入确认；不再生成聚合或总结文件。Step 2 归因分析师读取所有可用 Step 1 报告，Phase 3-7 再根据当前职责按需读取独立报告和原始数据。
+- **CN 市场不走业务线分析**（长桥无 A 股分部数据），Step 1 为 4 个基础分析师，随后仍运行 Price Action Attribution Analyst。
 - **降级**：长桥抓取失败时生成 `segments_fetch_failed.flag`，跳过分部视角，不阻断分析。
 
 ### 工具模块
 
 | 文件 | 职责 |
 |------|------|
-| `tools/fetch_data.py` | 主抓取流程（新浪翻页+去噪流水+长桥分部+flag），并把同口径估值、TTM EPS/P/E 对账和 GAAP 营业利润审计追加到 `fundamentals.txt` |
+| `tools/fetch_data.py` | 主抓取流程（相对表现/预期上下文+新浪翻页+去噪流水+长桥分部+flag），并把同口径估值、TTM EPS/P/E 对账和 GAAP 营业利润审计追加到 `fundamentals.txt` |
+| `tools/price_attribution_data.py` | 选择可解释的大盘/行业代理，计算 1/5/20 时段绝对与超额收益，序列化最近 60 时段对齐行情，并输出带点时使用边界的财报预期差和评级行动 |
 | `tools/financial_audit.py` | 使用最新有效收盘价与季度报表复算市值、P/B、简化 EV/EBITDA 和 TTM EPS/P/E；对比 provider 快照并输出冲突状态，同时区分 GAAP 报告营业利润与派生营业利润 |
 | `tools/news_filter.py` | 新闻去重/去噪/分层保留及证据编号、内容层级序列化纯函数 |
 | `tools/longbridge_fetcher.py` | 长桥日 K 兜底、counter_id、分部 API 抓取解析及清单推导 |

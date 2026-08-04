@@ -13,7 +13,9 @@ Example:
 
 Output:
     {output_dir}/{TICKER}/{DATE}/
-        ohlcv.csv           # OHLCV price data (30 days)
+        ohlcv.csv           # OHLCV price data for the configured lookback
+        price_context.json  # 1/5/20-session absolute/relative returns
+        expectations.txt    # Earnings surprise and analyst-expectation context
         indicators.txt      # All technical indicators
         news.txt            # Company-specific news
         global_news.txt     # Macro/global news
@@ -52,6 +54,7 @@ from financial_audit import append_audit
 from options_flow import fetch_options_report
 from macro_data import fetch_macro_report
 from prediction_markets import fetch_prediction_markets
+from price_attribution_data import fetch_attribution_context
 
 # Look-back windows
 PRICE_LOOKBACK_DAYS = 350  # ~230+ trading days, comfortable margin for 200 SMA
@@ -1098,6 +1101,19 @@ def _latest_close_from_ohlcv(ohlcv_text: str) -> float | None:
     return float(close.iloc[-1]) if not close.empty else None
 
 
+def _price_frame_from_ohlcv(ohlcv_text: str) -> pd.DataFrame:
+    """Parse the generated OHLCV artifact for attribution calculations."""
+    import io
+
+    try:
+        frame = pd.read_csv(io.StringIO(ohlcv_text), comment="#", parse_dates=["Date"])
+    except Exception:
+        return pd.DataFrame()
+    if frame.empty or "Date" not in frame.columns or "Close" not in frame.columns:
+        return pd.DataFrame()
+    return frame.set_index("Date")
+
+
 def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
                           ohlcv_text: str, market: str) -> dict:
     """Compute data quality metadata: trading days, indicator sufficiency, period labels.
@@ -1248,6 +1264,47 @@ def main():
     with open(path, "w") as f:
         f.write(ohlcv)
     results["files"]["ohlcv"] = path
+
+    # 1a. Relative-performance and expectation context for the second-wave
+    # Price Action Attribution Analyst. Each artifact degrades independently;
+    # unavailable comparator or consensus evidence remains explicitly Not Rated.
+    print("  [1a] Fetching price-attribution context...")
+    try:
+        price_context, expectations_text = fetch_attribution_context(
+            target_symbol=normalize_ticker(yf_ticker),
+            market=market,
+            analysis_date=curr_date,
+            price_start=price_start,
+            target_history=_price_frame_from_ohlcv(ohlcv),
+        )
+    except Exception as e:
+        price_context = {
+            "metadata": {
+                "target_symbol": normalize_ticker(yf_ticker),
+                "market": market,
+                "analysis_date": curr_date,
+            },
+            "comparators": [],
+            "windows": {},
+            "daily_series": [],
+            "warnings": [
+                f"Attribution context unavailable: {type(e).__name__}: {e}. Relative performance Not Rated."
+            ],
+        }
+        expectations_text = (
+            f"# Expectations Context for {normalize_ticker(yf_ticker)}\n\n"
+            f"<expectations data unavailable: {type(e).__name__}: {e} — expectation gap and priced-in assessment Not Rated>\n"
+        )
+
+    path = os.path.join(ticker_dir, "price_context.json")
+    with open(path, "w") as f:
+        json.dump(price_context, f, indent=2, default=str)
+    results["files"]["price_context"] = path
+
+    path = os.path.join(ticker_dir, "expectations.txt")
+    with open(path, "w") as f:
+        f.write(expectations_text)
+    results["files"]["expectations"] = path
 
     # 1b. Options flow (US only — yfinance option chains are reliable only
     # for US-listed equities; HK coverage is sparse and CN has none)

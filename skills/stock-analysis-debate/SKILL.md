@@ -1,40 +1,45 @@
 ---
 name: stock-analysis-debate
-description: Use when the user wants to analyze a stock (US/CN/HK markets) and get a Buy/Hold/Sell recommendation backed by a multi-agent debate among market analysts, researchers, risk assessors, and portfolio managers using real market data.
+description: Use when the user wants to analyze a stock (US/CN/HK markets), explain recent price behavior, and get a Buy/Hold/Sell recommendation backed by evidence-graded price attribution and a multi-agent debate using real market data.
 ---
 
 # Stock Analysis with Multi-Agent Debate
 
 ## Overview
 
-Conduct a professional stock analysis by orchestrating multiple AI agents in a structured debate. Agents play specialized roles — Market Analyst, News Analyst, Social Media Analyst, Fundamentals Analyst, Options Flow Analyst (US-listed equities only), Bull/Bear Researchers, Trader, Aggressive/Conservative/Neutral Risk Analysts, and Portfolio Manager — to produce a data-backed investment recommendation (Buy/Overweight/Hold/Underweight/Sell).
+Conduct a professional stock analysis by orchestrating multiple AI agents in a structured debate. Agents play specialized roles — Market Analyst, News Analyst, Social Media Analyst, Fundamentals Analyst, Options Flow Analyst (US-listed equities only), Price Action Attribution Analyst, Bull/Bear Researchers, Trader, Aggressive/Conservative/Neutral Risk Analysts, and Portfolio Manager — to explain recent price behavior and produce a data-backed investment recommendation (Buy/Overweight/Hold/Underweight/Sell).
 
-Data is fetched primarily from **yfinance** (OHLCV, news, fundamentals, financial statements), with **Longbridge daily K-lines** filling missing latest OHLCV dates for US/HK/SH/SZ stocks, and **stockstats** computing technical indicators.
+Data is fetched primarily from **yfinance** (OHLCV, benchmark/sector comparators, expectation records, news, fundamentals, financial statements), with **Longbridge daily K-lines** filling missing latest OHLCV dates for US/HK/SH/SZ stocks, and **stockstats** computing technical indicators.
 
 ## Critical Execution Rules
 
 **These rules override all other instructions during analysis execution:**
 
 1. **NEVER ask the user for permission to proceed between phases.** After each phase completes, immediately continue to the next phase. The user asked for a complete analysis — deliver it in one continuous run.
-2. **Each Phase 2 analyst writes its complete result directly to its own file under `reposrts/{TICKER}/reports/{DATE}/` and returns only a short write confirmation. After all analysts return, verify every expected file exists and is non-empty, then CONTINUE to Phase 3 without stopping. The main session must never aggregate analyst responses into a shared report file.**
+2. **Phase 2 has TWO steps. Step 1 launches the applicable base analysts in parallel. After their files are verified, Step 2 launches exactly one Price Action Attribution Analyst, which reads the base reports and attribution data and writes `price_action_attribution_analyst.md`. Only after both steps are verified may Phase 3 start. Every analyst writes directly to its own file and returns only a short write confirmation; the main session never aggregates analyst responses.**
 3. **Phases 3-6 run agents sequentially — each depends on the previous one's output. After each agent returns, immediately launch the next one. Do NOT pause for user confirmation.**
 4. **Phase 7 is the final phase (NOT a sub-agent). It MUST produce TWO outputs in ONE message batch: (A) Write `analysis_report.md` via the Write tool, and (B) the final decision text. If either is missing, the analysis is incomplete. Do NOT output the decision text without also calling Write.**
 5. **The workflow is complete ONLY when the report file has been written to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/analysis_report.md` AND confirmed to the user.**
 
-6. **CN market skips Phase 1 Step 3 (Segment Setup) and Segment Analyst entirely.** No `segments.yaml`, no segment data. Run 4 analysts (options flow is US-only).
-7. **If `segments_fetch_failed.flag` exists**, treat as CN: skip Phase 1 Step 3 (Segment Setup) and Segment Analyst, run 4 analysts. Note the missing segment view in the final report.
+6. **CN market skips Phase 1 Step 3 (Segment Setup) and Segment Analyst entirely.** No `segments.yaml`, no segment data. Run 4 Step 1 analysts (options flow is US-only), then the mandatory Price Action Attribution Analyst in Step 2.
+7. **If `segments_fetch_failed.flag` exists**, skip Segment Analyst, run every other applicable Step 1 analyst (including Options Flow for US equities), then the mandatory Price Action Attribution Analyst in Step 2. Note the missing segment view in the final report.
 8. **Options Flow Analyst runs ONLY for US-listed equities.** For HK/CN markets `options.txt` contains a Not Rated placeholder; the Options Flow Analyst must not run and options evidence must not influence the rating, target price, position sizing, or risk limits.
 
 9. **REPORT DATE:** `{DATE}` is the execution/analysis date and is the ONLY date allowed in the report title and output directory. Treat `data_as_of_date` only as the market-data cutoff and disclose it separately. Even when `data_fresh: false`, write exactly one report to `reposrts/{TICKER}/reports/{DATE}/analysis_report.md`; never create or copy another report under `data_as_of_date`. If `warning_no_200_sma: true`, 200 SMA must be reported as N/A.
 10. **ARITHMETIC VERIFICATION (Phase 7):** Before writing the final report, verify TTM EPS/P/E reconciliation, target_price = (profit × PE) / total_shares, forward_PE = current_price / forward_EPS, and market_cap = current_price × total_shares. If values conflict beyond the stated tolerance, disclose and correct them before producing the rating.
 11. **NEWS/SENTIMENT EVIDENCE:** Treat `news.txt` evidence IDs and content levels as hard boundaries. If `Social Data Available: false`, social sentiment is Not Rated and must not affect the rating, target price, position sizing, or risk limits. If `options.txt` marks options flow Not Rated, the same restriction applies to options evidence.
 
-12. **CONTEXT HYGIENE (main session):** The main session's context is reserved for orchestration, decision synthesis, and deliverables:
+12. **PRICE ATTRIBUTION EVIDENCE:** The Price Action Attribution Analyst ranks competing hypotheses; it does not prove a unique cause or issue a rating, target price, position size, or trade. No pre-event expectation means the surprise/priced-in claim is Not Rated. No comparator means abnormal return is Not Rated. No stock-specific leverage/short/flow evidence means forced liquidation, short squeeze, or investor identity is not established. Oversold/overbought is a state, not a catalyst.
+
+13. **CONTEXT HYGIENE (main session):** The main session's context is reserved for orchestration, decision synthesis, and deliverables:
     - Every Phase 2 analyst writes its own report file and returns only a short confirmation — never the full report.
+    - The Price Action Attribution Analyst is the only Phase 2 role required to read all available Step 1 reports; it reads raw files only to verify material attribution claims.
     - Debate/risk agents write their own files (File I/O protocol) and return only short confirmations/summaries — never their full arguments.
     - Downstream agents read only the reports and raw data needed for their current role. Give them the report/data directory paths and mandatory prior-phase artifacts; never paste file contents into agent prompts.
     - Never Read a file whose content is already in the main context (own Write output).
     - At Phase 7, read only the unseen reports and raw data required for final claims, debate adjudication, and arithmetic verification. Files already in the main context are not re-read.
+
+14. **ONE-RETRY POLICY:** Every phase and every agent call allows exactly ONE retry at the smallest granularity. Retry only the failed step — a failed `fetch_data.py`/`prepare_segments.py` run (Phase 1), a single failed analyst (Phase 2), one debate round or one risk-debate role (Phases 3/6), or one failed downstream agent (Phases 4/5) — never re-run completed work. If the retry also fails, STOP the entire workflow immediately, report the failed step to the user, and do NOT continue to later phases.
 
 ## Output Directory Contract
 
@@ -52,21 +57,22 @@ Set these paths once at the start of the run and pass absolute paths to every su
 
 Do not create a combined Phase 2 report, summary file, manifest, or concatenated analyst output. Keep each analyst result only in its role-specific file.
 
-For Phases 3-7:
+For Phase 2 Step 2 and Phases 3-7:
 
 1. Provide the absolute report directory, data directory, and mandatory artifact from the immediately preceding phase.
 2. Let the active agent select and read only the individual reports and raw data needed for its role and claims.
-3. Do not require every phase to read every `*_analyst.md` or data file.
+3. Except for the Price Action Attribution Analyst's required Step 1 report intake, do not require every phase to read every `*_analyst.md` or data file.
 4. Treat missing optional evidence as Not Rated and disclose the gap when it affects the conclusion; do not fabricate a replacement summary.
 
 ## Workflow
 
 1. **Phase 1: Data Collection & Validation** — Bash `fetch_data.py`, then read `data_quality.json`, then (HK/US only) segment setup via `prepare_segments.py`. All foreground, synchronous; wait for each to return before proceeding. Details in the Phase 1 section below (Steps 1-3).
 
-2. **Phase 2: Analyst Reports** — 4 to 6 Agent calls
-   - Parallel: launch all in a SINGLE message, foreground (no `run_in_background`).
+2. **Phase 2: Analyst Reports** — 5 to 7 Agent calls in two steps
+   - Step 1: launch 4 to 6 base analysts in a SINGLE message, foreground (no `run_in_background`).
    - Options Flow Analyst runs ONLY for US-listed equities.
    - Segment Analyst runs ONLY for HK/US with `multi_segment: true` in `segments.yaml`.
+   - Step 2: after all Step 1 files are verified, run one Price Action Attribution Analyst sequentially.
    - Each analyst writes directly to its assigned file under `reposrts/{TICKER}/reports/{DATE}/`; the main session only verifies the files.
 
 3. **Phase 3: Bull vs Bear Debate** — 4 Agent calls
@@ -96,6 +102,8 @@ Three sequential steps, all foreground and synchronous (wait for each to return 
 python skills/stock-analysis-debate/tools/fetch_data.py <TICKER> <DATE> --ticker-data-dir skills/stock-analysis-debate/reposrts/<TICKER>/data
 ```
 
+**Failure retry**: If the fetch fails, retry the exact command once. If the retry also fails, STOP the workflow and report the failure to the user (rule 14).
+
 **First-time setup** (install dependencies if not present):
 ```bash
 pip install -r skills/stock-analysis-debate/tools/requirements.txt
@@ -105,7 +113,9 @@ Output is saved to `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`
 
 | File | Content | Source |
 |------|---------|--------|
-| `ohlcv.csv` | OHLCV price data (60 days) | yfinance + Longbridge latest-date fallback |
+| `ohlcv.csv` | OHLCV price data (up to the configured 350-calendar-day lookback) | yfinance + Longbridge latest-date fallback |
+| `price_context.json` | Broad-market/sector comparator metadata, 1/5/20-session absolute and excess returns, and 60-session aligned daily context; each unavailable comparator degrades independently to Not Rated | yfinance + price_attribution_data.py |
+| `expectations.txt` | Retrieval-time consensus snapshot, historical earnings-surprise records, recent rating actions, and strict point-in-time use rules | yfinance + price_attribution_data.py |
 | `indicators.txt` | 13 technical indicators | stockstats via yfinance/Longbridge OHLCV |
 | `news.txt` | Company-specific news with evidence IDs, content levels, available summaries, processing audit, and explicit social-data availability (30 days) | yfinance + fetch_data.py |
 | `global_news.txt` | Macro/global news | yfinance Search |
@@ -155,15 +165,16 @@ Output is saved to `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`
      python skills/stock-analysis-debate/tools/prepare_segments.py {TICKER} {DATE} --ticker-data-dir skills/stock-analysis-debate/reposrts/{TICKER}/data --gen-yaml
      ```
 2. Read `segments.yaml`. Record `multi_segment` for Phase 2 branching.
-3. Proceed immediately to Phase 2.
+3. **Failure retry**: If Step 3 fails, retry the failed `prepare_segments.py` command once. If the retry also fails, STOP the workflow and report the failure to the user (rule 14).
+4. Proceed immediately to Phase 2.
 
 See `prompts/segment_analyst.md` for data interpretation rules and `prepare_segments.py` plus `longbridge_fetcher.py` for tool-level processing logic.
 - `reconciliation_status=mismatch` → the tool raises an exception, Phase 1 Step 3 fails, and no CSV is generated.
 - A non-empty `segment_completeness_status` → the analyst must disclose the incomplete data in the report.
 
-## Phase 2: Analyst Reports (Parallel, Direct File Output)
+## Phase 2: Analyst Reports (Two Steps, Direct File Output)
 
-**CRITICAL**: Launch all applicable analyst agents (4 base analysts, plus the conditional Options Flow Analyst [US only] and Segment Analyst [HK/US + multi_segment only]) in a SINGLE message as parallel Agent tool calls. Do NOT use `run_in_background` — use foreground calls so results return to the main conversation. The system will execute them in parallel and wait for all to complete.
+**CRITICAL**: Step 1 launches the applicable base analysts (4 base analysts, plus the conditional Options Flow Analyst [US only] and Segment Analyst [HK/US + multi_segment only]) in a SINGLE message as parallel Agent tool calls. Do NOT use `run_in_background` — use foreground calls so results return to the main conversation. Wait for all Step 1 agents before starting Step 2. Step 2 is one sequential Price Action Attribution Analyst call and must never run in parallel with Step 1.
 
 **IMPORTANT — Main session must NOT read prompt files or data files before dispatching analysts.** Each sub-agent reads its own prompt file and data files via the Read tool — the main session reading them too is pure context waste. The main session only tells each agent:
 - Full absolute file paths to: its prompt file + all required data files
@@ -181,7 +192,9 @@ Every analyst task must end with this file protocol:
 
 The sub-agent discovers everything else by reading the files itself.
 
-### The 4 Base Analysts (launch simultaneously in one message):
+### Step 1 — The Base Analysts (launch simultaneously in one message)
+
+All analysts listed below launch IN THE SAME parallel batch: the 4 base analysts always run; the conditional Options Flow and Segment analysts join the batch only when their conditions are met. There are no sub-steps within Step 1.
 
 **Market Analyst** — Prompt: `skills/stock-analysis-debate/prompts/market_analyst.md` — Data: `ohlcv.csv`, `indicators.txt` — Output: `market_analyst.md`
 
@@ -191,19 +204,25 @@ The sub-agent discovers everything else by reading the files itself.
 
 **Fundamentals Analyst** — Prompt: `skills/stock-analysis-debate/prompts/fundamentals_analyst.md` — Data: `fundamentals.txt`, `balance_sheet.csv`, `cashflow.csv`, `income_stmt.csv` — Output: `fundamentals_analyst.md`
 
-### Conditional 5th Analyst (US market only):
-
-**Options Flow Analyst** — Prompt: `skills/stock-analysis-debate/prompts/options_flow_analyst.md` — Data: `options.txt` — Output: `options_flow_analyst.md`
+**Options Flow Analyst**(Conditional 5th Analyst (US market only)) — Prompt: `skills/stock-analysis-debate/prompts/options_flow_analyst.md` — Data: `options.txt` — Output: `options_flow_analyst.md`
 
 Launch Options Flow Analyst IN PARALLEL with the other 4 only when the market is **US** (yfinance option chains are reliable only for US-listed equities). For HK/CN markets `options.txt` contains a Not Rated placeholder — do NOT launch the Options Flow Analyst.
 
-### Conditional 6th Analyst (HK/US + multi_segment only):
-
-**Segment Analyst** — Prompt: `skills/stock-analysis-debate/prompts/segment_analyst.md` — Data: `revenue_sankey.csv`, `income_stmt.csv` — Output: `segment_analyst.md`.
+**Segment Analyst**(Conditional 6th Analyst (HK/US + multi_segment only)) — Prompt: `skills/stock-analysis-debate/prompts/segment_analyst.md` — Data: `revenue_sankey.csv`, `income_stmt.csv` — Output: `segment_analyst.md`.
 
 Launch Segment Analyst IN PARALLEL with the other analysts only when `segments.yaml` has `multi_segment: true`. Otherwise run the applicable analysts (US: 5 including Options Flow; HK: 4; CN: 4) as before.
 
-**After all launched agents return**: Verify that every expected analyst output exists and is non-empty. Do not read or combine successful reports in the main session. If an analyst failed or its output file is missing/empty, retry only that analyst once with the same output path. If it still fails, record the missing role for downstream agents and the final report; do not create a synthetic analyst report in the main session. Then IMMEDIATELY proceed to Phase 3. Do NOT ask the user.
+**After all Step 1 agents return**: Verify that every expected Step 1 output exists and is non-empty. Do not read or combine successful reports in the main session. If an analyst failed or its output file is missing/empty, retry only that analyst once with the same output path. If the retry also fails, STOP the entire workflow immediately and report the failed analyst to the user (rule 14); do not create a synthetic analyst report and do not continue to Step 2.
+
+### Step 2 — Price Action Attribution Analyst (mandatory, sequential)
+
+Run only after every Step 1 output has been verified.
+
+**Price Action Attribution Analyst** — Prompt: `skills/stock-analysis-debate/prompts/price_action_attribution_analyst.md` — Reports: every available Step 1 `*_analyst.md` in the report directory — Required data (pass as full absolute paths in the data directory): `{DATA_DIR}/price_context.json`, `{DATA_DIR}/expectations.txt`, `{DATA_DIR}/ohlcv.csv`, `{DATA_DIR}/indicators.txt`, `{DATA_DIR}/news.txt` — Conditional evidence (pass every file as a FULL absolute path under the data directory, never as a bare filename): `{DATA_DIR}/global_news.txt`, `{DATA_DIR}/macro_indicators.txt`, `{DATA_DIR}/prediction_markets.txt`, `{DATA_DIR}/fundamentals.txt`, `{DATA_DIR}/balance_sheet.csv`, `{DATA_DIR}/cashflow.csv`, `{DATA_DIR}/income_stmt.csv`, `{DATA_DIR}/options.txt` — Output: `price_action_attribution_analyst.md`.
+
+Provide the absolute prompt path, report directory, data directory, output path, instrument context, Phase 1 quality findings, and the list of failed/missing Step 1 roles. The analyst must read all available Step 1 reports, verify only its material claims against raw artifacts, rank competing hypotheses, and produce conditional outlooks without issuing a rating, target price, position size, or transaction recommendation.
+
+After it returns, verify `price_action_attribution_analyst.md` exists and is non-empty. Retry the attribution analyst once if the file is missing/empty. If the retry also fails, STOP the entire workflow immediately and report the failure to the user (rule 14); do NOT proceed to Phase 3 and do NOT ask the user.
 
 ## Debate History File Protocol
 
@@ -222,31 +241,37 @@ The main session only tells each agent: the file path, its role, the round numbe
 
 Run **`debate_rounds`** rounds (default 2). Each round: Bull → Bear, sequential. Sub-agents handle debate history file I/O via the protocol in their prompts.
 
-For each agent, provide: role, round N of total, debate history file path, report directory, data directory, and instrument context. The agent reads only the analyst reports and raw data needed to support its argument. Identify any analyst role that failed so the agent does not assume that evidence exists.
+For each agent, provide: role, round N of total, debate history file path, report directory, data directory, and instrument context. Require the agent to read `price_action_attribution_analyst.md` when available, challenge at least its primary attribution or its main alternative, and verify decisive counterclaims against the underlying reports/data. The attribution report is a hypothesis ranking, not an authority. Identify any analyst role that failed so the agent does not assume that evidence exists.
 
 **Return protocol**: Each debate agent appends its full argument to the debate history file and returns ONLY a one-line status confirmation (role, round, file write succeeded) per the Step 4 protocol in its prompt. The main session must NOT read `debate_history.md` during Phase 3 — it is shared memory between debate agents and read later by the Research Manager (which reads it itself) and at Phase 7 (when the main session reads it to write the report summaries).
 
 Debate history file: `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/debate_history.md`
 Supporting evidence: read individual reports and raw data from the report/data directories only as needed
 
+**Failure retry**: If a debate agent fails or does not append its argument to the debate history file, retry only that agent (same role and round) once. If the retry also fails, STOP the entire workflow immediately and report the failed round to the user (rule 14).
+
 After Phase 3, proceed immediately to Phase 4.
 
 ## Phase 4: Research Manager
 
-- **Before**: Do NOT preload debate, analyst, or data files in the main session — the sub-agent reads what it needs itself (see rule 12).
+- **Before**: Do NOT preload debate, analyst, or data files in the main session — the sub-agent reads what it needs itself (see rule 13).
 - **Prompt**: `skills/stock-analysis-debate/prompts/research_manager.md`
-- **Context in prompt**: Full absolute paths to `debate_history.md`, the report directory, and the data directory. The agent must read `debate_history.md`, then read only the individual reports/data needed to judge specific claims. Identify any missing analyst role. Include instrument context (market type, currency, ticker, e.g. "601988.SH is a CN stock on Shanghai Stock Exchange, currency: CNY, ±10% price limit, T+1 settlement").
+- **Context in prompt**: Full absolute paths to `debate_history.md`, the report directory, and the data directory. The agent must read `debate_history.md` and `price_action_attribution_analyst.md` when available, adjudicate the debate's challenges to the primary attribution/priced-in assessment, then read only the additional reports/data needed to judge specific claims. Identify any missing analyst role. Include instrument context (market type, currency, ticker, e.g. "601988.SH is a CN stock on Shanghai Stock Exchange, currency: CNY, ±10% price limit, T+1 settlement").
 - **Task**: Judge the debate. Make definitive Buy/Sell/Hold decision. Produce investment plan with rationale + strategic actions.
-- **After it returns**: The agent writes its complete plan directly to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/research_plan.md`, verifies the file exists and is non-empty, and returns only a short confirmation/summary — never the full plan. Immediately go to Phase 5.
+- **After it returns**: The agent writes its complete plan directly to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/research_plan.md`, verifies the file exists and is non-empty, and returns only a short confirmation/summary — never the full plan.
+- **Failure retry**: If the Research Manager fails or `research_plan.md` is missing/empty, retry the agent once. If the retry also fails, STOP the entire workflow immediately and report the failure to the user (rule 14).
+- Immediately go to Phase 5.
 
 ## Phase 5: Trader
 
-- **Before**: Do NOT preload `research_plan.md`, analyst reports, or data files in the main session — the sub-agent reads what it needs itself (see rule 12).
+- **Before**: Do NOT preload `research_plan.md`, analyst reports, or data files in the main session — the sub-agent reads what it needs itself (see rule 13).
 - **Prompt**: `skills/stock-analysis-debate/prompts/trader.md`
 - **Context in prompt**: Full absolute paths to `research_plan.md`, the report directory, and the data directory. The agent must read `research_plan.md`, then read only the individual reports/data needed to produce and verify the trade plan. Include instrument context.
 - Must end output with: `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`
 - For staged entries, require the Trader to output incremental and cumulative weights and verify that their sum does not exceed the maximum position. Include portfolio capital in context only when known; otherwise dollar amounts and share counts must be N/A.
-- **After it returns**: The agent writes its complete proposal directly to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/trader_plan.md`, verifies the file exists and is non-empty, and returns only a short confirmation/summary — never the full proposal. The proposal must still end with `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`. Immediately go to Phase 6.
+- **After it returns**: The agent writes its complete proposal directly to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/trader_plan.md`, verifies the file exists and is non-empty, and returns only a short confirmation/summary — never the full proposal. The proposal must still end with `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`.
+- **Failure retry**: If the Trader fails or `trader_plan.md` is missing/empty, retry the agent once. If the retry also fails, STOP the entire workflow immediately and report the failure to the user (rule 14).
+- Immediately go to Phase 6.
 
 ---
 
@@ -262,6 +287,8 @@ Risk debate history file: `skills/stock-analysis-debate/reposrts/{TICKER}/report
 Trader plan: `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/trader_plan.md`
 Supporting evidence: read individual reports and raw data from the report/data directories only as needed
 
+**Failure retry**: If a risk debator fails or does not append its assessment to the risk debate history file, retry only that agent (same role and round) once. If the retry also fails, STOP the entire workflow immediately and report the failed round to the user (rule 14).
+
 After Phase 6, proceed immediately to Phase 7.
 
 ## Phase 7: Portfolio Manager — Final Decision + Report File (main session)
@@ -274,11 +301,12 @@ After Phase 6, proceed immediately to Phase 7.
 
 ### Step 1: Gather
 
-Apply the on-demand read protocol from rule 12:
+Apply the on-demand read protocol from rule 13:
 
 - Read `portfolio_manager.md` for the required output structure.
 - Read `debate_history.md` when adjudicating Bull/Bear arguments and `risk_debate_history.md` when deriving the final position plan.
 - Read `research_plan.md` and `trader_plan.md` when writing the Investment Plan and Trading Proposal report summaries.
+- Read `price_action_attribution_analyst.md` when explaining the recent move, adjudicating priced-in claims, or deriving continuation/reversal conditions.
 - Read only the `*_analyst.md` files needed to support or challenge claims used in the final decision.
 - Read only the raw data needed for Step 2 verification. `fundamentals.txt` and `indicators.txt` are required when valuation or technical claims are used; read `options.txt` only for US equities when options evidence is available and relevant.
 - Do not re-read `data_quality.json` when its content is already present in the main context.
@@ -304,6 +332,8 @@ Before synthesizing, apply each relevant check below. Read the supporting raw fi
 14. **Forward EPS/P/E labeling**: Label Forward P/E as a provider consensus snapshot and state that the forecast is not independently audited (per fundamentals.txt use-rules). Do not drop this caveat when summarizing debate arguments.
 15. **Cash/debt basis**: State net cash as (cash and short-term investments − total debt) and label that basis. When the provider cash figure differs from the company-reported "cash + marketable investments + restricted cash" figure, disclose the difference instead of silently picking one.
 16. **Options flow evidence**: If `options.txt` marks options flow Not Rated (placeholder) or open-interest/IV data is explicitly unavailable (NOTE lines), options-derived claims (put/call ratios, skew, positioning) must not influence the rating, target price, position sizing, or risk limits. Never restate a ratio, strike, or IV figure that is not present in `options.txt`.
+17. **Relative-return integrity**: Recompute every 1/5/20-session absolute or excess-return claim from `price_context.json`. If a comparator is `not_rated`, do not infer abnormal return, company-specific strength, or peer/sector divergence for that comparison.
+18. **Attribution integrity**: Treat `price_action_attribution_analyst.md` as ranked hypotheses, not established unique causality. A surprise or priced-in claim requires dated pre-event expectation evidence; retrieval-time targets/recommendations alone are insufficient. Oversold/overbought cannot be named as a catalyst, RSI/price/volume cannot identify the actor, and forced liquidation/short squeeze/foreign or institutional flow requires direct supporting data. Downgrade unsupported claims to Plausible or Not Rated before they influence scenarios, rating, target price, position sizing, or risk limits.
 
 ### Step 3: Synthesize
 
@@ -312,14 +342,14 @@ Produce the Portfolio Manager's final decision in the main session. The Final De
 The Final Decision MUST contain, in order:
 
 1. **Rating** — one of Buy / Overweight / Hold / Underweight / Sell, a one-line verdict, AND one line on the key reason for choosing this rating over its nearest alternatives (e.g., why Overweight rather than Buy, or why Buy rather than Hold).
-2. **Executive Summary** — one coherent paragraph (not bullets-only): the business case in one or two sentences with figures, entry strategy, position sizing, key risk levels including the thesis-level invalidation condition, a tactical reference band if computable (e.g., options-implied range; otherwise Bollinger/structure levels), and the time horizon.
+2. **Executive Summary** — one coherent paragraph (not bullets-only): the business case in one or two sentences with figures, the best-supported recent price attribution and its confidence, entry strategy, position sizing, key risk levels including the thesis-level invalidation condition, a tactical reference band if computable (e.g., options-implied range; otherwise Bollinger/structure levels), and the time horizon.
 3. **Decision Logic Chain** — explicit reasoning for the rating vs EVERY other plausible choice: why not Sell/Underweight (hard-bottom evidence with figures), why not Hold (asymmetric payoff already priced), why not a one-shot full position (evidence-grade discount). Each justification cites data.
 4. **Core Thesis with Evidence Anchors** — 3-6 numbered arguments; each = claim + concrete evidence (figure, [Nxxx] ID, analyst report, or debate passage) + explicit rebuttal of the opposing view on that point. May be organized as grouped anchors (e.g., "facts anchoring the bullish direction" vs "facts anchoring the caution") when the debate's residual disagreement splits that way.
 5. **Debate Adjudication** — what the bull side won on (with evidence), what the bear side won on (with evidence), which arguments were dismissed and why, AND the facts neither side disputed (uncontested consensus — often the strongest basis for the rating direction), and the net ruling that leads to this rating.
-6. **Scenarios & Target Price Derivation** — base/optimistic/pessimistic scenarios with their conditions; the arithmetic chain behind the target price (e.g., multiple × TTM EBITDA → EV → equity value ÷ shares), cross-checked against technical measures (e.g., double-bottom measured move) and the debate's own targets. Recompute, do not copy.
+6. **Scenarios & Target Price Derivation** — base/optimistic/pessimistic scenarios with their conditions; reconcile them with the attribution report's continuation/reversal conditions; show the arithmetic chain behind the target price (e.g., multiple × TTM EBITDA → EV → equity value ÷ shares), cross-checked against technical measures (e.g., double-bottom measured move) and the debate's own targets. Recompute, do not copy.
 7. **Risk Levels & Verification Nodes** — two layers: (a) thesis-level invalidation (the sustained condition that would overturn the entire thesis, with its evidence threshold); (b) tactical stop/reference levels with structural derivation (ATR-calibrated, structure-based). Plus the upcoming verification event (e.g., earnings) that would confirm or invalidate the thesis.
 8. **Final Position Plan with Derivation** — the maximum position weight AND the reasoning that picked it among the risk-debate proposals (which proposal won and why, with the arithmetic); if the risk debate revised the trader's initial schedule, state the initial → final evolution and the evidence reason for each change; staged table with trigger / incremental / cumulative / entry price; arithmetic verification statement.
-9. **Data Caveats** — Not Rated items (social, options, macro), TTM/forward valuation conflicts and which anchor was used, missing statements.
+9. **Data Caveats** — Not Rated items (social, options, macro, expectation baseline, comparators, leverage/short/flow evidence), TTM/forward valuation conflicts and which anchor was used, missing statements.
 
 Sections 2-8 must carry the specific numbers and evidence they derive from — summary prose without data is not acceptable. Prioritize readability: lead with conclusions, use tables for comparisons and evidence, keep paragraphs short (one point each), and bold key figures — avoid wall-of-text prose.
 
@@ -349,26 +379,32 @@ Individual reports (include only analysts that ran):
 - [Fundamentals Analyst](./fundamentals_analyst.md)
 - [Options Flow Analyst](./options_flow_analyst.md)
 - [Segment Analyst](./segment_analyst.md)
+- [Price Action Attribution Analyst](./price_action_attribution_analyst.md)
 
-## 2. Bull vs Bear Debate
+## 2. Price Action Attribution
+{the primary Trigger/Surprise, principal Amplifier, abnormal-return evidence, Fundamental Anchor, competing explanation, priced-in classification, continuation/reversal conditions, confidence, and material Not Rated gaps}
+
+Full attribution: [price_action_attribution_analyst.md](./price_action_attribution_analyst.md)
+
+## 3. Bull vs Bear Debate
 {summary of the debate — each side's stance, key arguments, convergence points}
 
-完整辩论: [debate_history.md](./debate_history.md)
+Full debate: [debate_history.md](./debate_history.md)
 
-## 3. Investment Plan
+## 4. Investment Plan
 {summary of the research manager's plan}
 
-完整计划: [research_plan.md](./research_plan.md)
+Full plan: [research_plan.md](./research_plan.md)
 
-## 4. Trading Proposal
+## 5. Trading Proposal
 {summary of the trader's proposal}
 
-完整提案: [trader_plan.md](./trader_plan.md)
+Full proposal: [trader_plan.md](./trader_plan.md)
 
-## 5. Risk Assessment Debate
+## 6. Risk Assessment Debate
 {summary of the risk debate — each role's stance, position plans, convergence}
 
-完整辩论: [risk_debate_history.md](./risk_debate_history.md)
+Full debate: [risk_debate_history.md](./risk_debate_history.md)
 ```
 
 **Output B — Text**: A concise summary of the rating, price target, and key rationale so the user sees the result immediately.
@@ -397,7 +433,7 @@ After both outputs complete, confirm: "The analysis report has been saved to ski
 |-----------|---------|-------------|
 | `debate_rounds` | 2 | Bull vs Bear debate rounds |
 | `risk_discuss_rounds` | 2 | Risk assessment debate rounds |
-| `analysts` | all 5 (US) / all 4 (HK/CN) | Which analysts to run (market, social, news, fundamentals, options [US only]) |
+| `analysts` | all applicable Step 1 roles; attribution always runs | Which base analysts to run (market, social, news, fundamentals, options [US only], segment [conditional]); Price Action Attribution remains mandatory after Step 1 |
 | `date` | today | Analysis date in YYYY-MM-DD |
 
 ## Common Mistakes
@@ -405,5 +441,6 @@ After both outputs complete, confirm: "The analysis report has been saved to ski
 - **Modifying prompts**: Prompt files contain the exact prompts. Do NOT paraphrase or improve them. Pass verbatim.
 - **Defaulting to Hold**: If both sides have valid points, pick the stronger argument. Hold only for genuinely neutral situations.
 - **Forgetting instrument context**: Every debate/judgment agent needs market (US/CN/HK), currency, ticker format, and trading rules.
-- **Context bloat**: Do NOT paste file contents into agent prompts or require each phase to read every report/data file. Read only the evidence needed for the current role, and do not re-read content already in the main context. See rule 12 and the On-Demand Read Protocol.
+- **Context bloat**: Do NOT paste file contents into agent prompts or require each phase to read every report/data file. The Price Action Attribution Analyst reads all Step 1 reports by design; every other downstream role reads only the evidence needed for its claims. Do not re-read content already in the main context. See rule 13 and the On-Demand Read Protocol.
+- **Post-hoc attribution**: Do not convert a nearby headline, an oversold reading, or a large rebound into a proven cause. Require expectation, timing, abnormal-return, and mechanism evidence; preserve competing hypotheses and Not Rated gaps.
 - **Anemic Final Decision**: A Final Decision that only restates the rating, entry points, and a one-paragraph thesis is incomplete (see Phase 7 Step 3). It must contain all 9 sections — Rating with key reason, Executive Summary, Decision Logic Chain (why not the other ratings), evidence-anchored thesis, Debate Adjudication (including uncontested consensus), scenario/target-price derivation, layered risk levels (thesis-level invalidation + tactical stops), position-plan derivation (which risk-debate proposal won and why, initial → final evolution), and Data Caveats — each carrying the specific numbers and evidence it derives from.

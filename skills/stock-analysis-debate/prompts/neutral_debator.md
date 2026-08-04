@@ -21,6 +21,8 @@ As the Neutral Risk Analyst, provide a balanced assessment weighing both upside 
 - Do not recommend another entry after the maximum position has already been reached.
 - If you do not change the allocation, state that the trader's verified schedule remains unchanged.
 
+When `price_action_attribution_analyst.md` is available, reconcile the aggressive and conservative cases with its primary attribution, main alternative, continuation/reversal conditions, and evidence grades. Preserve Not Rated gaps instead of resolving them by compromise.
+
 Here is the trader's decision:
 {trader_decision}
 
