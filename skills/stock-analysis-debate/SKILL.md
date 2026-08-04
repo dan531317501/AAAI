@@ -37,7 +37,7 @@ Data is fetched primarily from **yfinance** (OHLCV, benchmark/sector comparators
     - Debate/risk agents write their own files (File I/O protocol) and return only short confirmations/summaries — never their full arguments.
     - Downstream agents read only the reports and raw data needed for their current role. Give them the report/data directory paths and mandatory prior-phase artifacts; never paste file contents into agent prompts.
     - Never Read a file whose content is already in the main context (own Write output).
-    - At Phase 7, read only the unseen reports and raw data required for final claims, debate adjudication, and arithmetic verification. Files already in the main context are not re-read.
+    - At Phase 7, read only the unseen reports and raw data required for final claims and debate adjudication; arithmetic verification is delegated to the Step 2 sub-agent and is never re-run in the main session. Files already in the main context are not re-read.
 
 14. **ONE-RETRY POLICY:** Every phase and every agent call allows exactly ONE retry at the smallest granularity. Retry only the failed step — a failed `fetch_data.py`/`prepare_segments.py` run (Phase 1), a single failed analyst (Phase 2), one debate round or one risk-debate role (Phases 3/6), or one failed downstream agent (Phases 4/5) — never re-run completed work. If the retry also fails, STOP the entire workflow immediately, report the failed step to the user, and do NOT continue to later phases.
 
@@ -293,7 +293,7 @@ After Phase 6, proceed immediately to Phase 7.
 
 ## Phase 7: Portfolio Manager — Final Decision + Report File (main session)
 
-**This phase runs in the main session, NOT as a sub-agent.** The main session has orchestrated every phase and holds the most complete context.
+**This phase runs in the main session, NOT as a sub-agent** — with ONE exception: Step 2 (Arithmetic Sanity Check) runs as a dedicated sub-agent so its raw-data reads and computations never pollute the main session context. The main session has orchestrated every phase and holds the most complete context.
 
 **The phase produces TWO outputs. They MUST be called in the SAME tool call batch. Never split them across messages.**
 
@@ -308,36 +308,24 @@ Apply the on-demand read protocol from rule 13:
 - Read `research_plan.md` and `trader_plan.md` when writing the Investment Plan and Trading Proposal report summaries.
 - Read `price_action_attribution_analyst.md` when explaining the recent move, adjudicating priced-in claims, or deriving continuation/reversal conditions.
 - Read only the `*_analyst.md` files needed to support or challenge claims used in the final decision.
-- Read only the raw data needed for Step 2 verification. `fundamentals.txt` and `indicators.txt` are required when valuation or technical claims are used; read `options.txt` only for US equities when options evidence is available and relevant.
+- Do NOT read raw data for Step 2 verification — the Arithmetic Verifier sub-agent (Step 2) reads and recomputes every raw input itself. Read raw data in the main session only for claims the final decision itself must cite: `fundamentals.txt` and `indicators.txt` are required when valuation or technical claims are used; read `options.txt` only for US equities when options evidence is available and relevant.
 - Do not re-read `data_quality.json` when its content is already present in the main context.
 - Do not create any intermediate combined or summary file while gathering evidence.
 
-### Step 2: Arithmetic Sanity Check (MANDATORY — do NOT skip)
+### Step 2: Arithmetic Sanity Check (MANDATORY — do NOT skip) — sub-agent
 
-Before synthesizing, apply each relevant check below. Read the supporting raw file only when the check applies, then verify the value with actual computation rather than copying an analyst claim:
+Run the 18-point arithmetic and evidence-integrity check as a dedicated SUB-AGENT so its raw-data reads and computations stay out of the main session context:
 
-1. **Market Cap**: current_price × total_shares. Does it match the fundamentals.txt market cap? If discrepancy >10%, flag it.
-2. **P/B**: use current_price ÷ (latest-quarter common stock equity ÷ ordinary shares from that same quarter). Do not use a stale provider Book Value or attribute the mismatch to share count.
-3. **EV/EBITDA**: use point-in-time market cap + latest total debt - latest cash and short-term investments, divided by TTM EBITDA in the same base currency. Preserve the numerator/denominator units and label simplified EV explicitly.
-4. **GAAP operating profit**: use `Total Operating Income As Reported`; reconcile `Operating Income`, restructuring/merger charges, and other operating adjustments. Longbridge `oper_inc` is a provider-defined Sankey subtotal and must not be relabeled as GAAP without reconciliation.
-5. **TTM EPS/P/E**: Use the audit section's `Preferred TTM EPS` and `Preferred TTM P/E`. When reconciliation status is `mismatch`, disclose provider and statement-derived values, use the statement-derived values, and remove downstream claims based on the conflicting provider values. When status is `provider_only` or `unavailable`, report audited TTM EPS/P/E as N/A and do not use provider values as a valuation anchor.
-6. **Forward PE**: Compute current_price / provider_forward_EPS and compare it with provider Forward PE. Label both as provider consensus snapshot metrics; arithmetic agreement does not independently validate the forecast.
-7. **Target Price**: For every target price in the debate, compute `(profit × PE) / total_shares` and verify it matches. If a debater claims "CNY 55 billion × 20x = CNY 88 per share" but the formula produces a different value, this is a HARD ERROR. Flag and correct it in the final report.
-8. **Revenue/Net Income period labels**: If the Fundamentals Analyst cites a figure as "full-year 2025," verify that it is at least the sum of the visible quarters. If a column labeled "2025-12-31" is a single quarter, correct the label to "Q4 2025" in the final report.
-9. **200 SMA**: If data_quality.json says `warning_no_200_sma: true`, any mention of "200 SMA" in analyst reports that uses a value other than N/A is invalid.
-10. **News evidence**: Every material company-news claim must cite `[Nxxx]`. A `title_only` item supports only the literal headline; do not upgrade secondary reporting to an official confirmation or treat media rewrites as independent corroboration.
-11. **Social sentiment**: If `news.txt` says `Social Data Available: false`, report social sentiment as Not Rated. Remove unsupported mention counts, sentiment scores, community trends, user positioning, and ticker comparisons from downstream outputs. These claims must not influence the rating, target price, position sizing, or risk limits.
-12. **Position sizing**: For every staged entry plan, verify that cumulative weight equals the sum of incremental entry weights and does not exceed the stated maximum position. If any risk-debate proposal changes a stage, recompute all later stages, capital, and shares. Remove entry stages that occur after the maximum is reached. If portfolio capital or entry price is unavailable, report capital and shares as N/A.
-13. **Drawdown/return percentages**: Recompute every "drawdown X%" / "up Yx from 52-week low" claim from `fundamentals.txt` 52-week high/low and the latest close in `indicators.txt`/`ohlcv.csv`. Percentages sourced from news headlines/summaries are as-of their writing date (media basis) and must not be repeated as current facts — restate the recomputed value, or explicitly label the media figure and its date.
-14. **Forward EPS/P/E labeling**: Label Forward P/E as a provider consensus snapshot and state that the forecast is not independently audited (per fundamentals.txt use-rules). Do not drop this caveat when summarizing debate arguments.
-15. **Cash/debt basis**: State net cash as (cash and short-term investments − total debt) and label that basis. When the provider cash figure differs from the company-reported "cash + marketable investments + restricted cash" figure, disclose the difference instead of silently picking one.
-16. **Options flow evidence**: If `options.txt` marks options flow Not Rated (placeholder) or open-interest/IV data is explicitly unavailable (NOTE lines), options-derived claims (put/call ratios, skew, positioning) must not influence the rating, target price, position sizing, or risk limits. Never restate a ratio, strike, or IV figure that is not present in `options.txt`.
-17. **Relative-return integrity**: Recompute every 1/5/20-session absolute or excess-return claim from `price_context.json`. If a comparator is `not_rated`, do not infer abnormal return, company-specific strength, or peer/sector divergence for that comparison.
-18. **Attribution integrity**: Treat `price_action_attribution_analyst.md` as ranked hypotheses, not established unique causality. A surprise or priced-in claim requires dated pre-event expectation evidence; retrieval-time targets/recommendations alone are insufficient. Oversold/overbought cannot be named as a catalyst, RSI/price/volume cannot identify the actor, and forced liquidation/short squeeze/foreign or institutional flow requires direct supporting data. Downgrade unsupported claims to Plausible or Not Rated before they influence scenarios, rating, target price, position sizing, or risk limits.
+1. Launch ONE foreground Agent call with prompt `skills/stock-analysis-debate/prompts/arithmetic_verifier.md` (contains the full 18 checks). Do NOT use `run_in_background`.
+2. Pass: absolute report directory and data directory paths; the list of `*_analyst.md`, `debate_history.md`, `risk_debate_history.md`, `research_plan.md`, and `trader_plan.md` files whose numeric claims must be verified; and the output path `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/arithmetic_verification.md`. The sub-agent reads every raw file it needs (`fundamentals.txt`, `indicators.txt`, `ohlcv.csv`, `price_context.json`, `options.txt`, `news.txt`, `data_quality.json`) itself.
+3. Output contract: the sub-agent writes its full findings (PASS/FLAG per check, recomputed vs claimed value, required correction) directly to `arithmetic_verification.md` and returns only a short confirmation. The main session must NOT read the raw verification inputs; if the Final Decision needs a verified number, read `arithmetic_verification.md` instead.
+4. Failure retry (rule 14): if the sub-agent fails or `arithmetic_verification.md` is missing/empty, retry the sub-agent once. If the retry also fails, STOP the entire workflow immediately and report the failure to the user; do NOT proceed to Step 3.
 
 ### Step 3: Synthesize
 
 Produce the Portfolio Manager's final decision in the main session. The Final Decision is the single most important deliverable — it must be a **fully-argued conclusion**, not a summary. A Final Decision that merely restates the rating, entry points, and a one-paragraph thesis is INCOMPLETE and must be expanded. Every claim must be anchored to specific evidence: numeric values, evidence IDs (e.g., [N005]), analyst verdicts, or debate-file passages.
+
+Before synthesizing, read `arithmetic_verification.md` (Step 2's output). Its flags and corrections BIND the Final Decision: recompute, do not copy — apply every FLAG to the sections below before writing the report, and never restate a number the verifier flagged without the correction.
 
 The Final Decision MUST contain, in order:
 

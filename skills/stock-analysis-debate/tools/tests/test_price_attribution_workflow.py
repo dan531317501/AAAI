@@ -39,6 +39,43 @@ def test_skill_passes_conditional_evidence_as_full_paths():
     assert "{DATA_DIR}/options.txt" in step_2_section
 
 
+def test_skill_runs_arithmetic_check_in_sub_agent():
+    skill = _read("SKILL.md")
+
+    step_2_section = skill[skill.index("### Step 2: Arithmetic Sanity Check"):skill.index("### Step 3: Synthesize")]
+    assert "SUB-AGENT" in step_2_section
+    assert "prompts/arithmetic_verifier.md" in step_2_section
+    assert "arithmetic_verification.md" in step_2_section
+    assert "retry the sub-agent once" in step_2_section
+
+
+def test_arithmetic_verifier_prompt_has_all_checks():
+    prompt = _read("prompts/arithmetic_verifier.md")
+
+    for required_text in (
+        "Market Cap",
+        "P/B",
+        "EV/EBITDA",
+        "GAAP operating profit",
+        "Preferred TTM EPS",
+        "Forward PE",
+        "Target Price",
+        "Revenue/Net Income period labels",
+        "200 SMA",
+        "News evidence",
+        "Social sentiment",
+        "Position sizing",
+        "Drawdown/return percentages",
+        "Forward EPS/P/E labeling",
+        "Cash/debt basis",
+        "Options flow evidence",
+        "Relative-return integrity",
+        "Attribution integrity",
+        "arithmetic_verification.md",
+    ):
+        assert required_text in prompt, required_text
+
+
 def test_attribution_prompt_has_evidence_and_role_boundaries():
     prompt = _read("prompts/price_action_attribution_analyst.md")
 

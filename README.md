@@ -32,7 +32,7 @@
 
 编排采用 context 卫生原则：辩论/风险 Agent 按文件 I/O 协议自写历史文件并仅返回状态确认或精简摘要；主会话只传递文件路径、不向 Agent prompt 粘贴文件内容；主会话 context 仅保留编排与决策所需内容，避免全文重复驻留。
 
-最终 `analysis_report.md` 以 **Final Decision 置顶**，并单列价格行为归因章节；Phase 7 按最终主张读取必要的独立分析师报告、辩论历史和原始证据，完成算术与归因证据复核后撰写摘要，并附带各完整报告链接。
+最终 `analysis_report.md` 以 **Final Decision 置顶**，并单列价格行为归因章节；Phase 7 的算术复核由独立 Arithmetic Verifier 子代理完成（不占用主会话上下文，输出 `arithmetic_verification.md`），主会话按最终主张读取必要的独立分析师报告、辩论历史和验证结论后撰写摘要，并附带各完整报告链接。
 
 **数据源**：yfinance（OHLCV、大盘/行业代理、历史财报预期差、评级行动、基本面/财报/港股新闻）、长桥证券 API（A/H/美股最新日 K 兜底、HK/US 分部收入）、stockstats（技术指标）、新浪财经（CN 新闻 + HK 降级备用，翻页抓全）、东方财富（CN 公告）。
 
