@@ -1,4 +1,10 @@
-from data_validation import build_validated_metrics, fetch_fx_rate
+import pytest
+
+from data_validation import (
+    build_validated_metrics,
+    fetch_fx_rate,
+    render_validation_report,
+)
 
 
 def _snapshot():
@@ -54,6 +60,121 @@ def test_validated_contract_separates_actual_growth_from_consensus():
     assert "historical_actual_not_consensus" in actual["quality_flags"]
     assert contract["third_party_translation"]["status"] == "translated_only"
     assert contract["gates"]["allow_exact_valuation"] is True
+
+
+def test_llm_policy_allows_current_run_artifacts_without_gate_bypass():
+    contract = build_validated_metrics(
+        ticker="01810.HK", market="HK", analysis_date="2026-08-04",
+        snapshot=_snapshot(),
+        fx={"status": "verified", "rate": 0.92},
+        audit_metrics=_audit(),
+        official_filings={"status": "available", "provider": "HKEXnews", "records": []},
+        sankey_data=None,
+    )
+
+    policy = contract["llm_policy"]
+    assert policy["raw_provider_values_allowed"] is True
+    assert policy["validated_metric_bypass_allowed"] is False
+    assert "Current-run DATA_DIR artifacts listed in SKILL.md" in policy["allowed_input"]
+    assert "Prefer tool-derived values" in policy["allowed_math"]
+
+
+def test_valid_target_price_gate_records_method_period_and_inputs():
+    contract = build_validated_metrics(
+        ticker="01810.HK", market="HK", analysis_date="2026-08-04",
+        snapshot=_snapshot(),
+        fx={"status": "verified", "rate": 0.92},
+        audit_metrics=_audit(),
+        official_filings={"status": "available", "provider": "HKEXnews", "records": []},
+        sankey_data=None,
+    )
+
+    detail = contract["gate_details"]["allow_target_price"]
+    assert contract["gates"]["allow_target_price"] is True
+    assert contract["gates"]["allow_strong_rating"] is True
+    assert detail["allowed"] is True
+    assert detail["blocking_reasons"] == []
+    assert detail["forecast_period"] == "0y"
+    assert detail["valuation_method"] == "forward_eps_x_explicit_scenario_pe"
+    assert detail["sensitivity_required"] is True
+    assert "earnings_estimate.0y.avg" in detail["required_metric_ids"]
+
+
+@pytest.mark.parametrize(
+    "eps,pe,expected_reason",
+    [
+        (None, None, "ttm_eps_not_positive"),
+        (0, None, "ttm_eps_not_positive"),
+        (-1, -28, "ttm_eps_not_positive"),
+        (1, None, "point_in_time_pe_unavailable"),
+    ],
+)
+def test_invalid_pe_inputs_close_pe_target_and_strong_rating(eps, pe, expected_reason):
+    audit = _audit()
+    audit["statement_ttm_diluted_eps"] = eps
+    audit["statement_ttm_pe"] = pe
+    contract = build_validated_metrics(
+        ticker="01810.HK", market="HK", analysis_date="2026-08-04",
+        snapshot=_snapshot(),
+        fx={"status": "verified", "rate": 0.92},
+        audit_metrics=audit,
+        official_filings={"status": "available", "provider": "HKEXnews", "records": []},
+        sankey_data=None,
+    )
+
+    assert contract["gates"]["allow_exact_pe"] is False
+    assert contract["gates"]["allow_target_price"] is False
+    assert contract["gates"]["allow_strong_rating"] is False
+    assert expected_reason in contract["gate_details"]["allow_exact_pe"]["blocking_reasons"]
+
+
+@pytest.mark.parametrize(
+    "updates,expected_reason",
+    [
+        ({"avg": None}, "forecast_eps_not_positive"),
+        ({"avg": -0.5}, "forecast_eps_not_positive"),
+        ({"numberOfAnalysts": 0}, "forecast_analyst_count_invalid"),
+        ({"currency": "USD"}, "forecast_currency_mismatch"),
+        ({"period": "0q"}, "annual_forecast_period_missing"),
+    ],
+)
+def test_invalid_consensus_row_closes_target_and_strong_rating(updates, expected_reason):
+    snapshot = _snapshot()
+    snapshot["analyst_tables"]["earnings_estimate"][0].update(updates)
+    contract = build_validated_metrics(
+        ticker="01810.HK", market="HK", analysis_date="2026-08-04",
+        snapshot=snapshot,
+        fx={"status": "verified", "rate": 0.92},
+        audit_metrics=_audit(),
+        official_filings={"status": "available", "provider": "HKEXnews", "records": []},
+        sankey_data=None,
+    )
+
+    reasons = contract["gate_details"]["allow_target_price"]["blocking_reasons"]
+    assert contract["gates"]["allow_target_price"] is False
+    assert contract["gates"]["allow_strong_rating"] is False
+    assert expected_reason in reasons
+
+
+def test_provider_statement_mismatch_is_disclosed_and_blocks_target_confidence():
+    audit = _audit()
+    audit["ttm_valuation_reconciliation_status"] = "mismatch"
+    contract = build_validated_metrics(
+        ticker="01810.HK", market="HK", analysis_date="2026-08-04",
+        snapshot=_snapshot(),
+        fx={"status": "verified", "rate": 0.92},
+        audit_metrics=audit,
+        official_filings={"status": "available", "provider": "HKEXnews", "records": []},
+        sankey_data=None,
+    )
+
+    assert contract["gates"]["allow_exact_pe"] is True
+    assert contract["gates"]["allow_target_price"] is False
+    assert contract["gates"]["allow_strong_rating"] is False
+    assert "provider_vs_statement_ttm_valuation" in contract["quality"]["conflicting_metrics"]
+    assert "provider_statement_ttm_conflict" in contract["gate_details"]["allow_target_price"]["blocking_reasons"]
+    report = render_validation_report(contract)
+    assert "provider_statement_ttm_conflict" in report
 
 
 def test_missing_fx_blocks_all_exact_cross_currency_valuation_values():
@@ -132,3 +253,34 @@ def test_sec_structured_fact_is_normalized_as_official_metric():
     assert metric["provider"] == "SEC EDGAR XBRL"
     assert metric["status"] == "verified"
     assert metric["allowed_uses"] == ["official_fundamental_cross_check"]
+
+
+def test_historical_replay_closes_snapshot_dependent_gates_even_if_values_are_present():
+    temporal_context = {
+        "analysis_mode": "historical_replay",
+        "execution_date": "2026-08-06",
+        "analysis_as_of_date": "2024-05-01",
+        "analysis_timestamp": "2024-05-01T23:59:59.999999-04:00",
+        "point_in_time_enforced": True,
+        "source_statuses": {
+            "ohlcv": {"status": "allowed"},
+            "analyst_estimates": {"status": "not_rated"},
+        },
+    }
+    contract = build_validated_metrics(
+        ticker="AAPL", market="US", analysis_date="2024-05-01",
+        snapshot=_snapshot(),
+        fx={"status": "verified", "rate": 0.92},
+        audit_metrics=_audit(),
+        official_filings={"status": "available", "provider": "SEC EDGAR", "records": []},
+        sankey_data=None,
+        temporal_context=temporal_context,
+    )
+
+    reason = "historical_replay_non_point_in_time_valuation_inputs"
+    assert contract["schema_version"] == "1.2"
+    assert contract["llm_policy"]["raw_provider_values_allowed"] is False
+    assert contract["gates"]["allow_exact_valuation"] is False
+    assert contract["gates"]["allow_target_price"] is False
+    assert contract["gates"]["allow_strong_rating"] is False
+    assert reason in contract["gate_details"]["allow_exact_pe"]["blocking_reasons"]

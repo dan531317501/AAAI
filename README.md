@@ -28,20 +28,34 @@
 
 每次分析严格分离数据与报告：原始/派生数据写入 `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`，分析报告和流程产物写入 `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/`。报告日期固定使用本次执行日期，行情截止日期单独披露；每次执行只在报告目录生成一份 `analysis_report.md`，不会因行情数据滞后而在 `data_as_of_date` 目录重复输出。
 
-分阶段交易计划统一输出新增仓位和累计仓位；任何风险辩论调整都必须重算后续阶段，最终累计仓位不得超过上限。未提供组合本金时不虚构资金和股数。
+时间模式默认是 `current_research`，其中 `{DATE}` 必须等于本地当天。历史分析必须显式使用 `historical_replay` 并通过 `--as-of-date` 提供市场时区下的日终截止日；目录仍使用真实执行日期，报告明确标记为历史回放，不能伪装成当时生成的报告。
+
+```bash
+# 当前研究
+python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ticker-data-dir skills/stock-analysis-debate/reposrts/AAPL/data
+
+# 历史回放（执行目录仍是今天）
+python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --analysis-mode historical_replay --as-of-date 2024-05-01 --ticker-data-dir skills/stock-analysis-debate/reposrts/AAPL/data
+```
+
+默认采用 `research_only`：未提供完整组合画像时只输出证券研究结论、入场/失效条件，并将仓位标记为 Not Rated，不输出任何配置百分比、资金或股数。只有用户明确提供完整真实组合上下文，或明确要求并完整定义假设模型组合时，才按风险预算、压力损失、流动性及集中度约束的最小值计算仓位；Agent 一致或投票不能提高仓位。
 
 编排采用 context 卫生原则：辩论/风险 Agent 按文件 I/O 协议自写历史文件并仅返回状态确认或精简摘要；主会话只传递文件路径、不向 Agent prompt 粘贴文件内容；主会话 context 仅保留编排与决策所需内容，避免全文重复驻留。
 
-最终 `analysis_report.md` 以 **Final Decision 置顶**，并单列价格行为归因章节。所有币种识别、连续季度校验、TTM/估值运算、预测表语义、重试降级和数据门禁都在工具层完成，默认输出 `validated_metrics.toon` 与 `validation_report.md`；Phase 7 不再使用 LLM Arithmetic Verifier，只允许基于已验证指标做简单且展示公式的推导。
+最终 `analysis_report.md` 以 **Final Decision 置顶**，并单列价格行为归因章节。所有币种识别、连续季度校验、TTM/估值运算、预测表语义、重试降级和数据门禁都在工具层完成，默认输出 `validated_metrics.toon` 与 `validation_report.md`；Phase 7 优先引用数据目录中已有的工具派生值，不用 LLM 重算收益率、增长率、TTM、利润率、估值倍数或技术指标，仅对目标价、仓位等工作流明确要求的决策公式展示可追溯输入和计算过程。
 
 ### 数据完整性、币种与官方披露降级
 
 - **统一请求运行时**：yfinance、Longbridge 和官方披露接口对连接失败、超时、HTTP 408/429/5xx 做指数退避重试；400/401/403、结构错误等不可恢复问题立即失败。每次尝试写入 `data_quality.toon` 的 `provider_retry_events`。
-- **Fail-closed 数值契约**：`validated_metrics.toon` 为 LLM 的数值真相源，逐项记录 `metric_id`、币种、期间、provider、source field、状态和允许用途。缺失、过期、冲突或受门禁阻断的指标只能输出 N/A/Not Rated。
+- **目录级数值证据契约**：当前运行 `reposrts/{TICKER}/data/{DATE}/` 下由 `SKILL.md` 列出的有效产物共同构成数值依据，每个重要数字须追溯到文件、字段/行及期间。`validated_metrics.toon` 对其覆盖的指标及全部决策门禁具有优先约束；缺失、过期、冲突或被阻断的覆盖指标不能改从其他文件绕过，只能输出 N/A/Not Rated。
+- **历史时点契约**：`data_quality.toon` 与 `validated_metrics.toon` 同时保存 `execution_date`、`analysis_as_of_date`、市场时区 `analysis_timestamp`、`retrieved_at` 和逐来源 `source_statuses`。历史回放只允许截止日前的行情/相对收益、具有可解析发布时间的新闻及已提交官方披露；当前财务快照、报表、一致预期/修订/评级/目标价、内部人、期权、无 vintage 宏观、预测市场、全局新闻搜索、FX 当前元数据和分部快照全部自动降级为 Not Rated。SEC Company Facts 在落盘前按 `filed_at <= analysis_as_of_date` 裁剪。
 - **结构化输出**：`tools/structured_io.py` 统一负责 JSON 数据模型的 TOON/JSON 编解码、严格往返校验和原子落盘。`STRUCTURED_OUTPUT_FORMAT = "toon"` 为默认值；改成 `"json"` 后所有结构化文件统一输出 JSON。成功写入时会删除同名的另一格式，读取时可兼容历史 `.json`/`.toon` 文件。
 - **双币种建模**：分别保存交易币种 `quote_currency` 和财报/预测币种 `financial_currency`。跨币种 P/E、P/B、EV/EBITDA 和目标价必须使用分析日附近的有效 FX；无有效汇率时禁止精确估值。
 - **预测语义纠正**：`info.revenueGrowth` 和 `info.earningsGrowth` 仅表示最近季度历史同比；一致预期来自专门的 earnings/revenue estimate、EPS trend/revisions 接口，并保留每行币种和分析师数量。
 - **连续季度门禁**：TTM 只接受四个连续财季。即使存在四个非空值，只要整季缺失形成时间断档，也不会用更老季度回填。
+- **目标价与强评级门禁**：P/E 型目标价要求正的 TTM EPS/P/E、连续季度、有效币种/汇率，以及期间、币种、均值和分析师数量均有效的年度一致预期；`gate_details` 记录所有阻断原因和实际采用的预期期间。Buy/Sell 除数值门禁外，还必须在最终决策阶段具备相对收益、可追溯催化剂和投资逻辑失效条件，否则降级为 Overweight/Underweight/Hold。
+- **期权活动解释边界**：US 期权快照只描述成交/OI 构成、成交集中位置和近似 ±5% moneyness IV 相对定价。`volume > 2× prior OI` 仅标记异常活动，不能证明新开仓、资金方向、策略或参与者身份；期权证据不直接决定评级、目标价、仓位或风险上限。方法依据见 `skills/stock-analysis-debate/reference/options-volume-open-interest-and-sentiment.en.md`。
+- **组合适用性门禁**：`research_only`、`model_portfolio`、`portfolio_context_complete` 三种模式由 `prompts/portfolio_policy.md` 统一约束；任何必需字段缺失都会降级为 `research_only`。数值仓位必须展示所有约束、风险预算公式及最终绑定项，不能使用默认百分比或多 Agent 投票结果。
 - **官方披露降级**：港股发现 HKEXnews 财报公告，美股接 SEC EDGAR submissions 与 Company Facts XBRL，A 股接 CNINFO 法定披露。只有结构化字段进入数值管线；未结构化 PDF 仅作为证据链接，禁止 LLM 从中抽数。调用 SEC 时建议按其自动访问规范设置 `SEC_USER_AGENT="组织名 contact@example.com"`；未配置或被拒绝时显式降级，不伪造联系信息。
 - **长桥口径边界**：Longbridge 桑基币种标记为 `translated_only`。没有原始报告币种和换算汇率时，只能用于分部构成背景，不能作为官方经营增长或跨币种估值依据。
 
@@ -90,6 +104,7 @@
 | `tools/provider_runtime.py` | 统一错误分类、指数退避重试、响应校验和请求审计轨迹 |
 | `tools/official_filings.py` | HKEXnews、SEC EDGAR/XBRL、CNINFO 官方披露发现与结构化数据边界 |
 | `tools/data_validation.py` | API 币种识别、分析日汇率、预测表标准化、数值契约和决策门禁 |
+| `tools/temporal_policy.py` | 当前研究/历史回放日期校验、市场时区截止点、逐来源时点许可、历史快照降级与新闻时间过滤 |
 | `tools/structured_io.py` | JSON→TOON 转换、TOON/JSON 格式开关、严格往返校验、原子写入与历史格式兼容读取 |
 | `tools/price_attribution_data.py` | 选择可解释的大盘/行业代理，计算 1/5/20 时段绝对与超额收益，序列化最近 60 时段对齐行情，并输出带点时使用边界的财报预期差和评级行动 |
 | `tools/financial_audit.py` | 校验四个连续财季，按分析日 FX 把交易币种转换为财报币种后复算市值、P/B、简化 EV/EBITDA 和 TTM EPS/P/E；币种或周期不完整时阻断精确值 |

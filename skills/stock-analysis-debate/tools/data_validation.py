@@ -1,4 +1,4 @@
-"""Build the only numeric contract that downstream LLM agents may consume."""
+"""Build the fail-closed validation contract for covered numeric metrics."""
 
 from __future__ import annotations
 
@@ -208,6 +208,73 @@ def _metric(
     }
 
 
+def _positive_metric_ready(metric: dict[str, Any] | None) -> bool:
+    """Return whether a valuation input is usable and economically meaningful."""
+    return bool(
+        metric
+        and metric.get("status") in {"verified", "single_source"}
+        and isinstance(metric.get("value"), (int, float))
+        and not isinstance(metric.get("value"), bool)
+        and math.isfinite(metric["value"])
+        and metric["value"] > 0
+    )
+
+
+def _select_target_consensus(
+    snapshot: dict[str, Any], financial_currency: str | None,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Select a positive annual EPS consensus row without annualizing quarterly data."""
+    rows = snapshot.get("analyst_tables", {}).get("earnings_estimate", [])
+    candidates: list[dict[str, Any]] = []
+    observed_reasons: set[str] = set()
+    if not rows:
+        return None, ["earnings_estimate_missing"]
+
+    for record in rows:
+        period = str(record.get("period") or "").strip()
+        average = _finite(record.get("avg"))
+        analyst_count = _finite(record.get("numberOfAnalysts"))
+        currency = str(record.get("currency") or "").strip().upper()
+
+        if period not in {"0y", "+1y"}:
+            observed_reasons.add("annual_forecast_period_missing")
+            continue
+        if average is None or average <= 0:
+            observed_reasons.add("forecast_eps_not_positive")
+            continue
+        if analyst_count is None or analyst_count <= 0:
+            observed_reasons.add("forecast_analyst_count_invalid")
+            continue
+        if not financial_currency or currency != financial_currency.upper():
+            observed_reasons.add("forecast_currency_mismatch")
+            continue
+        candidates.append({
+            "period": period,
+            "avg": average,
+            "numberOfAnalysts": analyst_count,
+            "currency": currency,
+        })
+
+    if not candidates:
+        return None, sorted(observed_reasons or {"valid_earnings_consensus_missing"})
+    candidates.sort(key=lambda row: (row["period"] != "+1y", row["period"]))
+    return candidates[0], []
+
+
+def _gate_detail(
+    *,
+    blocking_reasons: list[str],
+    required_metric_ids: list[str],
+    **context: Any,
+) -> dict[str, Any]:
+    return {
+        "allowed": not blocking_reasons,
+        "blocking_reasons": blocking_reasons,
+        "required_metric_ids": required_metric_ids,
+        **context,
+    }
+
+
 def _sec_official_metrics(
     structured_facts: dict[str, Any] | None,
     analysis_date: str,
@@ -282,11 +349,26 @@ def build_validated_metrics(
     official_filings: dict[str, Any],
     sankey_data: dict[str, Any] | None,
     official_structured_facts: dict[str, Any] | None = None,
+    temporal_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create a fail-closed, typed numeric contract for downstream agents."""
+    temporal_context = temporal_context or {
+        "analysis_mode": "current_research",
+        "execution_date": analysis_date,
+        "analysis_as_of_date": analysis_date,
+        "analysis_timestamp": analysis_date,
+        "point_in_time_enforced": False,
+        "source_statuses": {},
+    }
+    historical_replay = temporal_context.get("analysis_mode") == "historical_replay"
     info = snapshot.get("info", {})
     quote_currency = snapshot.get("quote_currency")
     financial_currency = snapshot.get("financial_currency")
+    target_consensus, consensus_blocking_reasons = _select_target_consensus(
+        snapshot, financial_currency
+    )
+    reconciliation_status = audit_metrics.get("ttm_valuation_reconciliation_status")
+    reconciliation_conflict = reconciliation_status == "mismatch"
     metrics = [
         _metric(
             "latest_quarter_revenue_growth_yoy", info.get("revenueGrowth"),
@@ -307,7 +389,7 @@ def build_validated_metrics(
             unit="currency_per_share", currency=quote_currency,
             period=audit_metrics.get("price_date"), provider="local_audit",
             source_field="ohlcv.latest.Close", status="verified",
-            allowed_uses=["valuation", "technical_analysis"],
+            allowed_uses=["valuation", "technical_analysis", "target_price_input"],
         ),
         _metric(
             "statement_ttm_diluted_eps",
@@ -317,17 +399,27 @@ def build_validated_metrics(
             source_field="income_stmt.Diluted EPS",
             status=(
                 "verified" if audit_metrics.get("ttm_valuation_reconciliation_status")
-                in ("verified", "statement_only") else "unavailable"
+                in ("verified", "statement_only") else (
+                    "single_source" if reconciliation_conflict else "unavailable"
+                )
             ),
-            allowed_uses=["valuation"],
-            quality_flags=([] if audit_metrics.get("ttm_periods_contiguous") else ["non_contiguous_quarters"]),
+            allowed_uses=["valuation", "target_price_input"],
+            quality_flags=(
+                (["provider_statement_mismatch"] if reconciliation_conflict else [])
+                + ([] if audit_metrics.get("ttm_periods_contiguous") else ["non_contiguous_quarters"])
+            ),
         ),
         _metric(
             "point_in_time_pe", audit_metrics.get("statement_ttm_pe"),
             unit="multiple", currency=None, period=audit_metrics.get("price_date"),
             provider="local_audit", source_field="converted_price / statement_ttm_eps",
-            status="verified" if audit_metrics.get("valuation_currency_status") == "verified" else "unavailable",
-            allowed_uses=["valuation"],
+            status=(
+                "unavailable"
+                if audit_metrics.get("valuation_currency_status") != "verified"
+                else ("single_source" if reconciliation_conflict else "verified")
+            ),
+            allowed_uses=["valuation", "target_price_input"],
+            quality_flags=["provider_statement_mismatch"] if reconciliation_conflict else [],
         ),
         _metric(
             "point_in_time_pb", audit_metrics.get("price_to_book"),
@@ -350,12 +442,21 @@ def build_validated_metrics(
             for field, value in record.items():
                 if field in ("period", "currency"):
                     continue
+                target_input = bool(
+                    target_consensus
+                    and table_name == "earnings_estimate"
+                    and record.get("period") == target_consensus["period"]
+                    and field in {"avg", "numberOfAnalysts"}
+                )
                 metrics.append(_metric(
                     f"{table_name}.{record['period']}.{field}", value,
                     unit="count" if "Analyst" in field or field.lower().startswith(("up", "down")) else "provider_native",
                     currency=record.get("currency"), period=record["period"],
                     provider="yfinance", source_field=f"{table_name}.{field}",
-                    allowed_uses=["expectation_analysis"],
+                    allowed_uses=(
+                        ["expectation_analysis", "target_price_input"]
+                        if target_input else ["expectation_analysis"]
+                    ),
                 ))
     metrics.extend(_sec_official_metrics(official_structured_facts, analysis_date))
 
@@ -369,30 +470,140 @@ def build_validated_metrics(
         and financial_currency is not None
         and fx.get("status") == "verified"
     )
-    ttm_ready = (
-        audit_metrics.get("statement_ttm_diluted_eps") is not None
-        and audit_metrics.get("ttm_periods_contiguous") is True
-    )
-    exact_pe_ready = currency_ready and ttm_ready
-    exact_pb_ready = currency_ready and audit_metrics.get("price_to_book") is not None
-    exact_ev_ready = (
-        currency_ready
-        and audit_metrics.get("ev_to_provider_ttm_ebitda") is not None
-    )
+    metrics_by_id = {metric["metric_id"]: metric for metric in metrics}
+
+    exact_pe_reasons: list[str] = []
+    if historical_replay:
+        exact_pe_reasons.append("historical_replay_non_point_in_time_valuation_inputs")
+    if not currency_ready:
+        exact_pe_reasons.append("valuation_currency_unverified")
+    if not _positive_metric_ready(metrics_by_id.get("current_price")):
+        exact_pe_reasons.append("current_price_not_positive")
+    if not _positive_metric_ready(metrics_by_id.get("statement_ttm_diluted_eps")):
+        exact_pe_reasons.append("ttm_eps_not_positive")
+    if audit_metrics.get("ttm_periods_contiguous") is not True:
+        exact_pe_reasons.append("ttm_quarters_not_contiguous")
+    if not _positive_metric_ready(metrics_by_id.get("point_in_time_pe")):
+        exact_pe_reasons.append("point_in_time_pe_unavailable")
+    exact_pe_ready = not exact_pe_reasons
+
+    exact_pb_reasons: list[str] = []
+    if historical_replay:
+        exact_pb_reasons.append("historical_replay_non_point_in_time_valuation_inputs")
+    if not currency_ready:
+        exact_pb_reasons.append("valuation_currency_unverified")
+    if not _positive_metric_ready(metrics_by_id.get("point_in_time_pb")):
+        exact_pb_reasons.append("point_in_time_pb_unavailable")
+    exact_pb_ready = not exact_pb_reasons
+
+    exact_ev_reasons: list[str] = []
+    if historical_replay:
+        exact_ev_reasons.append("historical_replay_non_point_in_time_valuation_inputs")
+    if not currency_ready:
+        exact_ev_reasons.append("valuation_currency_unverified")
+    if not _positive_metric_ready(metrics_by_id.get("point_in_time_ev_to_ebitda")):
+        exact_ev_reasons.append("point_in_time_ev_to_ebitda_unavailable")
+    exact_ev_ready = not exact_ev_reasons
+
     valuation_ready = exact_pe_ready or exact_pb_ready or exact_ev_ready
-    consensus_ready = bool(snapshot.get("analyst_tables", {}).get("earnings_estimate"))
     conflicts = [m["metric_id"] for m in metrics if m["status"] == "conflict"]
+    if reconciliation_conflict:
+        conflicts.append("provider_vs_statement_ttm_valuation")
+
+    target_required_metric_ids = [
+        "current_price",
+        "statement_ttm_diluted_eps",
+        "point_in_time_pe",
+    ]
+    if target_consensus:
+        target_required_metric_ids.extend([
+            f"earnings_estimate.{target_consensus['period']}.avg",
+            f"earnings_estimate.{target_consensus['period']}.numberOfAnalysts",
+        ])
+    target_reasons = list(exact_pe_reasons) + list(consensus_blocking_reasons)
+    if reconciliation_conflict:
+        target_reasons.append("provider_statement_ttm_conflict")
+    for metric_id in target_required_metric_ids:
+        metric = metrics_by_id.get(metric_id)
+        if not metric or "target_price_input" not in metric.get("allowed_uses", []):
+            target_reasons.append(f"target_price_use_not_allowed:{metric_id}")
+    target_reasons = list(dict.fromkeys(target_reasons))
+    target_ready = not target_reasons
+
+    strong_rating_reasons = list(target_reasons)
+    strong_rating_ready = not strong_rating_reasons
+    strong_rating_decision_requirements = [
+        "valid_relative_return_evidence",
+        "traceable_catalyst_evidence",
+        "traceable_thesis_invalidation_condition",
+    ]
+
+    gate_details = {
+        "allow_exact_valuation": _gate_detail(
+            blocking_reasons=(
+                [] if valuation_ready else ["no_exact_valuation_method_available"]
+            ),
+            required_metric_ids=[],
+            available_methods=[
+                method for method, ready in (
+                    ("trailing_pe", exact_pe_ready),
+                    ("price_to_book", exact_pb_ready),
+                    ("ev_to_ebitda", exact_ev_ready),
+                ) if ready
+            ],
+        ),
+        "allow_exact_pe": _gate_detail(
+            blocking_reasons=exact_pe_reasons,
+            required_metric_ids=[
+                "current_price", "statement_ttm_diluted_eps", "point_in_time_pe"
+            ],
+        ),
+        "allow_exact_pb": _gate_detail(
+            blocking_reasons=exact_pb_reasons,
+            required_metric_ids=["current_price", "point_in_time_pb"],
+        ),
+        "allow_exact_ev_to_ebitda": _gate_detail(
+            blocking_reasons=exact_ev_reasons,
+            required_metric_ids=["point_in_time_ev_to_ebitda"],
+        ),
+        "allow_target_price": _gate_detail(
+            blocking_reasons=target_reasons,
+            required_metric_ids=target_required_metric_ids,
+            valuation_method="forward_eps_x_explicit_scenario_pe",
+            forecast_period=(target_consensus or {}).get("period"),
+            sensitivity_required=True,
+        ),
+        "allow_strong_rating": _gate_detail(
+            blocking_reasons=strong_rating_reasons,
+            required_metric_ids=target_required_metric_ids,
+            phase_7_requirements=strong_rating_decision_requirements,
+            note="Numeric prerequisites only; Phase 7 requirements are also mandatory.",
+        ),
+        "allow_segment_growth": _gate_detail(
+            blocking_reasons=["segment_growth_not_validated"],
+            required_metric_ids=[],
+        ),
+    }
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.2",
         "ticker": ticker,
         "market": market,
         "analysis_date": analysis_date,
+        "execution_date": temporal_context.get("execution_date", analysis_date),
+        "analysis_as_of_date": temporal_context.get("analysis_as_of_date", analysis_date),
+        "temporal_context": temporal_context,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "llm_policy": {
-            "allowed_input": "Only metrics in this file whose status and allowed_uses permit the claim.",
+            "allowed_input": "Current-run DATA_DIR artifacts listed in SKILL.md, with source field and period/as-of date; metrics covered by this file also require an allowed status and allowed_uses.",
             "missing_value": "Output N/A or Not Rated; never estimate or interpolate.",
-            "allowed_math": "Simple arithmetic over validated metrics only.",
-            "raw_provider_values_allowed": False,
+            "allowed_math": "Prefer tool-derived values; allow presentation-only rounding/unit scaling and explicit workflow-required target-price or position formulas.",
+            "raw_provider_values_allowed": not historical_replay,
+            "raw_provider_value_scope": (
+                "Only sources marked allowed in temporal_context.source_statuses; cite the source field and period/as-of date."
+                if historical_replay else
+                "Listed current-run DATA_DIR artifacts only; cite the source field and period/as-of date."
+            ),
+            "validated_metric_bypass_allowed": False,
         },
         "currency": {
             "quote_currency": quote_currency,
@@ -423,14 +634,15 @@ def build_validated_metrics(
             "allow_exact_pe": exact_pe_ready,
             "allow_exact_pb": exact_pb_ready,
             "allow_exact_ev_to_ebitda": exact_ev_ready,
-            "allow_target_price": exact_pe_ready and consensus_ready,
-            "allow_strong_rating": exact_pe_ready and consensus_ready and not conflicts,
+            "allow_target_price": target_ready,
+            "allow_strong_rating": strong_rating_ready,
             "allow_segment_growth": False,
         },
+        "gate_details": gate_details,
         "quality": {
             "status": (
                 "verified"
-                if exact_pe_ready and exact_pb_ready and exact_ev_ready and consensus_ready
+                if exact_pe_ready and exact_pb_ready and exact_ev_ready and target_consensus
                 else "partial"
             ),
             "ttm_periods_contiguous": audit_metrics.get("ttm_periods_contiguous"),
@@ -438,6 +650,10 @@ def build_validated_metrics(
             "notes": [
                 "Official filing discovery does not authorize LLM extraction from PDFs.",
                 "Longbridge currency is a translated provider presentation unless original currency and FX are supplied.",
+                *(
+                    ["Historical replay excludes retrieval-time snapshots without verified point-in-time availability."]
+                    if historical_replay else []
+                ),
             ],
         },
     }
@@ -445,6 +661,7 @@ def build_validated_metrics(
 
 def render_validation_report(contract: dict[str, Any]) -> str:
     gates = contract.get("gates", {})
+    gate_details = contract.get("gate_details", {})
     currency = contract.get("currency", {})
     quality = contract.get("quality", {})
     unavailable = [
@@ -456,6 +673,9 @@ def render_validation_report(contract: dict[str, Any]) -> str:
         "",
         f"Ticker: {contract.get('ticker')}",
         f"Analysis Date: {contract.get('analysis_date')}",
+        f"Execution Date: {contract.get('execution_date', contract.get('analysis_date'))}",
+        f"Analysis Mode: {contract.get('temporal_context', {}).get('analysis_mode', 'current_research')}",
+        f"Analysis Timestamp: {contract.get('temporal_context', {}).get('analysis_timestamp', contract.get('analysis_date'))}",
         f"Quality Status: {quality.get('status', 'partial')}",
         f"Quote Currency: {currency.get('quote_currency') or 'N/A'}",
         f"Financial Currency: {currency.get('financial_currency') or 'N/A'}",
@@ -466,9 +686,19 @@ def render_validation_report(contract: dict[str, Any]) -> str:
         "",
         *[f"- {name}: {str(value).lower()}" for name, value in gates.items()],
         "",
+        "## Gate Blocking Reasons",
+        "",
+        *(
+            [
+                f"- {name}: {', '.join(detail.get('blocking_reasons', [])) or 'None'}"
+                for name, detail in gate_details.items()
+            ]
+            or ["- None"]
+        ),
+        "",
         "## Unavailable Metrics",
         "",
         *( [f"- {metric_id}" for metric_id in unavailable] or ["- None"] ),
         "",
-        "LLM rule: use the validated_metrics structured artifact only; unavailable or disallowed metrics must be N/A or Not Rated.",
+        "LLM rule: use only sources allowed by temporal_context plus the listed current-run DATA_DIR artifacts, with source and period; for metrics covered by validated_metrics, unavailable or disallowed values remain N/A or Not Rated and cannot be restored from another artifact.",
     ])

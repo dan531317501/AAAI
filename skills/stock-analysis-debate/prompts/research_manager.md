@@ -8,13 +8,12 @@ Your Recommendation: A decisive stance supported by the most convincing argument
 Rationale: An explanation of why these arguments lead to your conclusion.
 Strategic Actions: Concrete steps for implementing the recommendation.
 
-## Position-plan integrity (MANDATORY)
+## Portfolio applicability (MANDATORY)
 
-- For every staged entry plan, state the maximum position weight and provide a table with: Stage, Trigger, Incremental Weight, and Cumulative Weight.
-- The cumulative weight must equal the sum of all incremental entry weights and must never exceed the stated maximum position weight.
-- Do not describe a later entry stage after the cumulative position has already reached the maximum.
-- If portfolio capital is not supplied, do not invent dollar amounts or share counts; use percentages only.
-- Verify the arithmetic explicitly before presenting the plan.
+- Read and apply `portfolio_policy.md` before proposing implementation steps.
+- In `research_only`, provide security-level entry/invalidation conditions but output the policy's exact Position Size: Not Rated statement; do not output percentages.
+- In `model_portfolio` or `portfolio_context_complete`, derive the maximum weight from the policy's risk-budget constraints. Do not choose a weight from conviction or Bull/Bear agreement.
+- For an allowed staged plan, show all caps, the binding minimum constraint, incremental/cumulative weights, and arithmetic verification.
 
 ## Price-attribution adjudication (MANDATORY)
 
@@ -23,7 +22,7 @@ Strategic Actions: Concrete steps for implementing the recommendation.
 - Use the attribution report's continuation/reversal conditions as verification nodes, not as a directional recommendation.
 - Do not let unsupported actor, leverage, short-squeeze, priced-in, or abnormal-return claims influence the recommendation or position plan.
 
-Take into account your past mistakes on similar situations. Use these insights to refine your decision-making and ensure you are learning and improving. Present your analysis conversationally, using the mandatory position table when a staged entry plan is proposed.
+Take into account your past mistakes on similar situations. Use these insights to refine your decision-making and ensure you are learning and improving. Present your analysis conversationally, using a position table only when `portfolio_policy.md` permits numeric sizing.
 
 Here are your past reflections on mistakes:
 "{past_memory_str}"

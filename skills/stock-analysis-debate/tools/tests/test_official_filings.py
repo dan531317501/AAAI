@@ -93,7 +93,21 @@ def test_sec_adapter_resolves_cik_and_preserves_structured_companyfacts(monkeypa
                     }
                 }
             }
-        return {"facts": {"us-gaap": {"RevenueFromContractWithCustomerExcludingAssessedTax": {}}}}
+        return {
+            "facts": {
+                "us-gaap": {
+                    "RevenueFromContractWithCustomerExcludingAssessedTax": {
+                        "label": "Revenue",
+                        "units": {
+                            "USD": [
+                                {"filed": "2026-07-31", "val": 10},
+                                {"filed": "2026-08-05", "val": 20},
+                            ]
+                        },
+                    }
+                }
+            }
+        }
 
     monkeypatch.setattr(official_filings, "request_json", fake_request)
 
@@ -104,3 +118,25 @@ def test_sec_adapter_resolves_cik_and_preserves_structured_companyfacts(monkeypa
     assert result["xbrl_namespaces"] == ["us-gaap"]
     assert result["records"][0]["structured_numeric_data"] is True
     assert result["structured_facts"]["facts"]["us-gaap"]
+    rows = result["structured_facts"]["facts"]["us-gaap"][
+        "RevenueFromContractWithCustomerExcludingAssessedTax"
+    ]["units"]["USD"]
+    assert [row["filed"] for row in rows] == ["2026-07-31"]
+
+
+def test_companyfacts_day_before_filing_hides_the_fact():
+    facts = {
+        "facts": {
+            "us-gaap": {
+                "Revenues": {
+                    "units": {
+                        "USD": [{"filed": "2026-07-31", "val": 10}]
+                    }
+                }
+            }
+        }
+    }
+
+    filtered = official_filings._filter_companyfacts_as_of(facts, "2026-07-30")
+
+    assert filtered["facts"] == {}

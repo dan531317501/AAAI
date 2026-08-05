@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
+import price_attribution_data
+
 from price_attribution_data import (
     build_price_context,
     render_expectations_context,
@@ -171,3 +173,36 @@ def test_expectations_context_labels_info_growth_as_historical_actual():
     assert "Revenue Growth (actual YoY)" in text
     assert "Structured Analyst Estimates" in text
     assert "| 0y | 1.08 | 17 | CNY |" in text
+
+
+def test_historical_attribution_skips_target_snapshot_and_keeps_date_bounded_prices(monkeypatch):
+    calls = []
+
+    class FakeTicker:
+        def __init__(self, symbol):
+            calls.append(symbol)
+            assert symbol != "TEST"
+
+        def history(self, **kwargs):
+            return _history([200 + index for index in range(25)])
+
+    monkeypatch.setattr(price_attribution_data.yf, "Ticker", FakeTicker)
+    monkeypatch.setattr(
+        price_attribution_data,
+        "retry_call",
+        lambda func, **kwargs: func(),
+    )
+
+    context, expectations = price_attribution_data.fetch_attribution_context(
+        target_symbol="TEST",
+        market="US",
+        analysis_date="2026-08-04",
+        price_start="2026-07-01",
+        target_history=_history([100 + index for index in range(25)]),
+        include_retrieval_snapshot=False,
+    )
+
+    assert calls == ["^GSPC"]
+    assert context["windows"]["20d"]["status"] == "available"
+    assert "Analysis Mode: historical_replay" in expectations
+    assert "Not Rated" in expectations

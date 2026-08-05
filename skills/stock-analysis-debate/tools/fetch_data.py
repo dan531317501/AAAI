@@ -4,12 +4,13 @@ Stock data fetcher for TradingAgents skill.
 Fetches all required data for a given ticker and date via yfinance + stockstats.
 
 Usage:
-    python fetch_data.py <TICKER> <DATE> [--output-dir <dir>]
+    python fetch_data.py <TICKER> <EXECUTION_DATE> [--output-dir <dir>]
     python fetch_data.py <TICKER> <DATE> --ticker-data-dir <dir>
+    python fetch_data.py <TICKER> <EXECUTION_DATE> --analysis-mode historical_replay --as-of-date <DATE>
 
 Example:
-    python fetch_data.py AAPL 2024-01-10
-    python fetch_data.py 600519.SH 2024-06-15 --output-dir /tmp/analysis
+    python fetch_data.py AAPL <TODAY>
+    python fetch_data.py AAPL <TODAY> --analysis-mode historical_replay --as-of-date 2024-01-10
 
 Output:
     {output_dir}/{TICKER}/{DATE}/
@@ -68,6 +69,14 @@ from provider_runtime import (
     retry_call,
 )
 from structured_io import write_structured_file
+from temporal_policy import (
+    CURRENT_RESEARCH,
+    HISTORICAL_REPLAY,
+    filter_historical_news,
+    historical_provider_snapshot,
+    not_rated_text,
+    resolve_temporal_context,
+)
 
 # Look-back windows
 PRICE_LOOKBACK_DAYS = 350  # ~230+ trading days, comfortable margin for 200 SMA
@@ -1000,15 +1009,19 @@ def _yf_news_to_list(ticker: str, start_date: str, end_date: str,
             url_obj = content.get("canonicalUrl") or content.get("clickThroughUrl") or {}
             link = url_obj.get("url", "")
             date_field = ""
+            published_at = ""
             if pub_date_str:
                 try:
-                    pd = datetime.fromisoformat(pub_date_str.replace("Z", "+00:00")).replace(tzinfo=None)
-                    if not (start_dt <= pd <= end_dt + timedelta(days=1)):
+                    parsed_date = datetime.fromisoformat(pub_date_str.replace("Z", "+00:00"))
+                    published_at = parsed_date.isoformat()
+                    parsed_date_naive = parsed_date.replace(tzinfo=None)
+                    if not (start_dt <= parsed_date_naive <= end_dt + timedelta(days=1)):
                         continue
-                    date_field = pd.strftime("%Y-%m-%d %H:%M")
+                    date_field = parsed_date_naive.strftime("%Y-%m-%d %H:%M")
                 except (ValueError, AttributeError):
                     date_field = pub_date_str
             out.append({"title": title, "date": date_field, "provider": provider,
+                        "published_at": published_at,
                         "link": link, "summary": content.get("summary", "")})
     except Exception as e:
         print(f"  [yf news] error: {e}", flush=True)
@@ -1017,7 +1030,8 @@ def _yf_news_to_list(ticker: str, start_date: str, end_date: str,
 
 def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
                            out_path: str, lookback_days: int = 30,
-                           market: str = "US") -> int:
+                           market: str = "US",
+                           temporal_excluded: int = 0) -> int:
     """对原始新闻跑去噪+去重，将正文和处理审计合并写入 news.txt。
 
     返回最终保留条数，并清理同目录下旧版 news_meta.txt，避免留下过期审计副本。
@@ -1065,6 +1079,7 @@ def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
     audit.extend([
         f"after_dedup: {len(after_dedup)} (removed {dedup_count})",
         f"final_kept: {len(after_dedup)}",
+        f"historical_timestamp_excluded: {temporal_excluded}",
         f"content_level_summary: {evidence_stats['summary']}",
         f"content_level_title_only: {evidence_stats['title_only']}",
         "social_data_available: false",
@@ -1152,8 +1167,10 @@ def _price_frame_from_ohlcv(ohlcv_text: str) -> pd.DataFrame:
     return frame.set_index("Date")
 
 
-def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
-                          ohlcv_text: str, market: str) -> dict:
+def _compute_data_quality(ticker_dir: str, ticker: str, analysis_as_of_date: str,
+                          ohlcv_text: str, market: str,
+                          execution_date: str | None = None,
+                          temporal_context: dict | None = None) -> dict:
     """Compute data quality metadata: trading days, indicator sufficiency, period labels.
 
     Returns a dict consumed by agents to avoid:
@@ -1162,6 +1179,8 @@ def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
       - mixing timestamps from different dates
     """
     import re
+
+    execution_date = execution_date or analysis_as_of_date
 
     # Count trading days from OHLCV
     trading_days = 0
@@ -1172,11 +1191,11 @@ def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
             last_ohlcv_date = line.split(",")[0]
 
     # 周末以此前最近工作日为目标；交易所节假日仍保持保守告警。
-    expected_price_date = _latest_expected_weekday(curr_date).strftime("%Y-%m-%d")
+    expected_price_date = _latest_expected_weekday(analysis_as_of_date).strftime("%Y-%m-%d")
     data_fresh = (
         last_ohlcv_date == expected_price_date
     ) if last_ohlcv_date else False
-    as_of_date = last_ohlcv_date or curr_date
+    as_of_date = last_ohlcv_date or analysis_as_of_date
 
     # Indicator sufficiency
     indicator_rules = {
@@ -1199,7 +1218,10 @@ def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
     quality = {
         "ticker": ticker,
         "market": market,
-        "analysis_date": curr_date,
+        "analysis_date": analysis_as_of_date,
+        "execution_date": execution_date,
+        "analysis_as_of_date": analysis_as_of_date,
+        "temporal_context": temporal_context or {},
         "data_as_of_date": as_of_date,
         "expected_price_date": expected_price_date,
         "data_fresh": data_fresh,
@@ -1215,7 +1237,7 @@ def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
         quality["notes"].append(
             f"WARNING: OHLCV data ends at {as_of_date}, not the expected latest "
             f"trading date {expected_price_date}. "
-            f"All analysis prices are as-of {as_of_date}. Do NOT use {curr_date} prices "
+            f"All analysis prices are as-of {as_of_date}. Do NOT use {analysis_as_of_date} prices "
             f"in the same report without explicitly noting the timestamp mismatch."
         )
     if not indicator_rules["close_200_sma"]["sufficient"]:
@@ -1231,7 +1253,18 @@ def _compute_data_quality(ticker_dir: str, ticker: str, curr_date: str,
 def main():
     parser = argparse.ArgumentParser(description="Fetch stock data for TradingAgents analysis")
     parser.add_argument("ticker", help="Ticker symbol (e.g., AAPL, 600519.SH, 00700.HK)")
-    parser.add_argument("date", help="Analysis date in YYYY-MM-DD format")
+    parser.add_argument("date", help="Execution date in YYYY-MM-DD format; must be today's local date")
+    parser.add_argument(
+        "--analysis-mode",
+        choices=(CURRENT_RESEARCH, HISTORICAL_REPLAY),
+        default=CURRENT_RESEARCH,
+        help="Current research by default; historical replay requires --as-of-date",
+    )
+    parser.add_argument(
+        "--as-of-date",
+        default=None,
+        help="Historical replay cutoff in YYYY-MM-DD format (market-timezone end of day)",
+    )
     output_group = parser.add_mutually_exclusive_group()
     output_group.add_argument(
         "--output-dir",
@@ -1246,15 +1279,23 @@ def main():
     args = parser.parse_args()
 
     ticker = args.ticker.strip().upper()
-    curr_date = args.date.strip()
+    execution_date = args.date.strip()
     clear_retry_events()
 
-    # Validate date format
+    market = detect_market(ticker)
     try:
-        curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
-    except ValueError:
-        print(f"Error: date must be in YYYY-MM-DD format, got: {curr_date}", file=sys.stderr)
+        temporal_context = resolve_temporal_context(
+            execution_date=execution_date,
+            analysis_mode=args.analysis_mode,
+            as_of_date=args.as_of_date,
+            market=market,
+        )
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
+    curr_date = temporal_context["analysis_as_of_date"]
+    curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+    historical_replay = args.analysis_mode == HISTORICAL_REPLAY
 
     # Setup output directory
     output_dir = args.output_dir or os.path.join(
@@ -1264,13 +1305,13 @@ def main():
     )
     ticker_root, ticker_dir = resolve_ticker_paths(
         ticker,
-        curr_date,
+        execution_date,
         base_output_dir=output_dir,
         ticker_data_dir=args.ticker_data_dir,
     )
     os.makedirs(ticker_dir, exist_ok=True)
 
-    print(f"Fetching data for {ticker} on {curr_date}...")
+    print(f"Fetching data for {ticker}; execution date {execution_date}, as of {curr_date}...")
     print(f"Output directory: {ticker_dir}")
 
     # Calculate date ranges
@@ -1279,31 +1320,46 @@ def main():
 
     results = {
         "ticker": ticker,
-        "date": curr_date,
-        "market": detect_market(ticker),
+        "date": execution_date,
+        "analysis_as_of_date": curr_date,
+        "analysis_mode": args.analysis_mode,
+        "temporal_context": temporal_context,
+        "market": market,
         "output_dir": ticker_dir,
         "files": {},
     }
 
-    market = results["market"]
-
     # Resolve yfinance ticker for HK stocks (yfinance is inconsistent:
     # 00700.HK works but 03690.HK doesn't; 3690.HK works but 700.HK doesn't)
-    if market == "HK":
+    if market == "HK" and not historical_replay:
         yf_ticker = resolve_hk_ticker(ticker)
         if yf_ticker != ticker:
             print(f"  Note: resolved HK ticker {ticker} -> {yf_ticker} for yfinance")
     else:
-        yf_ticker = ticker
+        yf_ticker = normalize_ticker(ticker)
 
     # Resolve currency and analyst-table semantics before any calculation.
     print("  [0] Fetching instrument metadata and currency context...")
-    provider_snapshot = fetch_provider_snapshot(
-        normalize_ticker(yf_ticker), curr_date
-    )
+    if historical_replay:
+        provider_snapshot = historical_provider_snapshot(
+            symbol=normalize_ticker(yf_ticker),
+            market=market,
+            temporal_context=temporal_context,
+        )
+    else:
+        provider_snapshot = fetch_provider_snapshot(
+            normalize_ticker(yf_ticker), curr_date
+        )
     quote_currency = provider_snapshot.get("quote_currency")
     financial_currency = provider_snapshot.get("financial_currency")
-    fx = fetch_fx_rate(quote_currency, financial_currency, curr_date)
+    fx = (
+        {
+            "status": "unavailable",
+            "reason": "historical replay has no verified point-in-time financial currency snapshot",
+        }
+        if historical_replay else
+        fetch_fx_rate(quote_currency, financial_currency, curr_date)
+    )
 
     metadata_path = write_structured_file(
         os.path.join(ticker_dir, "instrument_metadata"),
@@ -1319,6 +1375,10 @@ def main():
             "provider": "yfinance",
             "retrieved_at": provider_snapshot.get("retrieved_at"),
             "financial_currency": financial_currency,
+            "status": (
+                "not_rated_no_verified_point_in_time_snapshot"
+                if historical_replay else "available"
+            ),
             "tables": provider_snapshot.get("analyst_tables", {}),
         },
     )
@@ -1346,6 +1406,7 @@ def main():
             analysis_date=curr_date,
             price_start=price_start,
             target_history=_price_frame_from_ohlcv(ohlcv),
+            include_retrieval_snapshot=not historical_replay,
         )
     except Exception as e:
         price_context = {
@@ -1380,7 +1441,7 @@ def main():
     # 1b. Options flow (US only — yfinance option chains are reliable only
     # for US-listed equities; HK coverage is sparse and CN has none)
     print("  [1b] Fetching options flow...")
-    if market == "US":
+    if market == "US" and not historical_replay:
         options_text = fetch_options_report(
             yf_ticker,
             curr_date,
@@ -1392,6 +1453,8 @@ def main():
         results["files"]["options"] = path
     else:
         options_text = (
+            not_rated_text("Options", temporal_context)
+            if historical_replay else
             f"<options data unavailable for {ticker}: option chains are not "
             f"fetched for {market} market — Options Flow not rated>"
         )
@@ -1417,20 +1480,28 @@ def main():
         raw = fetch_hk_news_raw(ticker, news_start, curr_date)
     else:
         raw = _yf_news_to_list(yf_ticker, news_start, curr_date, market=market)
+    temporal_excluded = 0
+    if historical_replay:
+        raw, temporal_excluded = filter_historical_news(
+            raw, temporal_context["analysis_timestamp"]
+        )
     process_and_write_news(raw, curr_date, news_start, news_path,
-                           lookback_days=NEWS_LOOKBACK_DAYS, market=market)
+                           lookback_days=NEWS_LOOKBACK_DAYS, market=market,
+                           temporal_excluded=temporal_excluded)
     results["files"]["news"] = news_path
 
     # 4. Global news (route by market)
     print("  [4/8] Fetching global news...")
     global_news_parts = []
-    if market == "CN":
-        cn_macro = fetch_cn_global_news(curr_date)
-        global_news_parts.append(cn_macro)
-    # Always include yfinance global news (useful context for all markets)
-    yf_global = fetch_global_news(curr_date)
-    global_news_parts.append(yf_global)
-    global_news = "\n\n".join(global_news_parts)
+    if historical_replay:
+        global_news = not_rated_text("Global News", temporal_context)
+    else:
+        if market == "CN":
+            cn_macro = fetch_cn_global_news(curr_date)
+            global_news_parts.append(cn_macro)
+        yf_global = fetch_global_news(curr_date)
+        global_news_parts.append(yf_global)
+        global_news = "\n\n".join(global_news_parts)
     path = os.path.join(ticker_dir, "global_news.txt")
     with open(path, "w") as f:
         f.write(global_news)
@@ -1439,7 +1510,10 @@ def main():
     # 4b. FRED macro indicators (all markets; degrades to placeholder
     # when FRED_API_KEY is unset)
     print("  [4b] Fetching FRED macro indicators...")
-    macro_text = fetch_macro_report(curr_date)
+    macro_text = (
+        not_rated_text("Macro Indicators", temporal_context)
+        if historical_replay else fetch_macro_report(curr_date)
+    )
     path = os.path.join(ticker_dir, "macro_indicators.txt")
     with open(path, "w") as f:
         f.write(macro_text)
@@ -1447,7 +1521,10 @@ def main():
 
     # 4c. Polymarket prediction markets (all markets; no API key needed)
     print("  [4c] Fetching Polymarket prediction markets...")
-    pm_text = fetch_prediction_markets()
+    pm_text = (
+        not_rated_text("Prediction Markets", temporal_context)
+        if historical_replay else fetch_prediction_markets()
+    )
     path = os.path.join(ticker_dir, "prediction_markets.txt")
     with open(path, "w") as f:
         f.write(pm_text)
@@ -1455,7 +1532,10 @@ def main():
 
     # 5. Fundamentals
     print("  [5/8] Fetching fundamentals...")
-    fundamentals = fetch_fundamentals(yf_ticker, market=market)
+    fundamentals = (
+        not_rated_text("Fundamentals", temporal_context)
+        if historical_replay else fetch_fundamentals(yf_ticker, market=market)
+    )
     fundamentals = (
         f"{fundamentals.rstrip()}\n"
         f"Quote Currency: {quote_currency or 'N/A'}\n"
@@ -1468,8 +1548,11 @@ def main():
 
     # 6. Balance sheet
     print("  [6/8] Fetching balance sheet...")
-    balance_sheet = fetch_financial_stmt(yf_ticker, "balance_sheet", "quarterly",
-                                          curr_date, market=market)
+    balance_sheet = (
+        not_rated_text("Balance Sheet", temporal_context)
+        if historical_replay else
+        fetch_financial_stmt(yf_ticker, "balance_sheet", "quarterly", curr_date, market=market)
+    )
     path = os.path.join(ticker_dir, "balance_sheet.csv")
     with open(path, "w") as f:
         f.write(balance_sheet)
@@ -1477,8 +1560,11 @@ def main():
 
     # 7. Cash flow
     print("  [7/8] Fetching cash flow...")
-    cashflow = fetch_financial_stmt(yf_ticker, "cashflow", "quarterly",
-                                     curr_date, market=market)
+    cashflow = (
+        not_rated_text("Cash Flow", temporal_context)
+        if historical_replay else
+        fetch_financial_stmt(yf_ticker, "cashflow", "quarterly", curr_date, market=market)
+    )
     path = os.path.join(ticker_dir, "cashflow.csv")
     with open(path, "w") as f:
         f.write(cashflow)
@@ -1486,8 +1572,11 @@ def main():
 
     # 8. Income statement
     print("  [8/8] Fetching income statement...")
-    income_stmt = fetch_financial_stmt(yf_ticker, "income_stmt", "quarterly",
-                                        curr_date, market=market)
+    income_stmt = (
+        not_rated_text("Income Statement", temporal_context)
+        if historical_replay else
+        fetch_financial_stmt(yf_ticker, "income_stmt", "quarterly", curr_date, market=market)
+    )
     path = os.path.join(ticker_dir, "income_stmt.csv")
     with open(path, "w") as f:
         f.write(income_stmt)
@@ -1515,7 +1604,10 @@ def main():
 
     # 9. Insider transactions (best-effort)
     print("  [9/9] Fetching insider transactions...")
-    insider = fetch_insider_transactions(yf_ticker)
+    insider = (
+        not_rated_text("Insider Transactions", temporal_context)
+        if historical_replay else fetch_insider_transactions(yf_ticker)
+    )
     path = os.path.join(ticker_dir, "insider.txt")
     with open(path, "w") as f:
         f.write(insider)
@@ -1524,7 +1616,7 @@ def main():
     # 10. Segments (仅 HK/US)
     print("  [10] Fetching business segments...")
     sankey_data = None
-    if market in ("HK", "US"):
+    if market in ("HK", "US") and not historical_replay:
         sankey_path = os.path.join(ticker_dir, "revenue_sankey")
         rs_raw = fetch_revenue_sankey(ticker)
         rs_parsed = parse_revenue_sankey(rs_raw)
@@ -1543,8 +1635,10 @@ def main():
             else:
                 open(os.path.join(ticker_dir, "segments_missing.flag"), "w").close()
                 print("    segments.yaml missing -> segments_missing.flag", flush=True)
-    else:
+    elif market == "CN":
         print("  [10] Skipped (CN market, no segment analysis)", flush=True)
+    else:
+        print("  [10] Skipped (historical replay has no point-in-time segment snapshot)", flush=True)
 
     # 10b. Official disclosure fallback. PDF contents remain evidence-only;
     # only SEC XBRL structured facts may be used programmatically.
@@ -1575,6 +1669,7 @@ def main():
         official_filings=official,
         official_structured_facts=structured_facts,
         sankey_data=sankey_data,
+        temporal_context=temporal_context,
     )
     validated_path = write_structured_file(
         os.path.join(ticker_dir, "validated_metrics"),
@@ -1588,7 +1683,11 @@ def main():
 
     # 11. Data quality audit
     print("  [11] Computing data quality metadata...")
-    quality = _compute_data_quality(ticker_dir, ticker, curr_date, ohlcv, market)
+    quality = _compute_data_quality(
+        ticker_dir, ticker, curr_date, ohlcv, market,
+        execution_date=execution_date,
+        temporal_context=temporal_context,
+    )
     quality.update({
         "currency": contract["currency"],
         "official_filings": contract["official_filings"],

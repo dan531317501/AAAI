@@ -10,3 +10,5 @@ skills/stock-analysis-debate/reposrts/
 !skills/industry-research/data/
 skills/industry-research/data/*
 !skills/industry-research/data/.gitkeep
+
+outputs/

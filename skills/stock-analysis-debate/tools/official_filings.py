@@ -145,6 +145,7 @@ def _sec_filings(ticker: str, analysis_date: str) -> dict:
         operation="companyfacts", headers=SEC_HEADERS, timeout=30,
         validator=lambda value: isinstance(value, dict) and "facts" in value,
     )
+    facts = _filter_companyfacts_as_of(facts, analysis_date)
     recent = submissions.get("filings", {}).get("recent", {})
     records = []
     cutoff = datetime.strptime(analysis_date, "%Y-%m-%d").date()
@@ -180,6 +181,37 @@ def _sec_filings(ticker: str, analysis_date: str) -> dict:
         xbrl_namespaces=namespaces,
         structured_facts=facts,
     )
+
+
+def _filter_companyfacts_as_of(facts: dict, analysis_date: str) -> dict:
+    """Remove SEC fact rows that were filed after the analysis cutoff."""
+    cutoff = datetime.strptime(analysis_date, "%Y-%m-%d").date()
+    filtered = {key: value for key, value in facts.items() if key != "facts"}
+    filtered_taxonomies = {}
+    for taxonomy_name, concepts in facts.get("facts", {}).items():
+        filtered_concepts = {}
+        for concept_name, concept in concepts.items():
+            filtered_units = {}
+            for unit, rows in concept.get("units", {}).items():
+                allowed_rows = []
+                for row in rows:
+                    try:
+                        filed = datetime.strptime(str(row.get("filed")), "%Y-%m-%d").date()
+                    except (TypeError, ValueError):
+                        continue
+                    if filed <= cutoff:
+                        allowed_rows.append(row)
+                if allowed_rows:
+                    filtered_units[unit] = allowed_rows
+            if filtered_units:
+                filtered_concepts[concept_name] = {
+                    **{key: value for key, value in concept.items() if key != "units"},
+                    "units": filtered_units,
+                }
+        if filtered_concepts:
+            filtered_taxonomies[taxonomy_name] = filtered_concepts
+    filtered["facts"] = filtered_taxonomies
+    return filtered
 
 
 def _cninfo_filings(ticker: str, analysis_date: str) -> dict:

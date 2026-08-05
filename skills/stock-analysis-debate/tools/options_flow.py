@@ -2,18 +2,18 @@
 """Options-flow fetcher for the stock-analysis-debate skill.
 
 Fetches the yfinance option chain (free, no API key) and derives
-behavioral positioning metrics that complement sentiment/news analysis:
+activity and implied-pricing metrics that complement sentiment/news analysis:
 
-  - Put/Call Volume Ratio      — recent directional activity (short-term)
-  - Put/Call Open-Interest Ratio — outstanding-position lean (longer-term)
-  - IV skew (OTM Put IV − OTM Call IV) — relative cost of downside protection
-  - Most-active contracts      — where the money is actually trading
-  - High volume/OI contracts   — freshly opened positions (new activity)
+  - Put/Call Volume Ratio      — call/put activity mix, not trade direction
+  - Put/Call Open-Interest Ratio — outstanding-contract mix, not net positioning
+  - Approximate ±5% moneyness IV difference — relative implied pricing
+  - Most-active contracts      — where aggregate volume concentrates
+  - High volume relative to prior OI — unusual activity, open/close unknown
 
 Interpretation is deliberately left to the Options Flow Analyst prompt
-(``prompts/options_flow_analyst.md``): a high PCR is NOT automatically
-bearish (institutions buy puts to hedge long stock), and OI vs volume
-carry different horizons. This module only computes and renders facts.
+(``prompts/options_flow_analyst.md``). The aggregate snapshot has no
+buyer/seller aggressor, open/close, complex-trade, or participant-type fields,
+so this module never assigns directional flow or investor identity.
 
 Usage (normally invoked from fetch_data.py):
     python options_flow.py <TICKER> <ANALYSIS_DATE> [--spot <PRICE>]
@@ -43,7 +43,8 @@ logger = logging.getLogger(__name__)
 MIN_VALID_IV = 0.01
 # Only contracts with at least this volume count as "active".
 MIN_ACTIVE_VOLUME = 100
-# A contract with volume > OI * this factor is treated as freshly opened.
+# Flag activity when volume is high relative to prior-settlement OI. This does
+# not identify opening/closing trades or buyer/seller direction.
 VOL_OI_ACTIVITY_FACTOR = 2.0
 # Skip expiries with fewer than this many days until expiry (DTE < 1 is
 # same-day gamma noise; DTE=0 data is not meaningful for positioning).
@@ -166,8 +167,10 @@ def _top_contract(df: pd.DataFrame, strike_col: str = "strike") -> str | None:
     )
 
 
-def _fresh_contracts(df: pd.DataFrame, limit: int = 3) -> list[str]:
-    """Contracts whose volume implies newly opened positions (vol >> OI)."""
+def _high_volume_relative_to_oi_contracts(
+    df: pd.DataFrame, limit: int = 3,
+) -> list[str]:
+    """Contracts with high aggregate volume relative to prior-settlement OI."""
     active = df[
         (df["volume"] >= MIN_ACTIVE_VOLUME)
         & (df["openInterest"] > 0)
@@ -223,8 +226,17 @@ def compute_expiry_metrics(
         "iv_skew_pp": None,
         "top_call": _top_contract(calls),
         "top_put": _top_contract(puts),
-        "fresh_calls": _fresh_contracts(calls),
-        "fresh_puts": _fresh_contracts(puts),
+        "high_volume_relative_to_oi_calls": (
+            _high_volume_relative_to_oi_contracts(calls)
+        ),
+        "high_volume_relative_to_oi_puts": (
+            _high_volume_relative_to_oi_contracts(puts)
+        ),
+        "directional_flow_available": False,
+        "directional_flow_reason": (
+            "Aggregate option-chain volume/OI lacks trade-level aggressor, "
+            "open/close, complex-trade, and participant-type fields."
+        ),
     }
 
     if spot is None or spot <= 0 or calls.empty or puts.empty:
@@ -279,11 +291,12 @@ def render_expiry(metrics: dict) -> list[str]:
         otm_put_strike = metrics.get("otm_put_strike")
         skew = metrics.get("iv_skew_pp")
         if skew is not None:
-            skew_desc = "downside protection priced richer" if skew > 0 else (
-                "upside calls priced richer" if skew < 0 else "flat"
+            skew_desc = "put-side IV higher" if skew > 0 else (
+                "call-side IV higher" if skew < 0 else "flat"
             )
             lines.append(
-                f"- IV skew (OTM put IV − OTM call IV): {skew:+.1f}pp ({skew_desc})"
+                "- Approx. ±5% moneyness IV difference "
+                f"(put IV − call IV): {skew:+.1f}pp ({skew_desc})"
             )
         if otm_call_strike is not None:
             lines.append(
@@ -297,14 +310,17 @@ def render_expiry(metrics: dict) -> list[str]:
         lines.append(f"- Most active call: {metrics['top_call']}")
     if metrics.get("top_put"):
         lines.append(f"- Most active put: {metrics['top_put']}")
-    fresh_calls = metrics.get("fresh_calls") or []
-    fresh_puts = metrics.get("fresh_puts") or []
-    if fresh_calls or fresh_puts:
-        lines.append("- Freshly opened positions (volume >> OI):")
-        if fresh_calls:
-            lines.append(f"  Calls: {', '.join(fresh_calls)}")
-        if fresh_puts:
-            lines.append(f"  Puts: {', '.join(fresh_puts)}")
+    high_activity_calls = metrics.get("high_volume_relative_to_oi_calls") or []
+    high_activity_puts = metrics.get("high_volume_relative_to_oi_puts") or []
+    if high_activity_calls or high_activity_puts:
+        lines.append(
+            "- High activity relative to prior OI (volume > 2× prior OI; "
+            "opening/closing and trade direction unknown):"
+        )
+        if high_activity_calls:
+            lines.append(f"  Calls: {', '.join(high_activity_calls)}")
+        if high_activity_puts:
+            lines.append(f"  Puts: {', '.join(high_activity_puts)}")
     return lines
 
 
@@ -318,7 +334,7 @@ def render_options_report(
 ) -> str:
     """Render the full options.txt block for one ticker."""
     lines = [
-        f"## Options Flow for {ticker} (analysis date {analysis_date})",
+        f"## Options Activity and Implied Pricing for {ticker} (analysis date {analysis_date})",
         f"Data source: yfinance option chain (real-time snapshot; no historical options data)",
         f"Spot reference price: {'N/A' if spot is None else f'${spot:.2f}'}",
     ]
@@ -330,6 +346,15 @@ def render_options_report(
             f"<no options data found for {ticker} — Options Flow not rated>"
         )
         return "\n".join(lines)
+
+    lines.extend([
+        "NOTE: Directional and opening/closing flow is Not Rated. Aggregate "
+        "volume and prior-settlement OI do not identify the trade aggressor, "
+        "open/close status, complex trades, or participant identity.",
+        "NOTE: The IV comparison is an approximate ±5% spot-moneyness proxy, "
+        "not a fixed-delta or fixed-tenor normalized skew.",
+        "",
+    ])
 
     # Data-quality notes: surface snapshot limitations so the analyst does
     # not read a missing ratio as a directional signal.

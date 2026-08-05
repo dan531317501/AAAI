@@ -66,6 +66,34 @@ def test_numeric_validation_is_implemented_in_tools():
     assert "_periods_are_contiguous_quarters" in audit_tool
 
 
+def test_current_run_data_directory_is_the_numeric_evidence_set():
+    skill = _read("SKILL.md")
+    policy = _read("prompts/data_policy.md")
+
+    assert "DATA DIRECTORY EVIDENCE CONTRACT" in skill
+    assert "current run's non-empty artifacts listed in Phase 1" in skill
+    assert "source file, field/row or indicator, and period/as-of date" in skill
+    assert "authoritative only for the metrics it contains and for all `gates`" in skill
+    assert "another artifact" in policy
+    assert "Do not use an LLM to recompute returns, growth, TTM, margins" in policy
+    assert "An analyst report is not a substitute for the underlying data artifact" in policy
+
+
+def test_target_price_and_strong_rating_have_two_stage_controls():
+    skill = _read("SKILL.md")
+    manager = _read("prompts/portfolio_manager.md")
+    contract_tool = _read("tools/data_validation.py")
+
+    assert "gate_details.blocking_reasons" in skill
+    assert "Buy/Sell are strong ratings" in skill
+    assert "valid_relative_return_evidence" in contract_tool
+    assert "traceable_catalyst_evidence" in contract_tool
+    assert "traceable_thesis_invalidation_condition" in contract_tool
+    assert "include a multiple-sensitivity table" in skill
+    assert "Buy and Sell are strong ratings" in manager
+    assert "If any requirement is missing" in manager
+
+
 def test_attribution_prompt_has_evidence_and_role_boundaries():
     prompt = _read("prompts/price_action_attribution_analyst.md")
 

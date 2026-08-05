@@ -432,16 +432,19 @@ def fetch_attribution_context(
     analysis_date: str,
     price_start: str,
     target_history: pd.DataFrame,
+    include_retrieval_snapshot: bool = True,
 ) -> tuple[dict[str, Any], str]:
     """Fetch comparator prices and expectation records with graceful degradation."""
-    stock = yf.Ticker(target_symbol)
-    try:
-        info = retry_call(
-            lambda: stock.info or {}, provider="yfinance",
-            operation=f"{target_symbol}.info",
-        )
-    except Exception:
-        info = {}
+    stock = yf.Ticker(target_symbol) if include_retrieval_snapshot else None
+    info = {}
+    if stock is not None:
+        try:
+            info = retry_call(
+                lambda: stock.info or {}, provider="yfinance",
+                operation=f"{target_symbol}.info",
+            )
+        except Exception:
+            info = {}
 
     sector = info.get("sector")
     comparators = select_comparators(market, target_symbol, sector)
@@ -468,6 +471,17 @@ def fetch_attribution_context(
         comparator_histories=comparator_histories,
         analysis_date=analysis_date,
     )
+
+    if not include_retrieval_snapshot:
+        expectations = (
+            f"# Expectations Context for {target_symbol}\n\n"
+            f"Analysis Date: {analysis_date}\n"
+            "Analysis Mode: historical_replay\n\n"
+            "Not Rated — retrieval-time consensus, earnings-event records, rating "
+            "actions, targets, and revisions were excluded because the provider does "
+            "not prove that this snapshot was visible at the historical cutoff.\n"
+        )
+        return price_context, expectations
 
     try:
         earnings_dates = retry_call(

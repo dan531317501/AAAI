@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -8,9 +9,12 @@ from options_flow import (
     compute_expiry_metrics,
     render_options_report,
     _days_to_expiry,
-    _fresh_contracts,
+    _high_volume_relative_to_oi_contracts,
     _pick_strike,
 )
+
+
+SKILL_ROOT = Path(__file__).resolve().parents[2]
 
 
 def make_chain(
@@ -155,17 +159,31 @@ def test_most_active_contract_ignores_below_threshold_volume():
     assert metrics["top_put"] is not None  # puts still have 600 volume
 
 
-def test_fresh_contracts_flag_volume_greater_than_double_oi():
+def test_high_activity_contracts_flag_volume_greater_than_double_prior_oi():
     active = make_chain(volume=(300.0, 0.0, 0.0, 0.0, 0.0), oi=(100.0, 0.0, 0.0, 0.0, 0.0))
-    fresh = _fresh_contracts(clean_chain(active))
+    flagged = _high_volume_relative_to_oi_contracts(clean_chain(active))
 
-    assert len(fresh) == 1
-    assert "200.00" in fresh[0]
+    assert len(flagged) == 1
+    assert "200.00" in flagged[0]
 
 
-def test_fresh_contracts_are_empty_without_active_volume():
+def test_high_activity_contracts_are_empty_without_active_volume():
     quiet = make_chain(volume=(10.0, 10.0, 10.0, 10.0, 10.0), oi=(100.0,) * 5)
-    assert _fresh_contracts(clean_chain(quiet)) == []
+    assert _high_volume_relative_to_oi_contracts(clean_chain(quiet)) == []
+
+
+def test_same_volume_and_oi_cannot_distinguish_hypothetical_open_close_cases():
+    both_open = make_chain(
+        volume=(300.0, 0.0, 0.0, 0.0, 0.0),
+        oi=(100.0, 0.0, 0.0, 0.0, 0.0),
+    )
+    both_close = both_open.copy()
+    both_open["hypotheticalOpenClose"] = "both_open"
+    both_close["hypotheticalOpenClose"] = "both_close"
+
+    assert _high_volume_relative_to_oi_contracts(clean_chain(both_open)) == (
+        _high_volume_relative_to_oi_contracts(clean_chain(both_close))
+    )
 
 
 def test_pick_strike_returns_none_for_empty_frame():
@@ -188,22 +206,26 @@ def test_render_report_includes_ratios_and_skew():
 
     assert "Put/Call Volume Ratio: 1.33" in text
     assert "Put/Call Open-Interest Ratio: 1.33" in text
-    assert "IV skew (OTM put IV − OTM call IV): +1.0pp" in text
+    assert "Approx. ±5% moneyness IV difference (put IV − call IV): +1.0pp" in text
     assert "Most active call" in text
-    assert "Freshly opened positions" not in text  # no vol >> OI in fixture
+    assert "Directional and opening/closing flow is Not Rated" in text
+    assert "fixed-delta or fixed-tenor normalized skew" in text
 
 
-def test_render_report_lists_freshly_opened_positions():
-    fresh_calls = make_chain(volume=(300.0, 0.0, 0.0, 0.0, 0.0), oi=(100.0, 0.0, 0.0, 0.0, 0.0))
+def test_render_report_lists_high_activity_without_inferring_new_positions():
+    active_calls = make_chain(volume=(300.0, 0.0, 0.0, 0.0, 0.0), oi=(100.0, 0.0, 0.0, 0.0, 0.0))
     metrics = compute_expiry_metrics(
-        fresh_calls, PUTS, spot=205.0, expiry="2026-08-05", analysis_date="2026-08-03"
+        active_calls, PUTS, spot=205.0, expiry="2026-08-05", analysis_date="2026-08-03"
     )
     text = render_options_report(
         [metrics], ticker="TEST", analysis_date="2026-08-03", spot=205.0
     )
 
-    assert "Freshly opened positions (volume >> OI):" in text
+    assert "High activity relative to prior OI" in text
+    assert "opening/closing and trade direction unknown" in text
     assert "Calls: $200.00" in text
+    assert "freshly opened" not in text.lower()
+    assert "new money" not in text.lower()
 
 
 def test_render_report_notes_when_open_interest_is_unavailable():
@@ -254,3 +276,24 @@ def test_render_report_uses_n_a_for_missing_ratios():
 
     assert "Put/Call Volume Ratio: N/A" in text
     assert "Put/Call Open-Interest Ratio: N/A" in text
+
+
+def test_options_prompt_prohibits_direction_and_uses_evidence_status():
+    prompt = (SKILL_ROOT / "prompts/options_flow_analyst.md").read_text()
+
+    assert "Put/Call volume ratio is an activity mix, not direction" in prompt
+    assert "High volume relative to prior OI is an activity flag only" in prompt
+    assert "OPTIONS EVIDENCE: <Available / Limited / Not Rated>" in prompt
+    assert "OPTIONS FLOW: <Bullish" not in prompt
+
+
+def test_skill_routes_to_options_methodology_reference():
+    skill = (SKILL_ROOT / "SKILL.md").read_text()
+    reference = (
+        SKILL_ROOT / "reference/options-volume-open-interest-and-sentiment.en.md"
+    ).read_text()
+
+    assert "reference/options-volume-open-interest-and-sentiment.en.md" in skill
+    assert "Volume > 2× prior OI" in reference
+    assert "directional_pct" in reference
+    assert "OPTIONS EVIDENCE: Available / Limited / Not Rated" in reference

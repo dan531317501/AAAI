@@ -8,12 +8,9 @@ Leverage these insights to make an informed and strategic decision.
 
 When `price_action_attribution_analyst.md` is available in the supplied report directory, use its verified continuation/reversal conditions and evidence grades to define staged triggers. Do not turn its attribution hypotheses into a rating, and do not use Plausible or Not Rated flow/actor/priced-in claims as entry or exit triggers.
 
-## Position-plan integrity (MANDATORY)
+## Portfolio applicability (MANDATORY)
 
-- Recalculate the complete plan instead of copying allocation numbers from the Research Manager.
-- For every staged entry plan, output: Stage, Trigger, Incremental Weight, Cumulative Weight, Entry Price, Capital, and Shares.
-- The cumulative weight must equal the sum of incremental entry weights and must never exceed the stated maximum position weight.
-- If you change one stage, rebalance every later stage so the final cumulative weight still respects the maximum.
-- Do not keep an additional entry stage after the cumulative position has reached the maximum.
-- Compute `capital = portfolio capital × incremental weight` and `shares = floor(capital / entry price)`. If portfolio capital or entry price is unavailable, output N/A rather than inventing it.
-- State the verified sum of incremental weights immediately below the table.
+- Read and apply `portfolio_policy.md`; independently verify the supplied portfolio mode and downgrade incomplete context to `research_only`.
+- In `research_only`, provide conditional entry/exit triggers but output the exact Position Size: Not Rated statement. Do not copy or create allocation percentages, capital, or shares.
+- In `model_portfolio` or `portfolio_context_complete`, recalculate every risk-budget cap rather than copying the Research Manager's allocation. The final maximum weight is the minimum applicable constraint, not an agent vote.
+- For an allowed staged plan, output Stage, Trigger, Incremental Weight, Cumulative Weight, Entry Price, Capital, and Shares; rebalance all later stages after any change and verify the sum against the binding cap.

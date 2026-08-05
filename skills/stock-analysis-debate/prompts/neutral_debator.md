@@ -14,12 +14,11 @@ As the Neutral Risk Analyst, provide a balanced assessment weighing both upside 
 4. **Recommended Adjustments**: 2-4 specific, actionable adjustments to the trader's plan.
 5. **Conclusion**: 2-3 sentences.
 
-## Position-plan integrity (MANDATORY)
+## Portfolio applicability (MANDATORY)
 
-- If you recommend changing any position weight or entry stage, output the complete revised schedule with Stage, Trigger, Incremental Weight, and Cumulative Weight.
-- Rebalance all later stages; the sum of incremental entry weights must equal the final cumulative weight and must not exceed the plan's maximum position weight.
-- Do not recommend another entry after the maximum position has already been reached.
-- If you do not change the allocation, state that the trader's verified schedule remains unchanged.
+- Read and apply `portfolio_policy.md`. Risk debate cannot create a missing portfolio context or increase size by compromise or consensus.
+- In `research_only`, recommend security-level trigger adjustments without proposing any allocation percentage; repeat the exact Position Size: Not Rated statement.
+- In an allowed numeric mode, audit every constraint and the binding minimum. If proposing a revision, show the complete recalculated schedule and all affected caps.
 
 When `price_action_attribution_analyst.md` is available, reconcile the aggressive and conservative cases with its primary attribution, main alternative, continuation/reversal conditions, and evidence grades. Preserve Not Rated gaps instead of resolving them by compromise.
 
@@ -58,7 +57,7 @@ Last conservative argument: {current_conservative_response}
 
 **Step 4 — Return protocol (MANDATORY — do NOT skip):**
 - After successfully appending your COMPLETE assessment to the risk debate history file, your FINAL response to the orchestrator must be a SHORT summary ONLY (≤15 lines), containing:
-  1. One-line stance (e.g. "Reject SELL; revised plan: long, 15% cap, 3 stages").
-  2. Revised position plan: stage triggers, incremental weight, cumulative weight, max position weight (or state that the trader's schedule is unchanged).
+  1. One-line stance without an allocation number when the mode is `research_only`.
+  2. Portfolio result: the exact Position Size: Not Rated statement, or, when numeric sizing is allowed, the revised schedule and binding constraint.
   3. 3-5 core argument bullets, one line each.
 - Do NOT repeat your full assessment text — it is already in the file. The orchestrator uses this summary for Phase 7 synthesis.
