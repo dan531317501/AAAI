@@ -25,6 +25,8 @@ from datetime import datetime, timedelta
 
 import requests
 
+from provider_runtime import retry_call
+
 logger = logging.getLogger(__name__)
 
 FRED_API_BASE = "https://api.stlouisfed.org/fred"
@@ -123,8 +125,20 @@ def resolve_series_id(indicator: str) -> str:
 def _request(path: str, params: dict) -> dict:
     """GET a FRED endpoint, surfacing FRED's JSON error body on a bad request."""
     api_params = {**params, "api_key": get_api_key(), "file_type": "json"}
-    response = requests.get(
-        f"{FRED_API_BASE}/{path}", params=api_params, timeout=REQUEST_TIMEOUT
+    def call():
+        response = requests.get(
+            f"{FRED_API_BASE}/{path}",
+            params=api_params,
+            timeout=REQUEST_TIMEOUT,
+        )
+        if response.status_code != 400:
+            response.raise_for_status()
+        return response
+
+    response = retry_call(
+        call,
+        provider="FRED",
+        operation=path,
     )
     if response.status_code == 400:
         try:
@@ -132,7 +146,6 @@ def _request(path: str, params: dict) -> dict:
         except ValueError:
             message = response.text
         raise ValueError(f"FRED request failed: {message}")
-    response.raise_for_status()
     return response.json()
 
 

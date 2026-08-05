@@ -27,6 +27,8 @@ from urllib.parse import urlencode
 
 import requests
 
+from provider_runtime import RetryPolicy, retry_call
+
 logger = logging.getLogger(__name__)
 
 GAMMA_BASE = "https://gamma-api.polymarket.com"
@@ -75,18 +77,44 @@ def _request(path: str, params: dict) -> dict:
     """
     url = f"{GAMMA_BASE}/{path}"
     try:
-        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as direct_exc:
+        def direct_call():
+            response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+            return response.json()
+
+        return retry_call(
+            direct_call,
+            provider="Polymarket Gamma",
+            operation=path,
+            policy=RetryPolicy(
+                max_attempts=2,
+                base_delay_seconds=0.25,
+                max_delay_seconds=0.25,
+            ),
+            validator=lambda value: isinstance(value, dict),
+        )
+    except (requests.RequestException, ValueError) as direct_exc:
         logger.warning("Direct Gamma API failed (%s); trying Jina proxy", direct_exc)
         query = url + ("?" + urlencode(params) if params else "")
         try:
-            proxied = requests.get(
-                JINA_PROXY_BASE + query, timeout=REQUEST_TIMEOUT
+            def proxy_call():
+                proxied = requests.get(
+                    JINA_PROXY_BASE + query, timeout=REQUEST_TIMEOUT
+                )
+                proxied.raise_for_status()
+                return _parse_jina_response(proxied.text)
+
+            return retry_call(
+                proxy_call,
+                provider="Jina Reader",
+                operation=f"polymarket_proxy.{path}",
+                policy=RetryPolicy(
+                    max_attempts=2,
+                    base_delay_seconds=0.25,
+                    max_delay_seconds=0.25,
+                ),
+                validator=lambda value: isinstance(value, dict),
             )
-            proxied.raise_for_status()
-            return _parse_jina_response(proxied.text)
         except (requests.RequestException, ValueError) as proxy_exc:
             logger.warning("Jina proxy also failed: %s", proxy_exc)
             raise direct_exc from proxy_exc

@@ -39,41 +39,31 @@ def test_skill_passes_conditional_evidence_as_full_paths():
     assert "{DATA_DIR}/options.txt" in step_2_section
 
 
-def test_skill_runs_arithmetic_check_in_sub_agent():
+def test_skill_runs_deterministic_data_gate_without_llm_verifier():
     skill = _read("SKILL.md")
 
-    step_2_section = skill[skill.index("### Step 2: Arithmetic Sanity Check"):skill.index("### Step 3: Synthesize")]
-    assert "SUB-AGENT" in step_2_section
-    assert "prompts/arithmetic_verifier.md" in step_2_section
-    assert "arithmetic_verification.md" in step_2_section
-    assert "retry the sub-agent once" in step_2_section
+    step_2_section = skill[skill.index("### Step 2: Deterministic Data Gate"):skill.index("### Step 3: Synthesize")]
+    assert "configured `validated_metrics` artifact" in step_2_section
+    assert "validation_report.md" in step_2_section
+    assert "do not launch an agent" in step_2_section
+    assert "N/A or Not Rated" in step_2_section
+    assert "arithmetic_verifier.md" not in skill
 
 
-def test_arithmetic_verifier_prompt_has_all_checks():
-    prompt = _read("prompts/arithmetic_verifier.md")
+def test_numeric_validation_is_implemented_in_tools():
+    contract_tool = _read("tools/data_validation.py")
+    audit_tool = _read("tools/financial_audit.py")
 
     for required_text in (
-        "Market Cap",
-        "P/B",
-        "EV/EBITDA",
-        "GAAP operating profit",
-        "Preferred TTM EPS",
-        "Forward PE",
-        "Target Price",
-        "Revenue/Net Income period labels",
-        "200 SMA",
-        "News evidence",
-        "Social sentiment",
-        "Position sizing",
-        "Drawdown/return percentages",
-        "Forward EPS/P/E labeling",
-        "Cash/debt basis",
-        "Options flow evidence",
-        "Relative-return integrity",
-        "Attribution integrity",
-        "arithmetic_verification.md",
+        "quote_currency",
+        "financial_currency",
+        "allow_exact_valuation",
+        "allow_target_price",
+        "translated_only",
+        "raw_provider_values_allowed",
     ):
-        assert required_text in prompt, required_text
+        assert required_text in contract_tool, required_text
+    assert "_periods_are_contiguous_quarters" in audit_tool
 
 
 def test_attribution_prompt_has_evidence_and_role_boundaries():
@@ -109,6 +99,6 @@ def test_all_decision_layers_consume_or_challenge_attribution_report():
 def test_skill_declares_both_attribution_data_artifacts():
     skill = _read("SKILL.md")
 
-    assert "`price_context.json`" in skill
+    assert "`price_context.toon`" in skill
     assert "`expectations.txt`" in skill
     assert "price_attribution_data.py" in skill

@@ -13,6 +13,8 @@ from typing import Any
 import pandas as pd
 import yfinance as yf
 
+from provider_runtime import retry_call
+
 
 WINDOWS = (1, 5, 20)
 
@@ -265,6 +267,10 @@ def render_expectations_context(
     info: dict[str, Any] | None,
     earnings_dates: pd.DataFrame | None,
     upgrades_downgrades: pd.DataFrame | None,
+    earnings_estimate: pd.DataFrame | None = None,
+    revenue_estimate: pd.DataFrame | None = None,
+    eps_trend: pd.DataFrame | None = None,
+    eps_revisions: pd.DataFrame | None = None,
     retrieved_at: datetime | None = None,
 ) -> str:
     """Render expectation records with strict point-in-time caveats."""
@@ -284,7 +290,7 @@ def render_expectations_context(
         "They may describe current consensus but MUST NOT by themselves prove that a catalyst was unexpected or already priced in.",
         "For historical analysis dates earlier than retrieval date, snapshot fields are Not Rated as pre-event evidence.",
         "",
-        "## Provider Consensus Snapshot",
+        "## Provider Snapshot",
         "",
         "| Field | Value |",
         "|---|---:|",
@@ -300,11 +306,45 @@ def render_expectations_context(
         ("Target High Price", "targetHighPrice"),
         ("Forward EPS", "forwardEps"),
         ("Forward P/E", "forwardPE"),
-        ("Revenue Growth", "revenueGrowth"),
-        ("Earnings Growth", "earningsGrowth"),
     )
     for label, key in snapshot_fields:
         lines.append(f"| {label} | {_format_value(info.get(key))} |")
+
+    lines.extend([
+        "",
+        "## Latest-Quarter Historical Growth",
+        "",
+        "These are reported latest-quarter year-over-year fields, not analyst forecasts.",
+        "",
+        "| Field | Value | Currency |",
+        "|---|---:|---|",
+        f"| Revenue Growth (actual YoY) | {_format_value(info.get('revenueGrowth'))} | {_format_value(info.get('financialCurrency'))} |",
+        f"| Earnings Growth (actual YoY) | {_format_value(info.get('earningsGrowth'))} | {_format_value(info.get('financialCurrency'))} |",
+        "",
+        "## Structured Analyst Estimates",
+        "",
+        "The following tables come from dedicated provider estimate endpoints. Currency is preserved per row.",
+    ])
+
+    def append_frame(title: str, frame: pd.DataFrame | None) -> None:
+        lines.extend(["", f"### {title}", ""])
+        if frame is None or frame.empty:
+            lines.append("N/A — dedicated estimate endpoint unavailable.")
+            return
+        columns = [str(column) for column in frame.columns]
+        lines.append("| Period | " + " | ".join(columns) + " |")
+        lines.append("|---|" + "---:|" * len(columns))
+        for period, row in frame.iterrows():
+            lines.append(
+                "| " + str(period) + " | "
+                + " | ".join(_format_value(row.get(column)) for column in frame.columns)
+                + " |"
+            )
+
+    append_frame("Earnings Estimate", earnings_estimate)
+    append_frame("Revenue Estimate", revenue_estimate)
+    append_frame("EPS Trend", eps_trend)
+    append_frame("EPS Revisions", eps_revisions)
 
     lines.extend(
         [
@@ -377,6 +417,7 @@ def render_expectations_context(
             "",
             "- Compute surprise from pre-event expectation versus actual result; a good absolute result is not automatically a positive surprise.",
             "- Do not infer 'fully priced in' from target prices, recommendation means, or price action alone.",
+            "- Treat revenueGrowth and earningsGrowth as historical actual YoY fields, never as consensus forecasts.",
             "- When pre-event consensus, estimate revisions, or event timing is unavailable, mark the expectation gap or priced-in assessment Not Rated.",
             "- Media consensus figures require a dated source URL and must be labeled as third-party estimates.",
         ]
@@ -395,7 +436,10 @@ def fetch_attribution_context(
     """Fetch comparator prices and expectation records with graceful degradation."""
     stock = yf.Ticker(target_symbol)
     try:
-        info = stock.info or {}
+        info = retry_call(
+            lambda: stock.info or {}, provider="yfinance",
+            operation=f"{target_symbol}.info",
+        )
     except Exception:
         info = {}
 
@@ -405,9 +449,13 @@ def fetch_attribution_context(
     end_exclusive = (pd.Timestamp(analysis_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     for comparator in comparators:
         try:
-            comparator_histories[comparator["symbol"]] = yf.Ticker(
-                comparator["symbol"]
-            ).history(start=price_start, end=end_exclusive)
+            comparator_histories[comparator["symbol"]] = retry_call(
+                lambda symbol=comparator["symbol"]: yf.Ticker(symbol).history(
+                    start=price_start, end=end_exclusive
+                ),
+                provider="yfinance",
+                operation=f"{comparator['symbol']}.history",
+            )
         except Exception:
             comparator_histories[comparator["symbol"]] = None
 
@@ -422,13 +470,35 @@ def fetch_attribution_context(
     )
 
     try:
-        earnings_dates = stock.get_earnings_dates(limit=12)
+        earnings_dates = retry_call(
+            lambda: stock.get_earnings_dates(limit=12),
+            provider="yfinance", operation=f"{target_symbol}.earnings_dates",
+        )
     except Exception:
         earnings_dates = None
     try:
-        upgrades_downgrades = stock.upgrades_downgrades
+        upgrades_downgrades = retry_call(
+            lambda: stock.upgrades_downgrades,
+            provider="yfinance", operation=f"{target_symbol}.upgrades_downgrades",
+        )
     except Exception:
         upgrades_downgrades = None
+
+    estimates = {}
+    for name in (
+        "get_earnings_estimate",
+        "get_revenue_estimate",
+        "get_eps_trend",
+        "get_eps_revisions",
+    ):
+        try:
+            estimates[name] = retry_call(
+                lambda method=name: getattr(stock, method)(),
+                provider="yfinance",
+                operation=f"{target_symbol}.{name}",
+            )
+        except Exception:
+            estimates[name] = None
 
     expectations = render_expectations_context(
         target_symbol=target_symbol,
@@ -436,5 +506,9 @@ def fetch_attribution_context(
         info=info,
         earnings_dates=earnings_dates,
         upgrades_downgrades=upgrades_downgrades,
+        earnings_estimate=estimates["get_earnings_estimate"],
+        revenue_estimate=estimates["get_revenue_estimate"],
+        eps_trend=estimates["get_eps_trend"],
+        eps_revisions=estimates["get_eps_revisions"],
     )
     return price_context, expectations

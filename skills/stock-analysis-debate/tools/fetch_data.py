@@ -14,7 +14,7 @@ Example:
 Output:
     {output_dir}/{TICKER}/{DATE}/
         ohlcv.csv           # OHLCV price data for the configured lookback
-        price_context.json  # 1/5/20-session absolute/relative returns
+        price_context.toon  # 1/5/20-session absolute/relative returns
         expectations.txt    # Earnings surprise and analyst-expectation context
         indicators.txt      # All technical indicators
         news.txt            # Company-specific news
@@ -27,14 +27,13 @@ Output:
         options.txt         # Options flow (put/call ratios, IV skew; US only)
         macro_indicators.txt # FRED macro series (rates, inflation, labor)
         prediction_markets.txt # Polymarket event probabilities
-        summary.json        # Metadata summary
+        summary.toon        # Metadata summary
 
     With --ticker-data-dir:
     {ticker_data_dir}/{DATE}/
 """
 
 import argparse
-import json
 import os
 import sys
 from datetime import datetime, timedelta
@@ -50,11 +49,25 @@ from news_filter import (dedup_by_title, filter_noise, render_news_evidence,
 from longbridge_fetcher import (fetch_range_klines, fetch_revenue_sankey,
                                 get_revenue_sankey_metadata,
                                 parse_range_klines, parse_revenue_sankey)
-from financial_audit import append_audit
+from financial_audit import append_audit, compute_point_in_time_metrics
 from options_flow import fetch_options_report
 from macro_data import fetch_macro_report
 from prediction_markets import fetch_prediction_markets
 from price_attribution_data import fetch_attribution_context
+from data_validation import (
+    build_validated_metrics,
+    fetch_fx_rate,
+    fetch_provider_snapshot,
+    render_validation_report,
+)
+from official_filings import fetch_official_filings
+from provider_runtime import (
+    RetryPolicy,
+    clear_retry_events,
+    get_retry_events,
+    retry_call,
+)
+from structured_io import write_structured_file
 
 # Look-back windows
 PRICE_LOOKBACK_DAYS = 350  # ~230+ trading days, comfortable margin for 200 SMA
@@ -89,7 +102,7 @@ def detect_market(ticker: str) -> str:
     upper = ticker.upper()
     if ".HK" in upper:
         return "HK"
-    if ".SH" in upper or ".SS" in upper or ".SZ" in upper:
+    if ".SH" in upper or ".SS" in upper or ".SZ" in upper or ".BJ" in upper:
         return "CN"
     if upper.replace(".", "").isdigit():
         if len(upper.split(".")[0]) == 6:
@@ -133,7 +146,7 @@ def resolve_hk_ticker(ticker: str) -> str:
     for variant in _hk_ticker_variants(ticker):
         try:
             t = yf.Ticker(variant)
-            info = t.info
+            info = retry(lambda: t.info)
             if info and len(info) > best_keys:
                 best_keys = len(info)
                 best_ticker = variant
@@ -143,17 +156,18 @@ def resolve_hk_ticker(ticker: str) -> str:
     return best_ticker
 
 
-def retry(func, max_retries=5, delay=10):
-    """Retry wrapper for yfinance calls."""
-    import time
-    for attempt in range(max_retries):
-        try:
-            return func()
-        except Exception as e:
-            if attempt == max_retries - 1:
-                raise
-            print(f"  Retry {attempt + 1}/{max_retries} after error: {e}", file=sys.stderr)
-            time.sleep(delay)
+def retry(func, max_retries=4, delay=1):
+    """Compatibility wrapper backed by classified exponential retries."""
+    return retry_call(
+        func,
+        provider="yfinance",
+        operation="legacy_call",
+        policy=RetryPolicy(
+            max_attempts=max_retries,
+            base_delay_seconds=delay,
+            max_delay_seconds=max(delay, 8),
+        ),
+    )
 
 
 def _hk_ticker_variants(ticker: str) -> list:
@@ -285,7 +299,7 @@ def fetch_price_data(ticker: str, start_date: str, end_date: str,
 
 
 def fetch_ohlcv(ticker: str, start_date: str, end_date: str,
-                 market: str = None) -> str:
+                 market: str = None, quote_currency: str | None = None) -> str:
     """Fetch OHLCV data and return as CSV string."""
     symbol = normalize_ticker(ticker)
     if market is None:
@@ -299,7 +313,7 @@ def fetch_ohlcv(ticker: str, start_date: str, end_date: str,
         if col in data.columns:
             data[col] = data[col].round(2)
 
-    currency = {"US": "USD", "HK": "HKD", "CN": "CNY"}.get(market, "USD")
+    currency = quote_currency or "UNKNOWN"
 
     header = (
         f"# Stock data for {symbol} from {start_date} to {end_date}\n"
@@ -654,7 +668,12 @@ def fetch_cn_news(ticker: str, start_date: str, end_date: str) -> str:
         prefix = f"sh{code}" if is_shanghai else f"sz{code}"
 
         url = f"https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllNewsStock/symbol/{prefix}.phtml"
-        resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        resp = retry_call(
+            lambda: requests.get(
+                url, timeout=15, headers={"User-Agent": "Mozilla/5.0"}
+            ),
+            provider="Sina Finance", operation=f"{ticker}.cn_news",
+        )
         resp.encoding = "gb2312"
 
         # Extract news: DATE&nbsp;TIME&nbsp;&nbsp;<a target='_blank' href='URL'>TITLE</a>
@@ -702,7 +721,10 @@ def fetch_cn_news(ticker: str, start_date: str, end_date: str) -> str:
             "client_source": "web",
             "stock_list": code,
         }
-        resp_em = requests.get(url_em, params=params, timeout=15)
+        resp_em = retry_call(
+            lambda: requests.get(url_em, params=params, timeout=15),
+            provider="Eastmoney", operation=f"{ticker}.announcements",
+        )
         resp_em.raise_for_status()
         data_em = resp_em.json()
 
@@ -773,7 +795,12 @@ def fetch_hk_news(ticker: str, start_date: str, end_date: str) -> str:
     try:
         prefix = f"hk{code}"
         url = f"https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllNewsStock/symbol/{prefix}.phtml"
-        resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        resp = retry_call(
+            lambda: requests.get(
+                url, timeout=15, headers={"User-Agent": "Mozilla/5.0"}
+            ),
+            provider="Sina Finance", operation=f"{ticker}.hk_news",
+        )
         resp.encoding = "gb2312"
 
         import re
@@ -826,7 +853,15 @@ def _sina_fetch_all_pages(prefix: str, start_dt, end_dt, max_pages: int = 20) ->
     for page in range(1, max_pages + 1):
         url = f"http://vip.stock.finance.sina.com.cn/corp/view/vCB_AllNewsStock.php?symbol={prefix}&Page={page}"
         try:
-            resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+            resp = retry_call(
+                lambda request_url=url: requests.get(
+                    request_url,
+                    timeout=15,
+                    headers={"User-Agent": "Mozilla/5.0"},
+                ),
+                provider="Sina Finance",
+                operation=f"{prefix}.news_page_{page}",
+            )
             resp.encoding = "gb2312"
         except Exception as e:
             print(f"  [sina page {page}] error: {e}", flush=True)
@@ -911,7 +946,10 @@ def fetch_cn_news_raw(ticker: str, start_date: str, end_date: str) -> list:
         url_em = "https://np-anotice-stock.eastmoney.com/api/security/ann"
         params = {"page_size": 20, "page_index": 1, "ann_type": "A",
                   "client_source": "web", "stock_list": code}
-        resp_em = requests.get(url_em, params=params, timeout=15)
+        resp_em = retry_call(
+            lambda: requests.get(url_em, params=params, timeout=15),
+            provider="Eastmoney", operation=f"{ticker}.raw_announcements",
+        )
         resp_em.raise_for_status()
         for item in resp_em.json().get("data", {}).get("list", []):
             nd = item.get("notice_date", "")
@@ -1209,6 +1247,7 @@ def main():
 
     ticker = args.ticker.strip().upper()
     curr_date = args.date.strip()
+    clear_retry_events()
 
     # Validate date format
     try:
@@ -1257,9 +1296,40 @@ def main():
     else:
         yf_ticker = ticker
 
+    # Resolve currency and analyst-table semantics before any calculation.
+    print("  [0] Fetching instrument metadata and currency context...")
+    provider_snapshot = fetch_provider_snapshot(
+        normalize_ticker(yf_ticker), curr_date
+    )
+    quote_currency = provider_snapshot.get("quote_currency")
+    financial_currency = provider_snapshot.get("financial_currency")
+    fx = fetch_fx_rate(quote_currency, financial_currency, curr_date)
+
+    metadata_path = write_structured_file(
+        os.path.join(ticker_dir, "instrument_metadata"),
+        {
+            key: value for key, value in provider_snapshot.items()
+            if key not in ("info", "analyst_tables")
+        },
+    )
+    results["files"]["instrument_metadata"] = metadata_path
+    estimates_path = write_structured_file(
+        os.path.join(ticker_dir, "analyst_estimates"),
+        {
+            "provider": "yfinance",
+            "retrieved_at": provider_snapshot.get("retrieved_at"),
+            "financial_currency": financial_currency,
+            "tables": provider_snapshot.get("analyst_tables", {}),
+        },
+    )
+    results["files"]["analyst_estimates"] = estimates_path
+
     # 1. OHLCV
     print("  [1/8] Fetching OHLCV data...")
-    ohlcv = fetch_ohlcv(yf_ticker, price_start, curr_date, market=market)
+    ohlcv = fetch_ohlcv(
+        yf_ticker, price_start, curr_date, market=market,
+        quote_currency=quote_currency,
+    )
     path = os.path.join(ticker_dir, "ohlcv.csv")
     with open(path, "w") as f:
         f.write(ohlcv)
@@ -1296,9 +1366,10 @@ def main():
             f"<expectations data unavailable: {type(e).__name__}: {e} — expectation gap and priced-in assessment Not Rated>\n"
         )
 
-    path = os.path.join(ticker_dir, "price_context.json")
-    with open(path, "w") as f:
-        json.dump(price_context, f, indent=2, default=str)
+    path = write_structured_file(
+        os.path.join(ticker_dir, "price_context"),
+        price_context,
+    )
     results["files"]["price_context"] = path
 
     path = os.path.join(ticker_dir, "expectations.txt")
@@ -1385,6 +1456,11 @@ def main():
     # 5. Fundamentals
     print("  [5/8] Fetching fundamentals...")
     fundamentals = fetch_fundamentals(yf_ticker, market=market)
+    fundamentals = (
+        f"{fundamentals.rstrip()}\n"
+        f"Quote Currency: {quote_currency or 'N/A'}\n"
+        f"Financial Currency: {financial_currency or 'N/A'}\n"
+    )
     path = os.path.join(ticker_dir, "fundamentals.txt")
     with open(path, "w") as f:
         f.write(fundamentals)
@@ -1420,8 +1496,18 @@ def main():
     # Recompute valuation and operating-profit metrics from aligned local data.
     # This prevents stale provider P/B snapshots, unit errors in EV/EBITDA, and
     # confusion between GAAP reported and derived operating income.
+    verified_fx_rate = fx.get("rate") if fx.get("status") == "verified" else None
+    audit_metrics = compute_point_in_time_metrics(
+        fundamentals, balance_sheet, income_stmt, ohlcv,
+        quote_currency=quote_currency,
+        financial_currency=financial_currency,
+        fx_rate=verified_fx_rate,
+    )
     fundamentals = append_audit(
-        fundamentals, balance_sheet, income_stmt, ohlcv
+        fundamentals, balance_sheet, income_stmt, ohlcv,
+        quote_currency=quote_currency,
+        financial_currency=financial_currency,
+        fx_rate=verified_fx_rate,
     )
     fundamentals_path = results["files"]["fundamentals"]
     with open(fundamentals_path, "w") as f:
@@ -1437,16 +1523,16 @@ def main():
 
     # 10. Segments (仅 HK/US)
     print("  [10] Fetching business segments...")
+    sankey_data = None
     if market in ("HK", "US"):
-        sankey_path = os.path.join(ticker_dir, "revenue_sankey.json")
+        sankey_path = os.path.join(ticker_dir, "revenue_sankey")
         rs_raw = fetch_revenue_sankey(ticker)
         rs_parsed = parse_revenue_sankey(rs_raw)
         sankey_data = {
             "metadata": get_revenue_sankey_metadata(ticker),
             "revenue_sankey": rs_parsed,
         }
-        with open(sankey_path, "w") as f:
-            json.dump(sankey_data, f, ensure_ascii=False, indent=2)
+        sankey_path = write_structured_file(sankey_path, sankey_data)
         results["files"]["revenue_sankey"] = sankey_path
 
         yaml_path = os.path.join(ticker_root, "segments.yaml")
@@ -1460,20 +1546,73 @@ def main():
     else:
         print("  [10] Skipped (CN market, no segment analysis)", flush=True)
 
+    # 10b. Official disclosure fallback. PDF contents remain evidence-only;
+    # only SEC XBRL structured facts may be used programmatically.
+    print("  [10b] Fetching official filing evidence...")
+    official = fetch_official_filings(ticker, market, curr_date)
+    structured_facts = official.pop("structured_facts", None)
+    official_path = write_structured_file(
+        os.path.join(ticker_dir, "official_filings"),
+        official,
+    )
+    results["files"]["official_filings"] = official_path
+    if structured_facts is not None:
+        facts_path = write_structured_file(
+            os.path.join(ticker_dir, "official_companyfacts"),
+            structured_facts,
+        )
+        results["files"]["official_companyfacts"] = facts_path
+
+    # 10c. Generate the fail-closed numeric contract consumed by every LLM role.
+    print("  [10c] Building deterministic validated metrics...")
+    contract = build_validated_metrics(
+        ticker=ticker,
+        market=market,
+        analysis_date=curr_date,
+        snapshot=provider_snapshot,
+        fx=fx,
+        audit_metrics=audit_metrics,
+        official_filings=official,
+        official_structured_facts=structured_facts,
+        sankey_data=sankey_data,
+    )
+    validated_path = write_structured_file(
+        os.path.join(ticker_dir, "validated_metrics"),
+        contract,
+    )
+    results["files"]["validated_metrics"] = validated_path
+    validation_report_path = os.path.join(ticker_dir, "validation_report.md")
+    with open(validation_report_path, "w") as f:
+        f.write(render_validation_report(contract))
+    results["files"]["validation_report"] = validation_report_path
+
     # 11. Data quality audit
     print("  [11] Computing data quality metadata...")
     quality = _compute_data_quality(ticker_dir, ticker, curr_date, ohlcv, market)
-    quality_path = os.path.join(ticker_dir, "data_quality.json")
-    with open(quality_path, "w") as f:
-        json.dump(quality, f, indent=2, default=str)
+    quality.update({
+        "currency": contract["currency"],
+        "official_filings": contract["official_filings"],
+        "validation_gates": contract["gates"],
+        "validated_metrics_status": contract["quality"]["status"],
+        "provider_retry_events": get_retry_events(),
+    })
+    quality_path = write_structured_file(
+        os.path.join(ticker_dir, "data_quality"),
+        quality,
+    )
     results["files"]["data_quality"] = quality_path
 
     # Write summary
-    summary_path = os.path.join(ticker_dir, "summary.json")
-    with open(summary_path, "w") as f:
-        json.dump(results, f, indent=2, default=str)
+    summary_path = write_structured_file(
+        os.path.join(ticker_dir, "summary"),
+        results,
+    )
 
-    print(f"\nData fetched successfully. Summary: {summary_path}")
+    completion = (
+        "verified" if contract["quality"]["status"] == "verified"
+        else "completed with explicit degradation"
+    )
+    print(f"\nData fetch {completion}. Summary: {summary_path}")
     print(f"All files in: {ticker_dir}")
 
 

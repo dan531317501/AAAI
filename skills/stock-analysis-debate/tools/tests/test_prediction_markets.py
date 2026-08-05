@@ -146,8 +146,9 @@ def test_request_falls_back_to_jina_proxy_when_direct_blocked(monkeypatch):
     result = _request("public-search", {"q": "recession"})
 
     assert result == {"events": [{"id": "1"}]}
-    assert len(calls) == 2
-    assert "r.jina.ai" in calls[1]
+    assert calls.count("https://gamma-api.polymarket.com/public-search") == 2
+    assert len([url for url in calls if url.startswith("https://r.jina.ai/")]) == 1
+    assert "r.jina.ai" in calls[-1]
 
 
 def test_request_raises_original_error_when_proxy_also_fails(monkeypatch):

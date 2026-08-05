@@ -210,3 +210,55 @@ Operating Income,33318000000,16135000000,6136000000,3693000000,2169000000
     ]
     assert metrics["statement_ttm_diluted_eps"] is None
     assert metrics["ttm_valuation_reconciliation_status"] == "provider_only"
+
+
+def test_ttm_valuation_rejects_four_values_with_an_entire_quarter_column_missing():
+    missing_whole_quarter = """# Income Statement
+,2026-05-31,2026-02-28,2025-08-31,2025-05-31
+Diluted EPS,24.67,12.07,2.83,1.68
+Total Revenue,41456000000,23860000000,11315000000,9301000000
+Total Operating Income As Reported,33318000000,16135000000,3654000000,2169000000
+Operating Income,33318000000,16135000000,3693000000,2169000000
+"""
+
+    metrics = compute_point_in_time_metrics(
+        MU_FUNDAMENTALS, MU_BALANCE_SHEET, missing_whole_quarter, MU_OHLCV
+    )
+
+    assert len(metrics["ttm_eps_periods"]) == 4
+    assert metrics["ttm_periods_contiguous"] is False
+    assert metrics["statement_ttm_diluted_eps"] is None
+    assert metrics["ttm_valuation_reconciliation_status"] == "provider_only"
+
+
+def test_cross_currency_valuation_converts_quote_price_to_financial_currency():
+    metrics = compute_point_in_time_metrics(
+        MU_FUNDAMENTALS,
+        MU_BALANCE_SHEET,
+        MU_INCOME_STATEMENT,
+        MU_OHLCV,
+        quote_currency="HKD",
+        financial_currency="CNY",
+        fx_rate=0.92,
+    )
+
+    assert metrics["valuation_currency_status"] == "verified"
+    assert metrics["valuation_price_in_financial_currency"] == pytest.approx(874.66 * 0.92)
+    assert metrics["statement_ttm_pe"] == pytest.approx(874.66 * 0.92 / 44.17)
+
+
+def test_cross_currency_valuation_is_unavailable_without_fx():
+    metrics = compute_point_in_time_metrics(
+        MU_FUNDAMENTALS,
+        MU_BALANCE_SHEET,
+        MU_INCOME_STATEMENT,
+        MU_OHLCV,
+        quote_currency="HKD",
+        financial_currency="CNY",
+        fx_rate=None,
+    )
+
+    assert metrics["valuation_currency_status"] == "unavailable"
+    assert metrics["price_to_book"] is None
+    assert metrics["statement_ttm_pe"] is None
+    assert metrics["simplified_enterprise_value"] is None

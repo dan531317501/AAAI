@@ -3,7 +3,6 @@ import argparse
 import copy
 import csv
 import io
-import json
 import os
 import re
 
@@ -13,6 +12,11 @@ from longbridge_fetcher import (
     normalize_revenue_sankey,
 )
 from output_layout import resolve_ticker_paths
+from structured_io import (
+    read_structured_file,
+    resolve_structured_path,
+    write_structured_file,
+)
 
 
 def _sankey_period(item: dict) -> str:
@@ -156,7 +160,7 @@ def normalize_sankey_data(data: dict, ticker: str = None) -> dict:
 
 
 def gen_yaml_from_data(data: dict) -> dict:
-    """从 revenue_sankey.json 推导 segments.yaml。"""
+    """从 revenue_sankey 结构化文件推导 segments.yaml。"""
     if not data:
         return None
     periods = data.get("revenue_sankey", [])
@@ -200,14 +204,15 @@ def main():
         base_output_dir=output_dir,
         ticker_data_dir=args.ticker_data_dir,
     )
-    json_path = os.path.join(day_dir, "revenue_sankey.json")
+    data_path = os.path.join(day_dir, "revenue_sankey")
 
-    if not os.path.exists(json_path):
-        print(f"Error: {json_path} not found", flush=True)
+    try:
+        source_path = resolve_structured_path(data_path)
+    except FileNotFoundError as exc:
+        print(f"Error: {exc}", flush=True)
         return 1
 
-    with open(json_path) as handle:
-        data = json.load(handle)
+    data = read_structured_file(source_path)
 
     data = normalize_sankey_data(data, ticker=ticker)
     csv_text = to_sankey_csv(
@@ -215,8 +220,8 @@ def main():
         recent_n=args.recent_n,
     )
 
-    with open(json_path, "w") as handle:
-        json.dump(data, handle, ensure_ascii=False, indent=2)
+    output_path = write_structured_file(data_path, data)
+    print(f"Revenue sankey data written to {output_path}", flush=True)
 
     csv_path = os.path.join(day_dir, "revenue_sankey.csv")
     with open(csv_path, "w") as handle:

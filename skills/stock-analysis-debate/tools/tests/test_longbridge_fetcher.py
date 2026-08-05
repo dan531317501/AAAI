@@ -76,6 +76,8 @@ def test_sankey_metadata_records_single_source_and_derived_semantics():
     metadata = get_revenue_sankey_metadata("INTC")
 
     assert metadata["provider"] == "Longbridge"
+    assert metadata["currency_semantics"]["status"] == "translated_only"
+    assert "official_operating_growth" in metadata["currency_semantics"]["prohibited_uses"]
     assert set(metadata["request_url_templates"]) == {"revenue_sankey"}
     assert "business_historical" not in metadata["request_url_templates"]
     assert "previous fiscal quarter" in metadata["quarterly_growth_semantics"]["qoq"]

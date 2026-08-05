@@ -146,3 +146,28 @@ def test_expectations_context_accepts_rating_date_column():
 
     assert "2026-08-01" in text
     assert "Example Research" in text
+
+
+def test_expectations_context_labels_info_growth_as_historical_actual():
+    estimate = pd.DataFrame(
+        {"avg": [1.08], "numberOfAnalysts": [17], "currency": ["CNY"]},
+        index=["0y"],
+    )
+    text = render_expectations_context(
+        target_symbol="01810.HK",
+        analysis_date="2026-08-04",
+        info={
+            "revenueGrowth": -0.109,
+            "earningsGrowth": -0.581,
+            "financialCurrency": "CNY",
+        },
+        earnings_dates=None,
+        upgrades_downgrades=None,
+        earnings_estimate=estimate,
+        retrieved_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+    )
+
+    assert "Latest-Quarter Historical Growth" in text
+    assert "Revenue Growth (actual YoY)" in text
+    assert "Structured Analyst Estimates" in text
+    assert "| 0y | 1.08 | 17 | CNY |" in text

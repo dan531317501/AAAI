@@ -34,6 +34,8 @@ from datetime import datetime
 import pandas as pd
 import yfinance as yf
 
+from provider_runtime import retry_call
+
 logger = logging.getLogger(__name__)
 
 # yfinance fills IV with 0.00001 (or 0) for contracts with no quoted
@@ -354,7 +356,10 @@ def render_options_report(
 
 def _fetch_expiries(ticker: str) -> list[str]:
     """Return yfinance expiry dates for ``ticker`` (resolved for HK formats)."""
-    return list(yf.Ticker(ticker).options or [])
+    return list(retry_call(
+        lambda: yf.Ticker(ticker).options or [],
+        provider="yfinance", operation=f"{ticker}.option_expiries",
+    ))
 
 
 def fetch_options_report(
@@ -385,7 +390,13 @@ def fetch_options_report(
     expiry_metrics: list[dict] = []
     for expiry in eligible:
         try:
-            chain = yf.Ticker(ticker).option_chain(expiry)
+            chain = retry_call(
+                lambda selected_expiry=expiry: yf.Ticker(ticker).option_chain(
+                    selected_expiry
+                ),
+                provider="yfinance",
+                operation=f"{ticker}.option_chain.{expiry}",
+            )
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "Options chain fetch failed for %s @ %s: %s", ticker, expiry, exc

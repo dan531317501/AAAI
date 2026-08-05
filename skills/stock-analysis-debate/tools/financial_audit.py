@@ -7,6 +7,7 @@ import argparse
 import csv
 import io
 import math
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -99,6 +100,21 @@ def _latest_statement_values(
     return values
 
 
+def _periods_are_contiguous_quarters(periods: list[str]) -> bool:
+    """Accept four sequential fiscal quarter ends and reject missing whole columns."""
+    if len(periods) != 4:
+        return False
+    try:
+        dates = sorted(
+            (datetime.strptime(period, "%Y-%m-%d") for period in periods),
+            reverse=True,
+        )
+    except ValueError:
+        return False
+    gaps = [(dates[index] - dates[index + 1]).days for index in range(3)]
+    return all(60 <= gap <= 120 for gap in gaps)
+
+
 def _relative_difference(
     provider_value: float | None,
     statement_value: float | None,
@@ -136,6 +152,9 @@ def compute_point_in_time_metrics(
     balance_sheet_text: str,
     income_stmt_text: str,
     ohlcv_text: str,
+    quote_currency: str | None = None,
+    financial_currency: str | None = None,
+    fx_rate: float | None = None,
 ) -> dict[str, Any]:
     """Compute valuation and operating-profit metrics from aligned local inputs."""
     fundamentals = _parse_fundamentals(fundamentals_text)
@@ -149,6 +168,8 @@ def compute_point_in_time_metrics(
         "price_date": price_date,
         "financial_period": financial_period,
         "current_price": current_price,
+        "quote_currency": quote_currency,
+        "financial_currency": financial_currency,
     }
     if financial_period is None:
         result["status"] = "partial"
@@ -180,9 +201,30 @@ def compute_point_in_time_metrics(
     restructuring = income("Restructuring And Mergern Acquisition")
     other_special_charges = income("Other Special Charges")
 
+    if quote_currency and financial_currency:
+        if quote_currency == financial_currency:
+            effective_fx_rate = 1.0
+            valuation_currency_status = "verified"
+        elif fx_rate is not None and math.isfinite(fx_rate) and fx_rate > 0:
+            effective_fx_rate = fx_rate
+            valuation_currency_status = "verified"
+        else:
+            effective_fx_rate = None
+            valuation_currency_status = "unavailable"
+    else:
+        # Backward-compatible for direct library callers; the production workflow
+        # always supplies both currencies and never treats this status as verified.
+        effective_fx_rate = 1.0
+        valuation_currency_status = "currency_metadata_missing"
+
+    valuation_price = (
+        current_price * effective_fx_rate
+        if current_price is not None and effective_fx_rate is not None
+        else None
+    )
     point_in_time_market_cap = (
-        current_price * shares
-        if current_price is not None and shares not in (None, 0)
+        valuation_price * shares
+        if valuation_price is not None and shares not in (None, 0)
         else None
     )
     book_value_per_share = (
@@ -191,8 +233,8 @@ def compute_point_in_time_metrics(
         else None
     )
     price_to_book = (
-        current_price / book_value_per_share
-        if current_price is not None and book_value_per_share not in (None, 0)
+        valuation_price / book_value_per_share
+        if valuation_price is not None and book_value_per_share not in (None, 0)
         else None
     )
     enterprise_value = (
@@ -215,14 +257,17 @@ def compute_point_in_time_metrics(
     diluted_eps_quarters = _latest_statement_values(
         income_periods, income_rows, "Diluted EPS", 4
     )
+    ttm_periods_contiguous = _periods_are_contiguous_quarters(
+        [period for period, _ in diluted_eps_quarters]
+    )
     statement_ttm_eps = (
         sum(value for _, value in diluted_eps_quarters)
-        if len(diluted_eps_quarters) == 4
+        if len(diluted_eps_quarters) == 4 and ttm_periods_contiguous
         else None
     )
     statement_ttm_pe = (
-        current_price / statement_ttm_eps
-        if current_price is not None
+        valuation_price / statement_ttm_eps
+        if valuation_price is not None
         and statement_ttm_eps is not None
         and statement_ttm_eps > 0
         else None
@@ -256,8 +301,8 @@ def compute_point_in_time_metrics(
     )
 
     computed_forward_pe = (
-        current_price / provider_forward_eps
-        if current_price is not None
+        valuation_price / provider_forward_eps
+        if valuation_price is not None
         and provider_forward_eps is not None
         and provider_forward_eps > 0
         else None
@@ -285,6 +330,9 @@ def compute_point_in_time_metrics(
 
     result.update({
         "ordinary_shares": shares,
+        "fx_rate_quote_to_financial": effective_fx_rate,
+        "valuation_currency_status": valuation_currency_status,
+        "valuation_price_in_financial_currency": valuation_price,
         "common_stock_equity": common_equity,
         "point_in_time_market_cap": point_in_time_market_cap,
         "book_value_per_share": book_value_per_share,
@@ -297,6 +345,7 @@ def compute_point_in_time_metrics(
         "statement_ttm_diluted_eps": statement_ttm_eps,
         "statement_ttm_pe": statement_ttm_pe,
         "ttm_eps_periods": [period for period, _ in diluted_eps_quarters],
+        "ttm_periods_contiguous": ttm_periods_contiguous,
         "ttm_eps_difference": ttm_eps_difference,
         "ttm_pe_difference": ttm_pe_difference,
         "ttm_valuation_reconciliation_status": ttm_reconciliation_status,
@@ -337,9 +386,13 @@ def compute_point_in_time_metrics(
         reported_operating_margin,
     )
     base_complete = all(v is not None for v in required)
-    if not base_complete or ttm_reconciliation_status in (
+    if (
+        not base_complete
+        or valuation_currency_status == "unavailable"
+        or ttm_reconciliation_status in (
         "provider_only",
         "unavailable",
+        )
     ):
         result["status"] = "partial"
     elif ttm_reconciliation_status == "mismatch":
@@ -355,9 +408,15 @@ def compute_point_in_time_metrics(
         )
     elif ttm_reconciliation_status in ("provider_only", "unavailable"):
         result["warnings"].append(
-            "Fewer than four valid quarterly Diluted EPS values are available; "
+            "Four valid contiguous quarterly Diluted EPS values are unavailable; "
             "TTM EPS/P/E cannot be independently reconciled. Keep preferred "
             "TTM EPS/P/E unavailable; provider values are disclosure-only."
+        )
+    if valuation_currency_status == "unavailable":
+        result["warnings"].append(
+            "Quote and financial statement currencies differ but no verified "
+            "dated FX rate is available. Exact P/E, P/B, market cap, EV and "
+            "EV/EBITDA are unavailable."
         )
     if reported_operating_income is None and derived_operating_income is not None:
         result["warnings"].append(
@@ -390,6 +449,14 @@ def render_audit(metrics: dict[str, Any]) -> str:
         f"Price Date: {metrics.get('price_date') or 'N/A'}",
         f"Financial Statement Period: {metrics.get('financial_period') or 'N/A'}",
         f"Current Price: {_ratio(metrics.get('current_price'))}",
+        f"Quote Currency: {metrics.get('quote_currency') or 'N/A'}",
+        f"Financial Currency: {metrics.get('financial_currency') or 'N/A'}",
+        "Quote-to-Financial FX Rate: "
+        f"{_ratio(metrics.get('fx_rate_quote_to_financial'))}",
+        "Valuation Currency Status: "
+        f"{metrics.get('valuation_currency_status', 'unavailable')}",
+        "Price in Financial Currency: "
+        f"{_ratio(metrics.get('valuation_price_in_financial_currency'))}",
         f"Ordinary Shares: {_amount(metrics.get('ordinary_shares'))}",
         f"Common Stock Equity: {_amount(metrics.get('common_stock_equity'))}",
         "Point-in-Time Market Cap: "
@@ -408,6 +475,8 @@ def render_audit(metrics: dict[str, Any]) -> str:
         f"Statement-Derived TTM P/E: {_ratio(metrics.get('statement_ttm_pe'))}",
         "TTM EPS Statement Periods: "
         f"{', '.join(metrics.get('ttm_eps_periods', [])) or 'N/A'}",
+        "TTM EPS Periods Contiguous: "
+        f"{str(metrics.get('ttm_periods_contiguous', False)).lower()}",
         f"TTM EPS Difference: {_percent(metrics.get('ttm_eps_difference'))}",
         f"TTM P/E Difference: {_percent(metrics.get('ttm_pe_difference'))}",
         "TTM Valuation Reconciliation Status: "
@@ -465,11 +534,17 @@ def append_audit(
     balance_sheet_text: str,
     income_stmt_text: str,
     ohlcv_text: str,
+    quote_currency: str | None = None,
+    financial_currency: str | None = None,
+    fx_rate: float | None = None,
 ) -> str:
     """Replace any existing audit section and append a freshly computed one."""
     base = fundamentals_text.split(AUDIT_HEADING, 1)[0].rstrip()
     metrics = compute_point_in_time_metrics(
-        fundamentals_text, balance_sheet_text, income_stmt_text, ohlcv_text
+        fundamentals_text, balance_sheet_text, income_stmt_text, ohlcv_text,
+        quote_currency=quote_currency,
+        financial_currency=financial_currency,
+        fx_rate=fx_rate,
     )
     return f"{base}\n\n{render_audit(metrics)}\n"
 

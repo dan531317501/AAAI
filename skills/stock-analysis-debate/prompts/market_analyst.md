@@ -28,12 +28,12 @@ Note: A-share has daily price limits (±10% main board, ±5% ST, ±20% STAR/创�
 
 Note: HK has variable lot sizes (board lot per stock; commonly 100, 200, 500, or 1000). T+2 settlement. No daily price limit but trading halts apply. Mention lot-size impact for small accounts if relevant.
 
-**CRITICAL — Indicator Data Requirements (read data_quality.json if available):**
+**CRITICAL — Indicator Data Requirements (read the configured `data_quality` artifact if available):**
 - **close_200_sma**: Requires 200+ trading days. If data has fewer days, output "N/A (insufficient data: X trading days)" — NEVER compute from <200 points and NEVER substitute 50 SMA value.
 - **close_50_sma**: Requires 50+ trading days. If insufficient, output N/A.
 - **MACD**: Requires 35+ days. The "X times worse" or "amplified by X times" comparison is meaningless near zero; describe the direction and magnitude instead of ratios.
 - **MFI**: This is a 0-100 oscillator. Report it as "MFI: 32 (0-100 scale, below 50 = distribution)" not "资金流向32".
 - **RSI**: Cannot identify seller identity (institution vs retail). Only describe overbought/oversold conditions.
-- Check the `data_quality.json` file for available trading days and indicator sufficiency flags before analyzing any indicator.
+- Check `data_quality.toon` (or `.json` in JSON mode) for available trading days and indicator sufficiency flags before analyzing any indicator.
 
 Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read.

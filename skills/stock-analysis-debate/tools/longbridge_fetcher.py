@@ -8,6 +8,8 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from provider_runtime import retry_call
+
 
 def build_counter_id(ticker: str) -> str:
     """根据 ticker 生成长桥 counter_id。CN 返回 None（不支持）。
@@ -369,6 +371,17 @@ def get_revenue_sankey_metadata(ticker: str = None) -> dict:
     metadata = {
         "provider": "Longbridge",
         "payload_type": "parsed",
+        "currency_semantics": {
+            "status": "translated_only",
+            "meaning": (
+                "period.currency is the provider presentation currency; the API "
+                "does not expose original reporting currency or conversion rate"
+            ),
+            "prohibited_uses": [
+                "official_operating_growth",
+                "cross_currency_valuation",
+            ],
+        },
         "request_url_templates": {
             "revenue_sankey": (
                 f"{REVENUE_SANKEY_ENDPOINT}"
@@ -442,9 +455,17 @@ def fetch_revenue_sankey(ticker: str) -> dict:
         f"?counter_id={_encode_counter_id(cid)}&report=qf"
     )
     try:
-        resp = requests.get(url, headers=_HEADERS, timeout=15)
-        resp.raise_for_status()
-        return resp.json()
+        def call():
+            resp = requests.get(url, headers=_HEADERS, timeout=15)
+            resp.raise_for_status()
+            return resp.json()
+
+        return retry_call(
+            call,
+            provider="Longbridge",
+            operation=f"{ticker}.revenue_sankey",
+            validator=lambda value: isinstance(value, dict),
+        )
     except Exception as e:
         print(f"  [longbridge API2] error: {e}", flush=True)
         return {}
@@ -464,14 +485,22 @@ def fetch_range_klines(ticker: str, market: str = None) -> dict:
         "time_range": 3,
     }
     try:
-        resp = requests.get(
-            _KLINE_URL,
-            params=params,
-            headers=_KLINE_HEADERS,
-            timeout=15,
+        def call():
+            resp = requests.get(
+                _KLINE_URL,
+                params=params,
+                headers=_KLINE_HEADERS,
+                timeout=15,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+        return retry_call(
+            call,
+            provider="Longbridge",
+            operation=f"{ticker}.range_klines",
+            validator=lambda value: isinstance(value, dict),
         )
-        resp.raise_for_status()
-        return resp.json()
     except Exception as e:
         print(f"  [longbridge K line] error: {e}", flush=True)
         return {}
