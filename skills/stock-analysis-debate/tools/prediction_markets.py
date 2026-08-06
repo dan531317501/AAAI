@@ -68,24 +68,28 @@ def _parse_jina_response(text: str) -> dict:
 
 
 def _request(path: str, params: dict) -> dict:
-    """GET a Gamma API endpoint; falls back to the Jina Reader proxy.
+    """GET a Gamma API endpoint; Jina Reader proxy first, direct as fallback.
 
-    Direct access to Polymarket's domains is blocked on some networks; the
-    Jina proxy relays the request from its own servers, so a blocked network
-    still gets live data. The original exception is re-raised when both paths
-    fail so the caller sees one consistent failure.
+    Polymarket's domains are blocked on some networks, so route the request
+    through the Jina Reader proxy first — it relays the request from its own
+    servers and stays reachable where Polymarket is not. The original
+    exception is re-raised when both paths fail so the caller sees one
+    consistent failure.
     """
     url = f"{GAMMA_BASE}/{path}"
+    query = url + ("?" + urlencode(params) if params else "")
     try:
-        def direct_call():
-            response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-            response.raise_for_status()
-            return response.json()
+        def proxy_call():
+            proxied = requests.get(
+                JINA_PROXY_BASE + query, timeout=REQUEST_TIMEOUT
+            )
+            proxied.raise_for_status()
+            return _parse_jina_response(proxied.text)
 
         return retry_call(
-            direct_call,
-            provider="Polymarket Gamma",
-            operation=path,
+            proxy_call,
+            provider="Jina Reader",
+            operation=f"polymarket_proxy.{path}",
             policy=RetryPolicy(
                 max_attempts=2,
                 base_delay_seconds=0.25,
@@ -93,21 +97,18 @@ def _request(path: str, params: dict) -> dict:
             ),
             validator=lambda value: isinstance(value, dict),
         )
-    except (requests.RequestException, ValueError) as direct_exc:
-        logger.warning("Direct Gamma API failed (%s); trying Jina proxy", direct_exc)
-        query = url + ("?" + urlencode(params) if params else "")
+    except (requests.RequestException, ValueError) as proxy_exc:
+        logger.warning("Jina proxy failed (%s); trying direct Gamma API", proxy_exc)
         try:
-            def proxy_call():
-                proxied = requests.get(
-                    JINA_PROXY_BASE + query, timeout=REQUEST_TIMEOUT
-                )
-                proxied.raise_for_status()
-                return _parse_jina_response(proxied.text)
+            def direct_call():
+                response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()
+                return response.json()
 
             return retry_call(
-                proxy_call,
-                provider="Jina Reader",
-                operation=f"polymarket_proxy.{path}",
+                direct_call,
+                provider="Polymarket Gamma",
+                operation=path,
                 policy=RetryPolicy(
                     max_attempts=2,
                     base_delay_seconds=0.25,
@@ -115,9 +116,9 @@ def _request(path: str, params: dict) -> dict:
                 ),
                 validator=lambda value: isinstance(value, dict),
             )
-        except (requests.RequestException, ValueError) as proxy_exc:
-            logger.warning("Jina proxy also failed: %s", proxy_exc)
-            raise direct_exc from proxy_exc
+        except (requests.RequestException, ValueError) as direct_exc:
+            logger.warning("Direct Gamma API also failed: %s", direct_exc)
+            raise proxy_exc from direct_exc
 
 
 def parse_json_list(value) -> list:
@@ -198,14 +199,14 @@ def render_markets(topic: str, markets: list[dict], limit: int) -> str:
 def search_topic(topic: str, limit: int | None = None) -> str:
     """Return prediction-market probabilities for one event topic.
 
-    Degrades to a placeholder on network errors instead of raising, so a
-    transient failure never aborts the pipeline.
+    Degrades to a placeholder on expected provider transport or payload
+    errors, so one unavailable topic never aborts the pipeline.
     """
     if limit is None:
         limit = DEFAULT_LIMIT
     try:
         data = _request("public-search", {"q": topic, "limit_per_type": 20})
-    except requests.RequestException as exc:
+    except (requests.RequestException, ValueError) as exc:
         logger.warning("Polymarket search failed for %r: %s", topic, exc)
         return (
             f'## Polymarket prediction markets: "{topic}"\n'

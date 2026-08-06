@@ -14,6 +14,7 @@ from typing import Any
 
 AUDIT_HEADING = "## Point-in-Time Valuation and GAAP Operating Profit Audit"
 RECONCILIATION_TOLERANCE = 0.05
+SHARE_COUNT_RATIO_THRESHOLD = 2.0
 
 
 def _parse_number(value: str | None) -> float | None:
@@ -185,6 +186,7 @@ def compute_point_in_time_metrics(
         return _statement_value(income_periods, income_rows, label, financial_period)
 
     shares = balance("Ordinary Shares Number")
+    diluted_average_shares = income("Diluted Average Shares")
     common_equity = balance("Common Stock Equity")
     total_debt = balance("Total Debt")
     cash_and_investments = balance(
@@ -195,6 +197,22 @@ def compute_point_in_time_metrics(
     provider_forward_eps = fundamentals.get("Forward EPS")
     provider_forward_pe = fundamentals.get("Forward PE")
     provider_ttm_ebitda = fundamentals.get("EBITDA")
+    share_count_basis_ratio = (
+        shares / diluted_average_shares
+        if shares is not None
+        and diluted_average_shares is not None
+        and shares > 0
+        and diluted_average_shares > 0
+        else None
+    )
+    share_count_basis_status = "unavailable"
+    if share_count_basis_ratio is not None:
+        share_count_basis_status = (
+            "potential_mismatch"
+            if share_count_basis_ratio >= SHARE_COUNT_RATIO_THRESHOLD
+            or share_count_basis_ratio <= 1 / SHARE_COUNT_RATIO_THRESHOLD
+            else "consistent"
+        )
     total_revenue = income("Total Revenue")
     reported_operating_income = income("Total Operating Income As Reported")
     derived_operating_income = income("Operating Income")
@@ -212,9 +230,9 @@ def compute_point_in_time_metrics(
             effective_fx_rate = None
             valuation_currency_status = "unavailable"
     else:
-        # Backward-compatible for direct library callers; the production workflow
-        # always supplies both currencies and never treats this status as verified.
-        effective_fx_rate = 1.0
+        # Missing metadata cannot establish that quote and statement values
+        # share a unit. Keep all cross-currency valuation outputs unavailable.
+        effective_fx_rate = None
         valuation_currency_status = "currency_metadata_missing"
 
     valuation_price = (
@@ -292,13 +310,18 @@ def compute_point_in_time_metrics(
     else:
         ttm_reconciliation_status = "verified"
 
-    preferred_ttm_eps = statement_ttm_eps
-    preferred_ttm_pe = statement_ttm_pe
-    preferred_ttm_source = (
-        "quarterly income statement"
-        if statement_ttm_eps is not None
-        else None
-    )
+    if ttm_reconciliation_status == "mismatch":
+        preferred_ttm_eps = None
+        preferred_ttm_pe = None
+        preferred_ttm_source = None
+    else:
+        preferred_ttm_eps = statement_ttm_eps
+        preferred_ttm_pe = statement_ttm_pe
+        preferred_ttm_source = (
+            "quarterly income statement"
+            if statement_ttm_eps is not None
+            else None
+        )
 
     computed_forward_pe = (
         valuation_price / provider_forward_eps
@@ -330,6 +353,9 @@ def compute_point_in_time_metrics(
 
     result.update({
         "ordinary_shares": shares,
+        "diluted_average_shares": diluted_average_shares,
+        "share_count_basis_ratio": share_count_basis_ratio,
+        "share_count_basis_status": share_count_basis_status,
         "fx_rate_quote_to_financial": effective_fx_rate,
         "valuation_currency_status": valuation_currency_status,
         "valuation_price_in_financial_currency": valuation_price,
@@ -388,14 +414,17 @@ def compute_point_in_time_metrics(
     base_complete = all(v is not None for v in required)
     if (
         not base_complete
-        or valuation_currency_status == "unavailable"
+        or valuation_currency_status != "verified"
         or ttm_reconciliation_status in (
         "provider_only",
         "unavailable",
         )
     ):
         result["status"] = "partial"
-    elif ttm_reconciliation_status == "mismatch":
+    elif (
+        ttm_reconciliation_status == "mismatch"
+        or share_count_basis_status == "potential_mismatch"
+    ):
         result["status"] = "conflict"
     else:
         result["status"] = "complete"
@@ -403,8 +432,8 @@ def compute_point_in_time_metrics(
     if ttm_reconciliation_status == "mismatch":
         result["warnings"].append(
             "Provider TTM EPS/P/E conflicts with the latest four quarterly "
-            "Diluted EPS values. Use the statement-derived TTM EPS/P/E and "
-            "disclose the provider mismatch."
+            "Diluted EPS values. Neither value is an approved valuation anchor; "
+            "disclose the provider mismatch and keep preferred TTM EPS/P/E unavailable."
         )
     elif ttm_reconciliation_status in ("provider_only", "unavailable"):
         result["warnings"].append(
@@ -417,6 +446,17 @@ def compute_point_in_time_metrics(
             "Quote and financial statement currencies differ but no verified "
             "dated FX rate is available. Exact P/E, P/B, market cap, EV and "
             "EV/EBITDA are unavailable."
+        )
+    elif valuation_currency_status == "currency_metadata_missing":
+        result["warnings"].append(
+            "Quote or financial statement currency metadata is missing. Exact "
+            "P/E, P/B, market cap, EV and EV/EBITDA are unavailable."
+        )
+    if share_count_basis_status == "potential_mismatch":
+        result["warnings"].append(
+            "Ordinary Shares Number and Diluted Average Shares differ by "
+            f"{share_count_basis_ratio:.2f}x. Potential ADR/ADS or share-basis "
+            "mismatch; do not infer a conversion ratio or use exact valuation."
         )
     if reported_operating_income is None and derived_operating_income is not None:
         result["warnings"].append(
@@ -458,6 +498,12 @@ def render_audit(metrics: dict[str, Any]) -> str:
         "Price in Financial Currency: "
         f"{_ratio(metrics.get('valuation_price_in_financial_currency'))}",
         f"Ordinary Shares: {_amount(metrics.get('ordinary_shares'))}",
+        "Diluted Average Shares: "
+        f"{_amount(metrics.get('diluted_average_shares'))}",
+        "Share Count Basis Ratio (Ordinary/Diluted Average): "
+        f"{_ratio(metrics.get('share_count_basis_ratio'))}",
+        "Share Count Basis Status: "
+        f"{metrics.get('share_count_basis_status', 'unavailable')}",
         f"Common Stock Equity: {_amount(metrics.get('common_stock_equity'))}",
         "Point-in-Time Market Cap: "
         f"{_amount(metrics.get('point_in_time_market_cap'))}",

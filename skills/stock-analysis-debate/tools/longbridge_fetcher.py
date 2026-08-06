@@ -1,6 +1,7 @@
 """长桥证券数据抓取：K 线、分部数据及其 JSON 解析。"""
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
+import math
 import re
 import unicodedata
 from urllib.parse import quote
@@ -63,6 +64,51 @@ def build_kline_counter_id(ticker: str, market: str = None) -> str:
     return f"ST/US/{upper}"
 
 
+def _normalize_kline_volume(item: dict, market: str | None) -> float | None:
+    """Normalize Longbridge fallback volume to shares when its unit is known.
+
+    The current CN range-kline endpoint has returned lots in ``amount`` while
+    HK/US rows and yfinance use shares.  CN turnover provides a runtime sanity
+    check: turnover / (amount * close) is approximately 100 for lots and 1
+    for shares.  Ambiguous rows are left unavailable instead of contaminating
+    volume-weighted indicators.
+    """
+    raw_amount = item.get("amount")
+    if raw_amount in (None, ""):
+        return None
+    try:
+        amount = float(raw_amount)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(amount) or amount < 0:
+        return None
+    if market != "CN" or amount == 0:
+        return amount
+
+    turnover_raw = item.get("balance")
+    if turnover_raw in (None, ""):
+        turnover_raw = item.get("turnover")
+    try:
+        close = float(item["close"])
+        turnover = float(turnover_raw)
+    except (KeyError, TypeError, ValueError):
+        return None
+    if (
+        not math.isfinite(close)
+        or close <= 0
+        or not math.isfinite(turnover)
+        or turnover < 0
+    ):
+        return None
+
+    implied_multiplier = turnover / (amount * close)
+    if 0.5 <= implied_multiplier <= 2:
+        return amount
+    if 50 <= implied_multiplier <= 200:
+        return amount * 100
+    return None
+
+
 def parse_range_klines(resp: dict, market: str = None) -> list:
     """解析长桥日 K，返回按日期升序排列的 OHLCV 记录。"""
     if not isinstance(resp, dict) or resp.get("code") != 0:
@@ -87,7 +133,7 @@ def parse_range_klines(resp: dict, market: str = None) -> list:
                 "High": float(item["high"]),
                 "Low": float(item["low"]),
                 "Close": float(item["close"]),
-                "Volume": float(item.get("amount", 0) or 0),
+                "Volume": _normalize_kline_volume(item, market),
             }
         except (KeyError, TypeError, ValueError, OverflowError):
             continue

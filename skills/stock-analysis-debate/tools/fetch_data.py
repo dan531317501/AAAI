@@ -297,12 +297,19 @@ def fetch_price_data(ticker: str, start_date: str, end_date: str,
             if lb_latest is not None and (yf_latest is None or lb_latest > yf_latest):
                 # 同日记录以主数据源 yfinance 为准，只追加其缺失日期。
                 missing = fallback.index.difference(data.index)
+                volume_unavailable = (
+                    market == "CN"
+                    and "Volume" in fallback.columns
+                    and fallback.loc[missing, "Volume"].isna().any()
+                )
                 data = pd.concat([data, fallback.loc[missing]]).sort_index()
                 source = (
                     "yfinance + Longbridge fallback"
                     if yf_latest is not None
                     else "Longbridge fallback"
                 )
+                if volume_unavailable:
+                    source += "; CN Longbridge volume Not Rated"
 
     return data, source
 

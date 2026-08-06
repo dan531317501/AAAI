@@ -22,7 +22,7 @@ Volatility Indicators:
 Volume-Based Indicators:
 - vwma: VWMA: A moving average weighted by volume. Usage: Confirm trends by integrating price action with volume data. Tips: Watch for skewed results from volume spikes; use in combination with other volume analyses.
 
-- Select indicators that provide diverse and complementary information. Avoid redundancy (e.g., do not select both rsi and stochrsi). Also briefly explain why they are suitable for the given market context. When you tool call, please use the exact name of the indicators provided above as they are defined parameters, otherwise your call will fail. Please make sure to call get_stock_data first to retrieve the CSV that is needed to generate indicators. Then use get_indicators with the specific indicator names. Write a very detailed and nuanced report of the trends you observe. Provide specific, actionable insights with supporting evidence to help traders make informed decisions.
+- Select indicators that provide diverse and complementary information. Avoid redundancy (e.g., do not select both RSI and another oscillator expressing the same signal). Read the assigned current-run `ohlcv.csv`, `indicators.txt`, and configured `data_quality` artifact; do not call market-data or indicator tools and do not recompute indicators. Explain why each selected indicator is suitable for the observed market context, then write a detailed evidence-backed report of trend, momentum, volatility, and volume conditions.
 
 Note: A-share has daily price limits (±10% main board, ±5% ST, ±20% STAR/创业板; 涨跌停制度), 100 shares per lot, T+1 settlement. Mention these constraints if relevant to entry timing or stop-loss design.
 

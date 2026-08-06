@@ -66,7 +66,8 @@ MU_OHLCV = """Date,Open,High,Low,Close,Volume
 
 def test_point_in_time_pb_uses_latest_quarter_equity_and_shares():
     metrics = compute_point_in_time_metrics(
-        FUNDAMENTALS, BALANCE_SHEET, INCOME_STATEMENT, OHLCV
+        FUNDAMENTALS, BALANCE_SHEET, INCOME_STATEMENT, OHLCV,
+        quote_currency="USD", financial_currency="USD",
     )
 
     assert metrics["price_date"] == "2026-07-27"
@@ -78,7 +79,8 @@ def test_point_in_time_pb_uses_latest_quarter_equity_and_shares():
 
 def test_ev_to_ebitda_keeps_currency_units_and_point_in_time_market_cap():
     metrics = compute_point_in_time_metrics(
-        FUNDAMENTALS, BALANCE_SHEET, INCOME_STATEMENT, OHLCV
+        FUNDAMENTALS, BALANCE_SHEET, INCOME_STATEMENT, OHLCV,
+        quote_currency="USD", financial_currency="USD",
     )
 
     assert metrics["point_in_time_market_cap"] == pytest.approx(462_291_810_000)
@@ -103,10 +105,12 @@ def test_gaap_operating_income_prefers_as_reported_field():
 
 def test_append_audit_replaces_existing_section_instead_of_duplicating_it():
     once = append_audit(
-        FUNDAMENTALS, BALANCE_SHEET, INCOME_STATEMENT, OHLCV
+        FUNDAMENTALS, BALANCE_SHEET, INCOME_STATEMENT, OHLCV,
+        quote_currency="USD", financial_currency="USD",
     )
     twice = append_audit(
-        once, BALANCE_SHEET, INCOME_STATEMENT, OHLCV
+        once, BALANCE_SHEET, INCOME_STATEMENT, OHLCV,
+        quote_currency="USD", financial_currency="USD",
     )
 
     assert twice.count("## Point-in-Time Valuation and GAAP Operating Profit Audit") == 1
@@ -121,6 +125,7 @@ def test_ttm_valuation_prefers_four_quarter_eps_when_provider_snapshot_conflicts
         MU_BALANCE_SHEET,
         MU_INCOME_STATEMENT,
         MU_OHLCV,
+        quote_currency="USD", financial_currency="USD",
     )
 
     assert metrics["provider_ttm_eps"] == 52.39
@@ -136,10 +141,12 @@ def test_ttm_valuation_prefers_four_quarter_eps_when_provider_snapshot_conflicts
         abs(52.39 - 44.17) / 44.17
     )
     assert metrics["ttm_valuation_reconciliation_status"] == "mismatch"
-    assert metrics["preferred_ttm_eps"] == pytest.approx(44.17)
-    assert metrics["preferred_ttm_pe"] == pytest.approx(874.66 / 44.17)
-    assert metrics["preferred_ttm_source"] == "quarterly income statement"
+    assert metrics["preferred_ttm_eps"] is None
+    assert metrics["preferred_ttm_pe"] is None
+    assert metrics["preferred_ttm_source"] is None
     assert metrics["status"] == "conflict"
+    assert any("Neither value is an approved valuation anchor" in warning
+               for warning in metrics["warnings"])
 
 
 def test_ttm_valuation_is_verified_when_provider_and_statement_values_reconcile():
@@ -154,12 +161,38 @@ def test_ttm_valuation_is_verified_when_provider_and_statement_values_reconcile(
         MU_BALANCE_SHEET,
         MU_INCOME_STATEMENT,
         MU_OHLCV,
+        quote_currency="USD", financial_currency="USD",
     )
 
     assert metrics["ttm_valuation_reconciliation_status"] == "verified"
     assert metrics["status"] == "complete"
     assert metrics["ttm_eps_difference"] == pytest.approx(0)
     assert metrics["ttm_pe_difference"] == pytest.approx(0)
+
+
+def test_share_count_basis_flags_potential_ads_mismatch_without_guessing_ratio():
+    balance_sheet = MU_BALANCE_SHEET.replace(
+        "Ordinary Shares Number,1129393151",
+        "Ordinary Shares Number,18580000000",
+    )
+    income_statement = MU_INCOME_STATEMENT.replace(
+        "Diluted EPS,24.67,12.07,4.60,2.83,1.68",
+        "Diluted Average Shares,2400000000,2400000000,2400000000,2400000000,2400000000\n"
+        "Diluted EPS,24.67,12.07,4.60,2.83,1.68",
+    )
+
+    metrics = compute_point_in_time_metrics(
+        MU_FUNDAMENTALS,
+        balance_sheet,
+        income_statement,
+        MU_OHLCV,
+        quote_currency="USD", financial_currency="USD",
+    )
+
+    assert metrics["share_count_basis_status"] == "potential_mismatch"
+    assert metrics["share_count_basis_ratio"] == pytest.approx(18580000000 / 2400000000)
+    assert metrics["status"] == "conflict"
+    assert any("Potential ADR/ADS" in warning for warning in metrics["warnings"])
 
 
 def test_ttm_valuation_does_not_invent_statement_value_with_fewer_than_four_quarters():
@@ -262,3 +295,20 @@ def test_cross_currency_valuation_is_unavailable_without_fx():
     assert metrics["price_to_book"] is None
     assert metrics["statement_ttm_pe"] is None
     assert metrics["simplified_enterprise_value"] is None
+
+
+def test_missing_currency_metadata_fails_closed_for_all_valuation_outputs():
+    metrics = compute_point_in_time_metrics(
+        MU_FUNDAMENTALS, MU_BALANCE_SHEET, MU_INCOME_STATEMENT, MU_OHLCV
+    )
+
+    assert metrics["valuation_currency_status"] == "currency_metadata_missing"
+    assert metrics["fx_rate_quote_to_financial"] is None
+    assert metrics["valuation_price_in_financial_currency"] is None
+    assert metrics["point_in_time_market_cap"] is None
+    assert metrics["price_to_book"] is None
+    assert metrics["simplified_enterprise_value"] is None
+    assert metrics["ev_to_provider_ttm_ebitda"] is None
+    assert metrics["statement_ttm_pe"] is None
+    assert metrics["status"] == "partial"
+    assert any("currency metadata is missing" in warning for warning in metrics["warnings"])

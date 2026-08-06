@@ -52,7 +52,7 @@ Last conservative argument: {current_conservative_response}
   ---
   ```
 - If the file doesn't exist: create it with just your entry.
-- If the file exists: read the old content first, then write old content + your new entry (this is how you "append").
+- If the file exists: write the old content you read in Step 1, followed by your new entry.
 - Do NOT edit, truncate, or summarize your response OR previous entries. Write everything verbatim.
 
 **Step 4 — Return protocol (MANDATORY — do NOT skip):**

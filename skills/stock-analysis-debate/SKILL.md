@@ -9,7 +9,7 @@ description: Use when the user wants to analyze a stock (US/CN/HK markets), expl
 
 Conduct a professional stock analysis by orchestrating multiple AI agents in a structured debate. Agents play specialized roles — Market Analyst, News Analyst, Social Media Analyst, Fundamentals Analyst, Options Flow Analyst (US current research only), Price Action Attribution Analyst, Bull/Bear Researchers, Trader, Aggressive/Conservative/Neutral Risk Analysts, and Portfolio Manager — to explain recent price behavior and produce a data-backed investment recommendation (Buy/Overweight/Hold/Underweight/Sell).
 
-Data is fetched primarily from **yfinance** (OHLCV, benchmark/sector comparators, dedicated analyst-estimate tables, news, fundamentals, financial statements), with **Longbridge daily K-lines** filling missing latest OHLCV dates for US/HK/SH/SZ stocks, and **stockstats** computing technical indicators. Provider calls use classified exponential retries. Official disclosures are discovered through HKEXnews, SEC EDGAR/XBRL, or CNINFO as market-appropriate fallbacks; unstructured filing PDFs remain evidence-only and are never numerically extracted by an LLM.
+Data is fetched primarily from **yfinance** (OHLCV, benchmark/sector comparators, dedicated analyst-estimate tables, news, fundamentals, financial statements), with **Longbridge daily K-lines** filling missing latest OHLCV dates for US/HK/SH/SZ stocks using market-aware, fail-closed volume normalization, and **stockstats** computing technical indicators. Provider calls use classified exponential retries. Official disclosures are discovered through HKEXnews, SEC EDGAR/XBRL, or CNINFO as market-appropriate fallbacks; unstructured filing PDFs remain evidence-only and are never numerically extracted by an LLM.
 
 Use `current_research` by default. Use `historical_replay` only with an explicit historical cutoff; the tool then excludes every retrieval-time source that lacks verified point-in-time availability instead of backfilling it with today's snapshot.
 
@@ -18,9 +18,9 @@ Use `current_research` by default. Use `historical_replay` only with an explicit
 **These rules override all other instructions during analysis execution:**
 
 1. **NEVER ask the user for permission to proceed between phases.** After each phase completes, immediately continue to the next phase. The user asked for a complete analysis — deliver it in one continuous run.
-2. **Phase 2 has TWO steps. Step 1 launches the applicable base analysts in parallel. After their files are verified, Step 2 launches exactly one Price Action Attribution Analyst, which reads the base reports and attribution data and writes `price_action_attribution_analyst.md`. Only after both steps are verified may Phase 3 start. Every analyst writes directly to its own file and returns only a short write confirmation; the main session never aggregates analyst responses.**
-3. **Phases 3-6 run agents sequentially — each depends on the previous one's output. After each agent returns, immediately launch the next one. Do NOT pause for user confirmation.**
-4. **Phase 7 is the final phase (NOT a sub-agent). It MUST produce TWO outputs in ONE message batch: (A) Write `analysis_report.md` via the Write tool, and (B) the final decision text. If either is missing, the analysis is incomplete. Do NOT output the decision text without also calling Write.**
+2. **Phase 2 has TWO steps. Start every applicable base analyst concurrently, wait for all scheduled roles, and verify their files. Then start exactly one Price Action Attribution Analyst, which reads the base reports and attribution data and writes `price_action_attribution_analyst.md`. Only after both steps are verified may Phase 3 start. Every analyst writes directly to its own file and returns only a short write confirmation; the main session never aggregates analyst responses.**
+3. **Phases 3-6 run role tasks sequentially because each depends on the previous task's persisted artifact. After each artifact is verified, immediately start the next task. Do NOT pause for user confirmation.**
+4. **Phase 7 is the final phase and runs in the main session. In the same assistant turn, persist and verify `analysis_report.md` first, then return the user-visible decision summary. If the report is not verified, do not return a success summary.**
 5. **The workflow is complete ONLY when the report file has been written to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/analysis_report.md` AND confirmed to the user.**
 
 6. **CN market skips Phase 1 Step 3 (Segment Setup) and Segment Analyst entirely.** No `segments.yaml`, no segment data. Run 4 Step 1 analysts (options flow is US-only), then the mandatory Price Action Attribution Analyst in Step 2.
@@ -43,7 +43,7 @@ Use `current_research` by default. Use `historical_replay` only with an explicit
     - Never Read a file whose content is already in the main context (own Write output).
     - At Phase 7, read only the unseen reports and current-run data artifacts required for final claims and debate adjudication. Read the configured `validated_metrics` artifact and `validation_report.md` for their covered metrics and gates; other listed data artifacts remain valid domain evidence but cannot bypass a blocked covered metric. Files already in the main context are not re-read.
 
-14. **ONE-RETRY POLICY:** Every phase and every agent call allows exactly ONE retry at the smallest granularity. Retry only the failed step — a failed `fetch_data.py`/`prepare_segments.py` run (Phase 1), a single failed analyst (Phase 2), one debate round or one risk-debate role (Phases 3/6), or one failed downstream agent (Phases 4/5) — never re-run completed work. If the retry also fails, STOP the entire workflow immediately, report the failed step to the user, and do NOT continue to later phases.
+14. **ONE-RETRY POLICY — SINGLE FAILURE SOURCE OF TRUTH:** Resolve role applicability before scheduling work. An unavailable optional source degrades to Not Rated and may make its conditional role inapplicable; this is not a scheduled-role failure. Every scheduled unit has at most two total attempts: the initial attempt plus exactly one retry of that unit. A successful return is insufficient without its required non-empty artifact. After a second failure, enter terminal `FAILED`, report the failed unit, and do not execute any later state. Never re-run a completed unit. This policy also covers final report persistence.
 
 ## Output Directory Contract
 
@@ -70,39 +70,58 @@ For Phase 2 Step 2 and Phases 3-7:
 3. Except for the Price Action Attribution Analyst's required Step 1 report intake, do not require every phase to read every `*_analyst.md` or data file.
 4. Treat missing optional evidence as Not Rated and disclose the gap when it affects the conclusion; do not fabricate a replacement summary.
 
+## Workflow State Machine
+
+This table is the only phase-transition contract. State is inferred from verified artifacts; do not create a workflow manifest or separate state file.
+
+| State | Required prior evidence | Work | Completion evidence |
+|---|---|---|---|
+| `START` | Resolved ticker, execution date, analysis mode, data directory, and report directory | Create the two output directories and resolve applicable roles | Paths and applicability are fixed for the run |
+| `DATA_READY` | `START` | Run data collection and validation; run segment preparation only when applicable | Non-empty decodable `data_quality`, `validated_metrics`, and `validation_report.md`; segment outputs or an allowed pre-scheduling degradation |
+| `BASE_ANALYSTS_READY` | `DATA_READY` | Start all applicable base analyst roles concurrently | Every scheduled base role file exists and is non-empty |
+| `ATTRIBUTION_READY` | `BASE_ANALYSTS_READY` | Run Price Action Attribution Analyst | `price_action_attribution_analyst.md` exists and is non-empty |
+| `DEBATE_READY` | `ATTRIBUTION_READY` | Run Bull then Bear for every configured round | `debate_history.md` contains every scheduled role/round entry |
+| `RESEARCH_READY` | `DEBATE_READY` | Run Research Manager | `research_plan.md` exists and is non-empty |
+| `TRADER_READY` | `RESEARCH_READY` | Run Trader | `trader_plan.md` exists, is non-empty, and ends with the required proposal marker |
+| `RISK_READY` | `TRADER_READY` | Run Aggressive, Conservative, then Neutral for every configured round | `risk_debate_history.md` contains every scheduled role/round entry |
+| `REPORT_WRITTEN` | `RISK_READY` | Apply the deterministic gates and persist the final report | `analysis_report.md` exists, is non-empty, and contains the required final-decision sections |
+| `COMPLETE` | `REPORT_WRITTEN` | Return the concise user-visible decision summary in the same assistant turn | Report path and decision summary are both delivered |
+
+Apply rule 14 to the current unit whenever its completion evidence is absent. `FAILED` is terminal and has no outgoing transition.
+
 ## Workflow
 
-1. **Phase 1: Data Collection & Validation** — Bash `fetch_data.py`, then read the configured `data_quality` artifact (`.toon` by default), then (HK/US only) segment setup via `prepare_segments.py`. All foreground, synchronous; wait for each to return before proceeding. Details in the Phase 1 section below (Steps 1-3).
+1. **Phase 1: Data Collection & Validation** — Run `fetch_data.py` synchronously, inspect the configured `data_quality` artifact (`.toon` by default), then perform segment setup when applicable. Wait for each required artifact before proceeding. Details are in the Phase 1 section below.
 
-2. **Phase 2: Analyst Reports** — 5 to 7 Agent calls in two steps
-   - Step 1: launch 4 to 6 base analysts in a SINGLE message, foreground (no `run_in_background`).
+2. **Phase 2: Analyst Reports** — two steps
+   - Step 1: start 4 to 6 applicable base roles concurrently, then wait for every scheduled role.
    - Options Flow Analyst runs ONLY for US-listed equities in `current_research`.
    - Segment Analyst runs ONLY in `current_research` for HK/US with `multi_segment: true` in `segments.yaml`.
    - Step 2: after all Step 1 files are verified, run one Price Action Attribution Analyst sequentially.
    - Each analyst writes directly to its assigned file under `reposrts/{TICKER}/reports/{DATE}/`; the main session only verifies the files.
 
-3. **Phase 3: Bull vs Bear Debate** — 4 Agent calls
+3. **Phase 3: Bull vs Bear Debate**
    - Sequential: one at a time (2 rounds × Bull/Bear).
 
-4. **Phase 4: Research Manager** — 1 Agent call
+4. **Phase 4: Research Manager**
    - Sequential; depends on Phase 3 output.
 
-5. **Phase 5: Trader** — 1 Agent call
+5. **Phase 5: Trader**
    - Sequential; depends on Phase 4 output.
 
-6. **Phase 6: Risk Debate** — 6 Agent calls
+6. **Phase 6: Risk Debate**
    - Sequential: one at a time (3 roles × 2 rounds).
 
-7. **Phase 7: Portfolio Manager + Final Report** — Main session synthesis + MANDATORY Write
-   - NOT an Agent call; synthesized directly in the main session.
-   - **MUST produce TWO outputs in ONE batch: Write tool (analysis_report.md) + decision text.**
-   - Workflow is complete ONLY when both are done.
+7. **Phase 7: Portfolio Manager + Final Report** — Main-session synthesis and report persistence
+   - Do not delegate the final synthesis to another role.
+   - Persist and verify `analysis_report.md`, then return the decision summary in the same assistant turn.
+   - Workflow is complete only when both deliverables succeed.
 
 ## Phase 1: Data Collection & Validation
 
 Three sequential steps, all foreground and synchronous (wait for each to return before proceeding):
 
-**Step 1: Fetch data.** Run synchronously via Bash:
+**Step 1: Fetch data.** Run synchronously using the runtime's command-execution capability:
 
 ```bash
 python skills/stock-analysis-debate/tools/fetch_data.py <TICKER> <DATE> --ticker-data-dir skills/stock-analysis-debate/reposrts/<TICKER>/data
@@ -114,7 +133,7 @@ For a historical replay, keep `<DATE>` as today's execution date and pass the se
 python skills/stock-analysis-debate/tools/fetch_data.py <TICKER> <DATE> --analysis-mode historical_replay --as-of-date <HISTORICAL_DATE> --ticker-data-dir skills/stock-analysis-debate/reposrts/<TICKER>/data
 ```
 
-**Failure retry**: If the fetch fails, retry the exact command once. If the retry also fails, STOP the workflow and report the failure to the user (rule 14).
+On missing completion evidence, apply rule 14 to this data-fetch unit.
 
 **First-time setup** (install dependencies if not present):
 ```bash
@@ -190,7 +209,7 @@ In `historical_replay`, the tool writes explicit Not Rated placeholders instead 
      python skills/stock-analysis-debate/tools/prepare_segments.py {TICKER} {DATE} --ticker-data-dir skills/stock-analysis-debate/reposrts/{TICKER}/data --gen-yaml
      ```
 2. Read `segments.yaml`. Record `multi_segment` for Phase 2 branching.
-3. **Failure retry**: If Step 3 fails, retry the failed `prepare_segments.py` command once. If the retry also fails, STOP the workflow and report the failure to the user (rule 14).
+3. On missing completion evidence, apply rule 14 to this segment-preparation unit.
 4. Proceed immediately to Phase 2.
 
 See `prompts/segment_analyst.md` for data interpretation rules and `prepare_segments.py` plus `longbridge_fetcher.py` for tool-level processing logic.
@@ -199,9 +218,9 @@ See `prompts/segment_analyst.md` for data interpretation rules and `prepare_segm
 
 ## Phase 2: Analyst Reports (Two Steps, Direct File Output)
 
-**CRITICAL**: Step 1 launches the applicable base analysts (4 base analysts, plus the conditional Options Flow Analyst [US current research only] and Segment Analyst [HK/US current research + multi_segment only]) in a SINGLE message as parallel Agent tool calls. Do NOT use `run_in_background` — use foreground calls so results return to the main conversation. Wait for all Step 1 agents before starting Step 2. Step 2 is one sequential Price Action Attribution Analyst call and must never run in parallel with Step 1.
+**CRITICAL**: Start the applicable base analysts concurrently (4 base analysts, plus the conditional Options Flow Analyst [US current research only] and Segment Analyst [HK/US current research + multi_segment only]). Wait for all scheduled roles and verify their artifacts before starting Step 2. Step 2 is one sequential Price Action Attribution Analyst task and must never overlap Step 1.
 
-**IMPORTANT — Main session must NOT read prompt files or data files before dispatching analysts.** Each sub-agent reads its own prompt file and data files via the Read tool — the main session reading them too is pure context waste. The main session only tells each agent:
+**IMPORTANT — Main session must NOT preload prompt or data-file contents before dispatching analysts.** Each delegated role reads its own assigned files using the Read tool. The main session provides only:
 - Full absolute file paths to: its prompt file + all required data files
 - One unique absolute output path under `reposrts/{TICKER}/reports/{DATE}/`
 - Instrument context: ticker, market, analysis mode, execution date, analysis timestamp, quote currency, financial currency, verified FX status, and as-of price
@@ -239,7 +258,7 @@ Launch Options Flow Analyst IN PARALLEL with the other 4 only when the market is
 
 Launch Segment Analyst IN PARALLEL with the other analysts only in `current_research` when `segments.yaml` has `multi_segment: true`. Otherwise run the applicable analysts (current US: 5 including Options Flow; current HK: 4; historical replay: 4; CN: 4) as above.
 
-**After all Step 1 agents return**: Verify that every expected Step 1 output exists and is non-empty. Do not read or combine successful reports in the main session. If an analyst failed or its output file is missing/empty, retry only that analyst once with the same output path. If the retry also fails, STOP the entire workflow immediately and report the failed analyst to the user (rule 14); do not create a synthetic analyst report and do not continue to Step 2.
+**After all Step 1 roles settle**: Verify that every scheduled output exists and is non-empty. Do not read or combine successful reports in the main session. On missing completion evidence, apply rule 14 to only that role; never create a synthetic analyst report.
 
 ### Step 2 — Price Action Attribution Analyst (mandatory, sequential)
 
@@ -249,7 +268,7 @@ Run only after every Step 1 output has been verified.
 
 Provide the absolute prompt path, report directory, data directory, output path, instrument context, Phase 1 quality findings, and the list of failed/missing Step 1 roles. The analyst must read all available Step 1 reports, verify only its material claims against raw artifacts, rank competing hypotheses, and produce conditional outlooks without issuing a rating, target price, position size, or transaction recommendation.
 
-After it returns, verify `price_action_attribution_analyst.md` exists and is non-empty. Retry the attribution analyst once if the file is missing/empty. If the retry also fails, STOP the entire workflow immediately and report the failure to the user (rule 14); do NOT proceed to Phase 3 and do NOT ask the user.
+After it returns, verify `price_action_attribution_analyst.md` exists and is non-empty. On missing completion evidence, apply rule 14 to the attribution unit.
 
 ## Debate History File Protocol
 
@@ -275,7 +294,7 @@ For each agent, provide: role, round N of total, debate history file path, repor
 Debate history file: `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/debate_history.md`
 Supporting evidence: read individual reports and raw data from the report/data directories only as needed
 
-**Failure retry**: If a debate agent fails or does not append its argument to the debate history file, retry only that agent (same role and round) once. If the retry also fails, STOP the entire workflow immediately and report the failed round to the user (rule 14).
+On missing completion evidence for a role/round entry, apply rule 14 to only that debate unit.
 
 After Phase 3, proceed immediately to Phase 4.
 
@@ -285,8 +304,8 @@ After Phase 3, proceed immediately to Phase 4.
 - **Prompt**: `skills/stock-analysis-debate/prompts/research_manager.md`
 - **Context in prompt**: Full absolute paths to `debate_history.md`, the report directory, the data directory, `prompts/data_policy.md`, `prompts/portfolio_policy.md`, the configured `validated_metrics` artifact, and `validation_report.md`; plus the resolved `portfolio_mode` and only the user-supplied portfolio fields needed by the policy. The agent must read both policies before `debate_history.md` and `price_action_attribution_analyst.md`, adjudicate the debate's challenges to the primary attribution/priced-in assessment, then read only the additional reports/data needed to judge specific claims. Identify any missing analyst role. Include instrument context (market type, quote currency, financial currency, ticker, e.g. "601988.SH is a CN stock on Shanghai Stock Exchange, quote/financial currency: CNY, ±10% price limit, T+1 settlement").
 - **Task**: Judge the debate. Make definitive Buy/Sell/Hold decision. Produce investment plan with rationale + strategic actions.
-- **After it returns**: The agent writes its complete plan directly to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/research_plan.md`, verifies the file exists and is non-empty, and returns only a short confirmation/summary — never the full plan.
-- **Failure retry**: If the Research Manager fails or `research_plan.md` is missing/empty, retry the agent once. If the retry also fails, STOP the entire workflow immediately and report the failure to the user (rule 14).
+- **After it returns**: The agent writes its complete plan directly to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/research_plan.md`, and returns only a short confirmation/summary — never the full plan.
+- On missing completion evidence, apply rule 14 to the Research Manager unit.
 - Immediately go to Phase 5.
 
 ## Phase 5: Trader
@@ -296,8 +315,8 @@ After Phase 3, proceed immediately to Phase 4.
 - **Context in prompt**: Full absolute paths to `research_plan.md`, the report directory, the data directory, `prompts/data_policy.md`, `prompts/portfolio_policy.md`, the configured `validated_metrics` artifact, and `validation_report.md`; plus the resolved `portfolio_mode` and applicable user-supplied portfolio fields. The agent must apply both policies and the deterministic gates before reading `research_plan.md`, then read only the individual reports/data needed to produce and verify the trade plan. Include instrument context.
 - Must end output with: `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`
 - In `research_only`, require the exact Position Size: Not Rated statement and prohibit weights, capital, and shares. In an allowed numeric mode, require the Trader to derive every applicable cap from `portfolio_policy.md`, identify the binding minimum, and verify staged incremental/cumulative weights against it.
-- **After it returns**: The agent writes its complete proposal directly to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/trader_plan.md`, verifies the file exists and is non-empty, and returns only a short confirmation/summary — never the full proposal. The proposal must still end with `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`.
-- **Failure retry**: If the Trader fails or `trader_plan.md` is missing/empty, retry the agent once. If the retry also fails, STOP the entire workflow immediately and report the failure to the user (rule 14).
+- **After it returns**: The agent writes its complete proposal directly to `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/trader_plan.md`, and returns only a short confirmation/summary — never the full proposal. The proposal must still end with `FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**`.
+- On missing completion evidence, apply rule 14 to the Trader unit.
 - Immediately go to Phase 6.
 
 ---
@@ -314,15 +333,15 @@ Risk debate history file: `skills/stock-analysis-debate/reposrts/{TICKER}/report
 Trader plan: `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/trader_plan.md`
 Supporting evidence: read individual reports and raw data from the report/data directories only as needed
 
-**Failure retry**: If a risk debator fails or does not append its assessment to the risk debate history file, retry only that agent (same role and round) once. If the retry also fails, STOP the entire workflow immediately and report the failed round to the user (rule 14).
+On missing completion evidence for a role/round entry, apply rule 14 to only that risk-debate unit.
 
 After Phase 6, proceed immediately to Phase 7.
 
 ## Phase 7: Portfolio Manager — Final Decision + Report File (main session)
 
-**This phase runs in the main session, NOT as a sub-agent.** Numeric validation has already completed deterministically in Phase 1; do not launch an LLM verifier.
+**This phase runs in the main session, not as a delegated role.** Numeric validation has already completed deterministically in Phase 1; do not launch an LLM verifier.
 
-**The phase produces TWO outputs. They MUST be called in the SAME tool call batch. Never split them across messages.**
+**This phase produces two deliverables in the same assistant turn: first the persisted, verified report; then the user-visible summary.**
 
 ---
 
@@ -371,9 +390,9 @@ Sections 2-8 must carry the specific numbers and evidence they derive from — s
 
 **This is the mandatory deliverable. The analysis is incomplete until the file is on disk.**
 
-In ONE continuous sequence (Write, then text — same turn), do:
+In one assistant turn, perform this ordered sequence:
 
-**Output A — Write tool**: Call Write to create `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/analysis_report.md` with ALL sections populated. The main session writes the report summaries ITSELF (based on Step 1's Gather) — natural-language summaries, one short paragraph or bullet list per section. **Final Decision is FIRST.** Structure (fixed):
+**Output A — persisted report**: Use the Write tool to create `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/analysis_report.md` with ALL sections populated, then verify it exists and is non-empty. The main session writes the report summaries itself (based on Step 1's Gather) — natural-language summaries, one short paragraph or bullet list per section. **Final Decision is FIRST.** Structure (fixed):
 
 ```
 # Stock Analysis Report: {TICKER} ({DATE})
@@ -421,7 +440,7 @@ Full proposal: [trader_plan.md](./trader_plan.md)
 Full debate: [risk_debate_history.md](./risk_debate_history.md)
 ```
 
-**Output B — Text**: A concise summary of the rating, price target, and key rationale so the user sees the result immediately.
+**Output B — user-visible text**: Only after Output A is verified, return a concise summary of the rating, price target, and key rationale.
 
 After both outputs complete, confirm: "The analysis report has been saved to skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/analysis_report.md"
 
@@ -429,9 +448,7 @@ After both outputs complete, confirm: "The analysis report has been saved to ski
 
 ---
 
-**Guardrail**: If you catch yourself about to output the decision text without also calling Write on `analysis_report.md`, STOP. You are about to make the #1 deliverable mistake. Add the Write call, then send both together. A text-only output is not a deliverable — it disappears when context scrolls. The file is the permanent record.
-
-**If any analyst agent failed or returned no content**, note it in the report but do NOT stop.
+**Guardrail**: If `analysis_report.md` has not been persisted and verified, do not send the success summary. Apply rule 14 to the report-persistence unit; a second failure enters terminal `FAILED`.
 
 ## Market-Specific Handling
 

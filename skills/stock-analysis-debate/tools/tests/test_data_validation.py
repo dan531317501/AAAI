@@ -1,8 +1,10 @@
+import pandas as pd
 import pytest
 
 from data_validation import (
     build_validated_metrics,
     fetch_fx_rate,
+    fetch_provider_snapshot,
     render_validation_report,
 )
 
@@ -39,6 +41,35 @@ def _audit():
         "ttm_periods_contiguous": True,
         "valuation_currency_status": "verified",
     }
+
+
+def test_provider_snapshot_does_not_infer_financial_currency_from_estimates(monkeypatch):
+    class FakeTicker:
+        info = {"currency": "HKD", "financialCurrency": None}
+        history_metadata = {"currency": "HKD"}
+
+        def get_earnings_estimate(self):
+            return pd.DataFrame([{"currency": "CNY"}])
+
+        def get_revenue_estimate(self):
+            return pd.DataFrame()
+
+        def get_eps_trend(self):
+            return pd.DataFrame()
+
+        def get_eps_revisions(self):
+            return pd.DataFrame()
+
+        def get_growth_estimates(self):
+            return pd.DataFrame()
+
+    monkeypatch.setattr("data_validation.yf.Ticker", lambda symbol: FakeTicker())
+
+    snapshot = fetch_provider_snapshot("01810.HK", "2026-08-07")
+
+    assert snapshot["quote_currency"] == "HKD"
+    assert snapshot["financial_currency"] is None
+    assert snapshot["currency_evidence"]["estimate_currencies"] == ["CNY"]
 
 
 def test_validated_contract_separates_actual_growth_from_consensus():
@@ -168,13 +199,32 @@ def test_provider_statement_mismatch_is_disclosed_and_blocks_target_confidence()
         sankey_data=None,
     )
 
-    assert contract["gates"]["allow_exact_pe"] is True
+    assert contract["gates"]["allow_exact_pe"] is False
     assert contract["gates"]["allow_target_price"] is False
     assert contract["gates"]["allow_strong_rating"] is False
     assert "provider_vs_statement_ttm_valuation" in contract["quality"]["conflicting_metrics"]
     assert "provider_statement_ttm_conflict" in contract["gate_details"]["allow_target_price"]["blocking_reasons"]
     report = render_validation_report(contract)
     assert "provider_statement_ttm_conflict" in report
+
+
+def test_share_count_basis_conflict_closes_all_exact_valuation_methods():
+    audit = _audit()
+    audit["share_count_basis_status"] = "potential_mismatch"
+    contract = build_validated_metrics(
+        ticker="BABA", market="US", analysis_date="2026-08-04",
+        snapshot=_snapshot(),
+        fx={"status": "verified", "rate": 1.0},
+        audit_metrics=audit,
+        official_filings={"status": "partial", "provider": "SEC EDGAR", "records": []},
+        sankey_data=None,
+    )
+
+    assert contract["gates"]["allow_exact_pe"] is False
+    assert contract["gates"]["allow_exact_pb"] is False
+    assert contract["gates"]["allow_exact_ev_to_ebitda"] is False
+    assert contract["gates"]["allow_exact_valuation"] is False
+    assert "share_count_basis_mismatch" in contract["quality"]["conflicting_metrics"]
 
 
 def test_missing_fx_blocks_all_exact_cross_currency_valuation_values():

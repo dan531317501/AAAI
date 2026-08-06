@@ -88,9 +88,10 @@ def fetch_provider_snapshot(symbol: str, analysis_date: str) -> dict[str, Any]:
         if record.get("currency")
     })
     quote_currency = info.get("currency") or history_metadata.get("currency")
-    financial_currency = info.get("financialCurrency") or (
-        estimate_currencies[0] if len(estimate_currencies) == 1 else None
-    )
+    # Analyst-estimate tables may use a presentation/modeling currency that
+    # differs from the financial statements. Never promote it to the
+    # statement currency; missing explicit metadata must fail closed.
+    financial_currency = info.get("financialCurrency")
     return {
         "symbol": symbol,
         "analysis_date": analysis_date,
@@ -369,6 +370,9 @@ def build_validated_metrics(
     )
     reconciliation_status = audit_metrics.get("ttm_valuation_reconciliation_status")
     reconciliation_conflict = reconciliation_status == "mismatch"
+    share_count_conflict = (
+        audit_metrics.get("share_count_basis_status") == "potential_mismatch"
+    )
     metrics = [
         _metric(
             "latest_quarter_revenue_growth_yoy", info.get("revenueGrowth"),
@@ -398,14 +402,17 @@ def build_validated_metrics(
             period="TTM", provider="local_audit",
             source_field="income_stmt.Diluted EPS",
             status=(
-                "verified" if audit_metrics.get("ttm_valuation_reconciliation_status")
-                in ("verified", "statement_only") else (
-                    "single_source" if reconciliation_conflict else "unavailable"
+                "conflict"
+                if reconciliation_conflict or share_count_conflict
+                else (
+                    "verified" if audit_metrics.get("ttm_valuation_reconciliation_status")
+                    in ("verified", "statement_only") else "unavailable"
                 )
             ),
             allowed_uses=["valuation", "target_price_input"],
             quality_flags=(
                 (["provider_statement_mismatch"] if reconciliation_conflict else [])
+                + (["share_count_basis_mismatch"] if share_count_conflict else [])
                 + ([] if audit_metrics.get("ttm_periods_contiguous") else ["non_contiguous_quarters"])
             ),
         ),
@@ -416,23 +423,34 @@ def build_validated_metrics(
             status=(
                 "unavailable"
                 if audit_metrics.get("valuation_currency_status") != "verified"
-                else ("single_source" if reconciliation_conflict else "verified")
+                else ("conflict" if reconciliation_conflict or share_count_conflict else "verified")
             ),
             allowed_uses=["valuation", "target_price_input"],
-            quality_flags=["provider_statement_mismatch"] if reconciliation_conflict else [],
+            quality_flags=(
+                (["provider_statement_mismatch"] if reconciliation_conflict else [])
+                + (["share_count_basis_mismatch"] if share_count_conflict else [])
+            ),
         ),
         _metric(
             "point_in_time_pb", audit_metrics.get("price_to_book"),
             unit="multiple", currency=None, period=audit_metrics.get("price_date"),
             provider="local_audit", source_field="converted_price / book_value_per_share",
-            status="verified" if audit_metrics.get("valuation_currency_status") == "verified" else "unavailable",
+            status=(
+                "unavailable"
+                if audit_metrics.get("valuation_currency_status") != "verified"
+                else ("conflict" if share_count_conflict else "verified")
+            ),
             allowed_uses=["valuation"],
         ),
         _metric(
             "point_in_time_ev_to_ebitda", audit_metrics.get("ev_to_provider_ttm_ebitda"),
             unit="multiple", currency=None, period=audit_metrics.get("price_date"),
             provider="local_audit", source_field="converted_enterprise_value / provider_ttm_ebitda",
-            status="verified" if audit_metrics.get("valuation_currency_status") == "verified" else "unavailable",
+            status=(
+                "unavailable"
+                if audit_metrics.get("valuation_currency_status") != "verified"
+                else ("conflict" if share_count_conflict else "verified")
+            ),
             allowed_uses=["valuation"],
         ),
     ]
@@ -485,6 +503,8 @@ def build_validated_metrics(
         exact_pe_reasons.append("ttm_quarters_not_contiguous")
     if not _positive_metric_ready(metrics_by_id.get("point_in_time_pe")):
         exact_pe_reasons.append("point_in_time_pe_unavailable")
+    if share_count_conflict:
+        exact_pe_reasons.append("share_count_basis_mismatch")
     exact_pe_ready = not exact_pe_reasons
 
     exact_pb_reasons: list[str] = []
@@ -494,6 +514,8 @@ def build_validated_metrics(
         exact_pb_reasons.append("valuation_currency_unverified")
     if not _positive_metric_ready(metrics_by_id.get("point_in_time_pb")):
         exact_pb_reasons.append("point_in_time_pb_unavailable")
+    if share_count_conflict:
+        exact_pb_reasons.append("share_count_basis_mismatch")
     exact_pb_ready = not exact_pb_reasons
 
     exact_ev_reasons: list[str] = []
@@ -503,12 +525,16 @@ def build_validated_metrics(
         exact_ev_reasons.append("valuation_currency_unverified")
     if not _positive_metric_ready(metrics_by_id.get("point_in_time_ev_to_ebitda")):
         exact_ev_reasons.append("point_in_time_ev_to_ebitda_unavailable")
+    if share_count_conflict:
+        exact_ev_reasons.append("share_count_basis_mismatch")
     exact_ev_ready = not exact_ev_reasons
 
     valuation_ready = exact_pe_ready or exact_pb_ready or exact_ev_ready
     conflicts = [m["metric_id"] for m in metrics if m["status"] == "conflict"]
     if reconciliation_conflict:
         conflicts.append("provider_vs_statement_ttm_valuation")
+    if share_count_conflict:
+        conflicts.append("share_count_basis_mismatch")
 
     target_required_metric_ids = [
         "current_price",
@@ -523,6 +549,8 @@ def build_validated_metrics(
     target_reasons = list(exact_pe_reasons) + list(consensus_blocking_reasons)
     if reconciliation_conflict:
         target_reasons.append("provider_statement_ttm_conflict")
+    if share_count_conflict:
+        target_reasons.append("share_count_basis_mismatch")
     for metric_id in target_required_metric_ids:
         metric = metrics_by_id.get(metric_id)
         if not metric or "target_price_input" not in metric.get("allowed_uses", []):

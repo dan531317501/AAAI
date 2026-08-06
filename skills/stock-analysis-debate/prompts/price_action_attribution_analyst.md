@@ -147,5 +147,4 @@ End with:
 ## File Output Protocol
 
 1. Write the complete report directly to the assigned `price_action_attribution_analyst.md` output path.
-2. Verify that the file exists and is non-empty.
-3. Return only one line containing the role, output path, and write confirmation. Do not return the report body to the orchestrator.
+2. Return only one line containing the role, output path, and write confirmation. Do not return the report body to the orchestrator.

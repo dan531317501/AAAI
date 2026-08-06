@@ -17,16 +17,65 @@ def test_skill_runs_attribution_only_after_step_1_and_before_debate():
 
     assert step_1 < step_2 < phase_3
     assert "price_action_attribution_analyst.md` exists and is non-empty" in skill
-    assert "must never run in parallel with Step 1" in skill
+    assert "must never overlap Step 1" in skill
 
 
 def test_skill_allows_exactly_one_retry_then_stops():
     skill = _read("SKILL.md")
 
-    assert "ONE-RETRY POLICY" in skill
-    assert "retry only that analyst once" in skill
-    assert "retry only that agent (same role and round) once" in skill
-    assert "If the retry also fails, STOP the entire workflow immediately" in skill
+    assert "ONE-RETRY POLICY — SINGLE FAILURE SOURCE OF TRUTH" in skill
+    assert "at most two total attempts" in skill
+    assert "the initial attempt plus exactly one retry of that unit" in skill
+    assert "A successful return is insufficient without its required non-empty artifact" in skill
+    assert "enter terminal `FAILED`" in skill
+    assert "This policy also covers final report persistence" in skill
+    assert "note it in the report but do NOT stop" not in skill
+
+
+def test_base_analyst_prompts_use_persisted_inputs_without_provider_calls():
+    fundamentals = _read("prompts/fundamentals_analyst.md")
+    market = _read("prompts/market_analyst.md")
+
+    for forbidden_name in (
+        "get_fundamentals",
+        "get_balance_sheet",
+        "get_cashflow",
+        "get_income_statement",
+    ):
+        assert forbidden_name not in fundamentals
+    for forbidden_name in ("get_stock_data", "get_indicators"):
+        assert forbidden_name not in market
+    assert "Run independently from the Segment Analyst" in fundamentals
+    assert "do not call provider-data tools or refetch these inputs" in fundamentals
+    assert "do not call market-data or indicator tools" in market
+
+
+def test_workflow_contract_avoids_batch_syntax_and_uses_explicit_file_tools():
+    skill = _read("SKILL.md")
+    prompts = "\n".join(
+        _read(relative_path)
+        for relative_path in (
+            "prompts/bull_researcher.md",
+            "prompts/bear_researcher.md",
+            "prompts/aggressive_debator.md",
+            "prompts/conservative_debator.md",
+            "prompts/neutral_debator.md",
+        )
+    )
+
+    for runtime_specific_text in (
+        "SINGLE message",
+        "SAME batch",
+        "run_in_background",
+        "Agent tool",
+        "Bash tool",
+    ):
+        assert runtime_specific_text not in skill
+        assert runtime_specific_text not in prompts
+    assert "using the Read tool" in skill
+    assert "Use the Write tool" in skill
+    assert "using the Read tool" in prompts
+    assert "using the Write tool" in prompts
 
 
 def test_skill_passes_conditional_evidence_as_full_paths():

@@ -57,9 +57,9 @@ Reflections from similar situations and lessons learned: {past_memory_str}
   ---
   ```
 - If the file doesn't exist: create it with just your entry.
-- If the file exists: read the old content first, then write old content + your new entry (this is how you "append").
+- If the file exists: write the old content you read in Step 1, followed by your new entry.
 - Do NOT edit, truncate, or summarize your response OR previous entries. Write everything verbatim.
 
 **Step 4 — Return protocol (MANDATORY — do NOT skip):**
-- After successfully appending your COMPLETE argument to the debate history file, your FINAL response to the orchestrator must contain ONLY a 2-3 line status confirmation: your role, the round, the debate history file path, and confirmation that the full argument was appended verbatim.
+- After successfully appending your COMPLETE argument to the debate history file, your FINAL response to the orchestrator must contain ONLY a 2-3 line status confirmation: your role, the round, the debate history file path, and confirmation that the full argument was written to the file.
 - Do NOT repeat your argument content in your final response — it is already in the file. The orchestrator and the next debater read the file themselves.

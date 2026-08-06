@@ -95,6 +95,81 @@ def test_parse_range_klines_uses_market_timezone_for_a_share_date():
     assert parse_range_klines(payload, "CN")[0]["Date"] == "2026-07-30"
 
 
+def test_parse_range_klines_converts_cn_lots_to_shares():
+    payload = {
+        "code": 0,
+        "data": {
+            "klines": [{
+                "timestamp": "1785340800",
+                "open": "10",
+                "high": "11",
+                "low": "9",
+                "close": "10",
+                "amount": "100",
+                "balance": "100000",
+            }]
+        },
+    }
+
+    assert parse_range_klines(payload, "CN")[0]["Volume"] == 10000.0
+
+
+def test_parse_range_klines_preserves_cn_share_volume():
+    payload = {
+        "code": 0,
+        "data": {
+            "klines": [{
+                "timestamp": "1785340800",
+                "open": "10",
+                "high": "11",
+                "low": "9",
+                "close": "10",
+                "amount": "10000",
+                "balance": "100000",
+            }]
+        },
+    }
+
+    assert parse_range_klines(payload, "CN")[0]["Volume"] == 10000.0
+
+
+def test_parse_range_klines_marks_ambiguous_cn_volume_unavailable():
+    payload = {
+        "code": 0,
+        "data": {
+            "klines": [{
+                "timestamp": "1785340800",
+                "open": "10",
+                "high": "11",
+                "low": "9",
+                "close": "10",
+                "amount": "100",
+            }]
+        },
+    }
+
+    assert parse_range_klines(payload, "CN")[0]["Volume"] is None
+
+
+def test_parse_range_klines_does_not_scale_hk_volume():
+    payload = {
+        "code": 0,
+        "data": {
+            "klines": [{
+                "timestamp": "1785340800",
+                "open": "10",
+                "high": "11",
+                "low": "9",
+                "close": "10",
+                "amount": "100",
+                "balance": "100000",
+            }]
+        },
+    }
+
+    assert parse_range_klines(payload, "HK")[0]["Volume"] == 100.0
+
+
 def test_fetch_range_klines_sends_only_required_header(monkeypatch):
     captured = {}
 
@@ -198,6 +273,28 @@ def test_longbridge_supplies_prices_when_yfinance_fails(monkeypatch):
 
     assert list(data["Close"]) == [29.0, 30.0]
     assert source == "Longbridge fallback"
+
+
+def test_cn_fallback_marks_ambiguous_volume_not_rated(monkeypatch):
+    payload = {
+        "code": 0,
+        "data": {"klines": [_kline("2026-07-29", 29), _kline("2026-07-30", 30)]},
+    }
+
+    class Ticker:
+        def history(self, start, end):
+            raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(fetch_data.yf, "Ticker", lambda ticker: Ticker())
+    monkeypatch.setattr(fetch_data, "retry", lambda func, **kwargs: func())
+    monkeypatch.setattr(fetch_data, "fetch_range_klines", lambda *args: payload)
+
+    data, source = fetch_data.fetch_price_data(
+        "600519.SH", "2026-07-01", "2026-07-30", "CN"
+    )
+
+    assert data["Volume"].isna().all()
+    assert "CN Longbridge volume Not Rated" in source
 
 
 def test_weekend_quality_accepts_previous_friday_as_latest_trading_day():

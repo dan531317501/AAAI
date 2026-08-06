@@ -6,6 +6,24 @@
 
 - [AI 知识库全链路智能根因分析架构方案](../GolandProjects/afra-agent/AI知识库全链路智能根因分析架构方案.md)：面向线上告警驱动 RCA，覆盖代码/QA/API 知识加工、混合检索、实时证据验证、Agent 编排、安全治理、评测与渐进式落地路线。
 
+## 长桥 OpenAPI
+
+- [长桥 OpenAPI Python 完整参考](docs/longbridge-openapi-python.md)：按 Quote、Fundamental、Market、News & Contents、Screener、Trade、Account、AI Agent 分类，进一步按免费/基础、收费/订阅和条件权限整理，包含参数、响应结构、权限边界、官方 Python 同步/异步示例及 HTTP/SSE 示例。
+- [Longbridge REST Python Client](longbridge_rest_client/)：官方 HTTP REST OpenAPI 的 OAuth 2.0 PKCE Client，包含 29 个 REST operation、英文 request/response 字段模型、异常处理、Token 缓存和自动刷新。
+- [Longbridge REST API Endpoint Index](docs/longbridge-api-endpoints.md)：只列出英文 endpoint 与 API 作用。
+
+### REST Client quick start
+
+```bash
+python -m pip install -e .
+export LONGBRIDGE_OAUTH_CLIENT_ID="your-client-id"
+export LONGBRIDGE_OAUTH_CLIENT_SECRET="your-client-secret"  # public clients may omit this
+export LONGBRIDGE_OAUTH_REDIRECT_URI="http://127.0.0.1:8765/callback"
+python -m longbridge_rest_client.example
+```
+
+首次调用会打开浏览器完成 OAuth 2.0 PKCE 授权，Token 默认缓存到 `~/.longbridge/openapi/tokens/`，后续调用会自动复用或刷新 Token。实时行情、盘口、经纪队列和逐笔成交属于独立 WebSocket/TCP 行情协议，不在 HTTP REST Client 范围内。
+
 ## skills/translate-webpage-to-chinese
 
 网页中文化 skill。输入公开网页 URL 或已保存的 HTML，抽取可翻译文本并生成简体中文 HTML；保留原始 DOM、CSS、图片、链接和响应式布局，代码与专业术语可保持原文。
@@ -21,6 +39,8 @@
 默认以翻译效率为先，不执行浏览器截图对比或多视口验收；仅在直抓失败或发现明确问题时使用浏览器排查。
 
 用法与故障降级策略参考 `skills/translate-webpage-to-chinese/SKILL.md`。
+
+Anthropic Engineering 中文入口页为 `outputs/anthropic-engineering-zh-CN/index.zh-CN.html`，文章入口使用相对路径 `./articles/<slug>/index.zh-CN.html`，可直接用 Chrome 打开。
 
 ## skills/stock-analysis-debate
 
@@ -42,6 +62,8 @@ python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ana
 
 编排采用 context 卫生原则：辩论/风险 Agent 按文件 I/O 协议自写历史文件并仅返回状态确认或精简摘要；主会话只传递文件路径、不向 Agent prompt 粘贴文件内容；主会话 context 仅保留编排与决策所需内容，避免全文重复驻留。
 
+工作流采用产物驱动的状态机，不额外创建 manifest：`START → DATA_READY → BASE_ANALYSTS_READY → ATTRIBUTION_READY → DEBATE_READY → RESEARCH_READY → TRADER_READY → RISK_READY → REPORT_WRITTEN → COMPLETE`。每个已调度单元最多执行两次，返回成功但缺少非空产物仍算失败，第二次失败即进入终态 `FAILED` 并停止后续阶段；可选数据源在调度前不可用时则降级为 Not Rated，不计作角色执行失败。最终报告须先写入并验证，再在同一轮向用户返回摘要。
+
 最终 `analysis_report.md` 以 **Final Decision 置顶**，并单列价格行为归因章节。所有币种识别、连续季度校验、TTM/估值运算、预测表语义、重试降级和数据门禁都在工具层完成，默认输出 `validated_metrics.toon` 与 `validation_report.md`；Phase 7 优先引用数据目录中已有的工具派生值，不用 LLM 重算收益率、增长率、TTM、利润率、估值倍数或技术指标，仅对目标价、仓位等工作流明确要求的决策公式展示可追溯输入和计算过程。
 
 ### 数据完整性、币种与官方披露降级
@@ -58,8 +80,12 @@ python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ana
 - **组合适用性门禁**：`research_only`、`model_portfolio`、`portfolio_context_complete` 三种模式由 `prompts/portfolio_policy.md` 统一约束；任何必需字段缺失都会降级为 `research_only`。数值仓位必须展示所有约束、风险预算公式及最终绑定项，不能使用默认百分比或多 Agent 投票结果。
 - **官方披露降级**：港股发现 HKEXnews 财报公告，美股接 SEC EDGAR submissions 与 Company Facts XBRL，A 股接 CNINFO 法定披露。只有结构化字段进入数值管线；未结构化 PDF 仅作为证据链接，禁止 LLM 从中抽数。调用 SEC 时建议按其自动访问规范设置 `SEC_USER_AGENT="组织名 contact@example.com"`；未配置或被拒绝时显式降级，不伪造联系信息。
 - **长桥口径边界**：Longbridge 桑基币种标记为 `translated_only`。没有原始报告币种和换算汇率时，只能用于分部构成背景，不能作为官方经营增长或跨币种估值依据。
+- **估值币种 fail-closed**：分析师预期表的币种不能推断财报记账币种；报价币种、财报币种或 dated FX 缺失时，P/E、P/B、市场市值、EV 和 EV/EBITDA 均输出 `N/A`，审计状态为 `partial`。
+- **TTM/股数冲突 fail-closed**：Provider 与报表 TTM 不一致，或普通股数与摊薄平均股数出现明显倍数差异时，只保留审计追溯值，不生成 Preferred TTM 估值，也不猜测 ADR/ADS 换算比例。
 
 **数据源**：yfinance（OHLCV、大盘/行业代理、历史财报预期差、评级行动、基本面/财报/港股新闻）、长桥证券 API（A/H/美股最新日 K 兜底、HK/US 分部收入）、stockstats（技术指标）、新浪财经（CN 新闻 + HK 降级备用，翻页抓全）、东方财富（CN 公告）。
+
+Prediction Markets 按话题独立抓取；网络失败、无效 JSON 或响应结构不可用时，仅将对应话题降级为 `Not Rated`，不影响其他话题和主数据流水线，非预期程序错误仍显式失败。
 
 ### 价格行为归因
 
@@ -86,6 +112,7 @@ python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ana
 
 - OHLCV 优先使用 yfinance；若数据未覆盖分析日当天或此前最近一个交易日，则调用长桥日 K API 补齐缺失交易日。
 - 支持沪深 A 股、港股和美股代码；同一交易日已有 yfinance 数据时不会被覆盖。
+- Longbridge 回补成交量按市场和成交额/收盘价自适应识别单位：A 股确认“手”后换算为股，港股/美股不做放大；单位无法确认时 Volume 标记为 `Not Rated`，避免污染 VWMA、MFI 和放量判断。
 - 长桥请求仅发送必需的 `x-app-id` Header，不携带浏览器指纹、设备 ID 或账户渠道信息。
 
 ### 多业务分部视角（仅 HK/US）

@@ -130,13 +130,12 @@ def test_parse_jina_response_raises_without_json_payload():
         _parse_jina_response("<html>blocked</html>")
 
 
-def test_request_falls_back_to_jina_proxy_when_direct_blocked(monkeypatch):
+def test_request_uses_jina_proxy_first(monkeypatch):
     calls = []
 
     def fake_get(url, params=None, timeout=None):
         calls.append(url)
-        if url.startswith("https://gamma-api.polymarket.com"):
-            raise requests.exceptions.ConnectionError("blocked")
+        assert url.startswith("https://r.jina.ai/")
         return type("Resp", (), {
             "raise_for_status": lambda self: None,
             "text": "Markdown Content:\n{\"events\":[{\"id\":\"1\"}]}",
@@ -146,12 +145,33 @@ def test_request_falls_back_to_jina_proxy_when_direct_blocked(monkeypatch):
     result = _request("public-search", {"q": "recession"})
 
     assert result == {"events": [{"id": "1"}]}
-    assert calls.count("https://gamma-api.polymarket.com/public-search") == 2
-    assert len([url for url in calls if url.startswith("https://r.jina.ai/")]) == 1
-    assert "r.jina.ai" in calls[-1]
+    assert len(calls) == 1
+    assert calls[0].startswith("https://r.jina.ai/")
+    assert "gamma-api.polymarket.com/public-search" in calls[0]
 
 
-def test_request_raises_original_error_when_proxy_also_fails(monkeypatch):
+def test_request_falls_back_to_direct_gamma_when_proxy_fails(monkeypatch):
+    calls = []
+
+    def fake_get(url, params=None, timeout=None):
+        calls.append(url)
+        if url.startswith("https://r.jina.ai/"):
+            raise requests.exceptions.ConnectionError("jina blocked")
+        return type("Resp", (), {
+            "raise_for_status": lambda self: None,
+            "json": lambda self: {"events": [{"id": "1"}]},
+        })()
+
+    monkeypatch.setattr("prediction_markets.requests.get", fake_get)
+    result = _request("public-search", {"q": "recession"})
+
+    assert result == {"events": [{"id": "1"}]}
+    assert calls[0].startswith("https://r.jina.ai/")
+    assert calls[-1].startswith("https://gamma-api.polymarket.com")
+    assert calls.count("https://gamma-api.polymarket.com/public-search") == 1
+
+
+def test_request_raises_original_error_when_both_paths_fail(monkeypatch):
     def fake_get(url, params=None, timeout=None):
         raise requests.exceptions.ConnectionError("still blocked")
 
@@ -171,16 +191,39 @@ def test_search_topic_degrades_on_network_error(monkeypatch):
     assert "not rated for this topic" in text
 
 
-def test_fetch_prediction_markets_keeps_topics_independent(monkeypatch):
-    def fake_search(topic, limit=None):
-        return f"## topic: {topic} (limit={limit})\n"
+def test_search_topic_degrades_on_invalid_provider_payload(monkeypatch):
+    def fake_request(path, params):
+        raise ValueError("provider returned invalid JSON")
 
-    monkeypatch.setattr("prediction_markets.search_topic", fake_search)
+    monkeypatch.setattr("prediction_markets._request", fake_request)
+    text = search_topic("Fed rate cut")
+
+    assert "prediction-market data unavailable: ValueError" in text
+    assert "not rated for this topic" in text
+
+
+def test_search_topic_does_not_hide_programming_errors(monkeypatch):
+    def fake_request(path, params):
+        raise RuntimeError("unexpected implementation failure")
+
+    monkeypatch.setattr("prediction_markets._request", fake_request)
+
+    with pytest.raises(RuntimeError, match="unexpected implementation failure"):
+        search_topic("Fed rate cut")
+
+
+def test_fetch_prediction_markets_keeps_topics_independent(monkeypatch):
+    def fake_request(path, params):
+        if params["q"] == "Fed rate cut":
+            raise ValueError("provider returned invalid JSON")
+        return {"events": []}
+
+    monkeypatch.setattr("prediction_markets._request", fake_request)
     text = fetch_prediction_markets()
 
-    assert "## topic: Fed rate cut (limit=6)" in text
-    assert "## topic: recession (limit=6)" in text
-    assert "## topic: US election (limit=6)" in text
+    assert 'prediction-market data unavailable: ValueError' in text
+    assert "No open prediction markets matched 'recession'" in text
+    assert "No open prediction markets matched 'US election'" in text
 
 
 def test_default_topics_are_macro_relevant():
