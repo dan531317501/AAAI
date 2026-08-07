@@ -29,7 +29,7 @@ If any required item is missing, contradictory, or only inferred, downgrade to `
 
 ## 4. `portfolio_context_complete` evidence
 
-- Cite each sizing input to the user-provided portfolio context or a current-run data artifact.
+- Cite each sizing input to the user-provided portfolio context or a Phase 2 report's `Evidence Handoff`; never reopen the data directory.
 - Do not expose unrelated personal financial details in the report; include only inputs needed to audit the sizing result.
 - A security rating remains a research view. The calculated weight is a separate portfolio-applicability result.
 

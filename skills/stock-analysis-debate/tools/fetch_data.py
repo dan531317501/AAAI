@@ -1129,7 +1129,10 @@ def fetch_cn_global_news(curr_date: str, lookback_days: int = 7) -> str:
                 expected = row.get("预期", "")
                 previous = row.get("前值", "")
                 time_str = row.get("时间", "")
-                lines.append(f"- {time_str} | {event}: 实际={actual}, 预期={expected}, 前值={previous}")
+                lines.append(
+                    f"- {time_str} | {event}: actual={actual}, "
+                    f"expected={expected}, previous={previous}"
+                )
             lines.append("")
     except Exception as e:
         lines.append(f"# Note: CN economic calendar unavailable: {e}\n")
@@ -1693,6 +1696,7 @@ def main():
         audit_metrics=audit_metrics,
         official_filings=official,
         official_structured_facts=structured_facts,
+        official_financials=official_financials,
         sankey_data=sankey_data,
         temporal_context=temporal_context,
     )

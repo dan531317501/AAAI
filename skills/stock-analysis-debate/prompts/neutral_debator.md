@@ -37,7 +37,7 @@ Last conservative argument: {current_conservative_response}
 
 **Step 1 — Before generating your argument:**
 - Read the risk debate history file at the path provided in your prompt using the Read tool.
-- Read all data files specified in your prompt (analyst reports, trader plan, etc.).
+- Read only the report files and prior-phase artifacts specified in your prompt.
 - If the risk debate history file doesn't exist yet (Round 1), note this — you will create it in Step 3.
 
 **Step 2 — Generate your argument:** Write a complete, concise risk assessment argument as specified above.

@@ -1,4 +1,10 @@
+import sys
+from types import SimpleNamespace
+
+import pandas as pd
 import pytest
+
+from fetch_data import fetch_cn_global_news
 
 from macro_data import (
     DEFAULT_INDICATORS,
@@ -148,3 +154,29 @@ def test_fetch_macro_report_keeps_other_series_when_one_fails(monkeypatch):
     assert "<macro data unavailable: TestError>" in text
     assert "### fed_funds_rate" in text
     assert "OK" in text
+
+
+def test_cn_macro_data_preserves_source_text_but_uses_english_generated_labels(monkeypatch):
+    calendar = pd.DataFrame([
+        {
+            "地区": "中国",
+            "事件": "制造业采购经理指数",
+            "公布": "50.2",
+            "预期": "49.9",
+            "前值": "49.8",
+            "时间": "09:30",
+        }
+    ])
+    fake_akshare = SimpleNamespace(
+        news_economic_baidu=lambda date: calendar,
+        news_cctv=lambda date: pd.DataFrame(),
+    )
+    monkeypatch.setitem(sys.modules, "akshare", fake_akshare)
+
+    text = fetch_cn_global_news("2026-08-07")
+
+    assert "制造业采购经理指数" in text
+    assert "actual=50.2, expected=49.9, previous=49.8" in text
+    assert "实际=" not in text
+    assert "预期=" not in text
+    assert "前值=" not in text

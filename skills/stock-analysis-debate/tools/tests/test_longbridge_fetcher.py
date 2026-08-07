@@ -228,7 +228,7 @@ def test_derive_segments_yaml_from_latest_sankey_period():
         "CCPG",
         "DCAI",
     ]
-    assert "Level-1完整性=ok" in result["judgment_basis"]
+    assert "Level-1 completeness=ok" in result["judgment_basis"]
 
 
 def test_derive_segments_yaml_empty_returns_none():

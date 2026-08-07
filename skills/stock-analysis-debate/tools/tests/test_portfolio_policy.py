@@ -68,12 +68,12 @@ def test_every_position_role_reads_shared_policy_and_handles_research_only():
 def test_skill_passes_portfolio_policy_and_mode_through_decision_phases():
     skill = _read("SKILL.md")
 
-    assert "**PORTFOLIO APPLICABILITY:**" in skill
+    assert "**PORTFOLIO APPLICABILITY — GLOBAL:**" in skill
     assert NOT_RATED_POSITION in skill
     assert "`prompts/portfolio_policy.md`" in skill
     assert "| `portfolio_mode` | `research_only` |" in skill
     assert "Agent consensus never substitutes" in skill
-    assert "In `research_only`, that result contains no allocation number" in skill
+    assert skill.count("Position Size: Not Rated — complete portfolio context was not supplied.") == 1
 
 
 def test_old_percentage_fallback_and_role_vote_examples_are_removed():

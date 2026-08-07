@@ -613,13 +613,13 @@ def derive_segments_yaml(periods: list) -> dict:
             "brief": "",
         })
 
-    basis = f"长桥分部数据：{len(real_segs)}个业务分部"
+    basis = f"Longbridge segment data: {len(real_segs)} business segments"
     if other:
-        basis += f"，其他汇总项抵销前占比{other_pct:.2f}%"
+        basis += f", other aggregate items represent {other_pct:.2f}% before eliminations"
     completeness = latest.get("segment_completeness_status", "unavailable")
-    basis += f"，Level-1完整性={completeness}"
+    basis += f", Level-1 completeness={completeness}"
     if completeness == "missing":
-        basis += f"（缺口{latest.get('missing_segment_revenue', '')}）"
+        basis += f" (gap={latest.get('missing_segment_revenue', '')})"
     return {
         "multi_segment": multi,
         "judgment_basis": basis,

@@ -25,8 +25,8 @@ Read all available Phase 2 base-analyst reports from the assigned report directo
 - `news_analyst.md`
 - `social_media_analyst.md`
 - `fundamentals_analyst.md`
-- `options_flow_analyst.md` when it ran
-- `segment_analyst.md` when it ran
+- `options_flow_analyst.md` if exists
+- `segment_analyst.md` if exists
 
 Read these data artifacts:
 

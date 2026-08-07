@@ -46,7 +46,11 @@ Anthropic Engineering 中文入口页为 `outputs/anthropic-engineering-zh-CN/in
 
 多智能体辩论式股票分析 skill。编排 Market/News/Social/Fundamentals 基础分析师、Price Action Attribution（价格行为归因）分析师、Bull/Bear 辩论、风险辩论和组合经理，解释近期涨跌并产出 Buy/Hold/Sell 建议。
 
-每次分析严格分离数据与报告：原始/派生数据写入 `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`，分析报告和流程产物写入 `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/`。报告日期固定使用本次执行日期，行情截止日期单独披露；每次执行只在报告目录生成一份 `analysis_report.md`，不会因行情数据滞后而在 `data_as_of_date` 目录重复输出。
+跨阶段通用约束统一定义在 `SKILL.md` 的 `Critical Execution Rules`；各 Phase 仅保留自身输入、前序报告依赖、执行动作和产物要求，避免在多个阶段重复维护同一规则。
+
+每次分析严格分离数据与报告：原始/派生数据写入 `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`，分析报告和流程产物写入 `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/`。Phase 2 是唯一读取本次 `data/{DATE}` 的分析阶段；Phase 3-7 仅基于 Phase 2 报告和前序阶段报告继续，不再接收或打开原始数据文件。报告日期固定使用本次执行日期，行情截止日期单独披露；每次执行只在报告目录生成一份 `analysis_report.md`，不会因行情数据滞后而在 `data_as_of_date` 目录重复输出。
+
+运行语言固定为“英文中间产物、中文最终报告”：数据目录中的机器生成字段、标签、说明和摘要，以及 Phase 2-6 的分析师报告、辩论历史、研究计划、交易计划和风险辩论报告均使用英文；外部来源自带的中文新闻/公告标题、专名、引文、公司名和分部名保持原文，不静默改写。只有最终 `analysis_report.md` 使用简体中文，标题、正文、表头、标签、风险提示和结论均中文化，同时保留 ticker、证据 ID、文件路径、公式和必须精确匹配的评级 token。
 
 时间模式默认是 `current_research`，其中 `{DATE}` 必须等于本地当天。历史分析必须显式使用 `historical_replay` 并通过 `--as-of-date` 提供市场时区下的日终截止日；目录仍使用真实执行日期，报告明确标记为历史回放，不能伪装成当时生成的报告。
 
@@ -60,16 +64,16 @@ python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ana
 
 默认采用 `research_only`：未提供完整组合画像时只输出证券研究结论、入场/失效条件，并将仓位标记为 Not Rated，不输出任何配置百分比、资金或股数。只有用户明确提供完整真实组合上下文，或明确要求并完整定义假设模型组合时，才按风险预算、压力损失、流动性及集中度约束的最小值计算仓位；Agent 一致或投票不能提高仓位。
 
-编排采用 context 卫生原则：辩论/风险 Agent 按文件 I/O 协议自写历史文件并仅返回状态确认或精简摘要；主会话只传递文件路径、不向 Agent prompt 粘贴文件内容；主会话 context 仅保留编排与决策所需内容，避免全文重复驻留。
+编排采用 context 卫生原则：辩论/风险 Agent 按文件 I/O 协议自写历史文件并仅返回状态确认或精简摘要；主会话只传递文件路径、不向 Agent prompt 粘贴文件内容；Phase 2 报告通过 `Evidence Handoff` 保留数值来源、期间、状态、允许用途、gate 结果和阻断原因，后续阶段只传报告目录与必需的前序报告路径。
 
 工作流采用产物驱动的状态机，不额外创建 manifest：`START → DATA_READY → BASE_ANALYSTS_READY → ATTRIBUTION_READY → DEBATE_READY → RESEARCH_READY → TRADER_READY → RISK_READY → REPORT_WRITTEN → COMPLETE`。每个已调度单元最多执行两次，返回成功但缺少非空产物仍算失败，第二次失败即进入终态 `FAILED` 并停止后续阶段；可选数据源在调度前不可用时则降级为 Not Rated，不计作角色执行失败。最终报告须先写入并验证，再在同一轮向用户返回摘要。
 
-最终 `analysis_report.md` 以 **Final Decision 置顶**，并单列价格行为归因章节。所有币种识别、连续季度校验、TTM/估值运算、预测表语义、重试降级和数据门禁都在工具层完成，默认输出 `validated_metrics.toon` 与 `validation_report.md`；Phase 7 优先引用数据目录中已有的工具派生值，不用 LLM 重算收益率、增长率、TTM、利润率、估值倍数或技术指标，仅对目标价、仓位等工作流明确要求的决策公式展示可追溯输入和计算过程。
+最终 `analysis_report.md` 将“最终决策”章节置顶，同时单列价格行为归因章节。所有币种识别、连续季度校验、TTM/估值运算、预测表语义、重试降级和数据门禁都在工具层完成，默认输出 `validated_metrics.toon` 与 `validation_report.md`；Phase 2 将允许使用的工具派生值及其限制写入各自报告，Phase 7 只消费这些报告中的证据交接，不再读取数据目录，也不用 LLM 重算收益率、增长率、TTM、利润率、估值倍数或技术指标。
 
 ### 数据完整性、币种与官方披露降级
 
 - **统一请求运行时**：yfinance、Longbridge 和官方披露接口对连接失败、超时、HTTP 408/429/5xx 做指数退避重试；400/401/403、结构错误等不可恢复问题立即失败。每次尝试写入 `data_quality.toon` 的 `provider_retry_events`。
-- **目录级数值证据契约**：当前运行 `reposrts/{TICKER}/data/{DATE}/` 下由 `SKILL.md` 列出的有效产物共同构成数值依据，每个重要数字须追溯到文件、字段/行及期间。`validated_metrics.toon` 对其覆盖的指标及全部决策门禁具有优先约束；缺失、过期、冲突或被阻断的覆盖指标不能改从其他文件绕过，只能输出 N/A/Not Rated。
+- **目录级数值证据契约**：当前运行 `reposrts/{TICKER}/data/{DATE}/` 下由 `SKILL.md` 列出的有效产物共同构成 Phase 2 的数值依据，每个重要数字须追溯到文件、字段/行及期间。`validated_metrics.toon` 对其覆盖的指标及全部决策门禁具有优先约束；Phase 2 将这些依据和限制写入报告的 `Evidence Handoff`，Phase 3-7 只继承报告证据，缺失或被阻断的声明输出 N/A/Not Rated，不回读数据目录。
 - **历史时点契约**：`data_quality.toon` 与 `validated_metrics.toon` 同时保存 `execution_date`、`analysis_as_of_date`、市场时区 `analysis_timestamp`、`retrieved_at` 和逐来源 `source_statuses`。历史回放只允许截止日前的行情/相对收益、具有可解析发布时间的新闻及已提交官方披露；当前财务快照、报表、一致预期/修订/评级/目标价、内部人、期权、无 vintage 宏观、预测市场、全局新闻搜索、FX 当前元数据和分部快照全部自动降级为 Not Rated。SEC Company Facts 在落盘前按 `filed_at <= analysis_as_of_date` 裁剪。
 - **结构化输出**：`tools/structured_io.py` 统一负责 JSON 数据模型的 TOON/JSON 编解码、严格往返校验和原子落盘。`STRUCTURED_OUTPUT_FORMAT = "toon"` 为默认值；改成 `"json"` 后所有结构化文件统一输出 JSON。成功写入时会删除同名的另一格式，读取时可兼容历史 `.json`/`.toon` 文件。
 - **双币种建模**：分别保存交易币种 `quote_currency` 和财报/预测币种 `financial_currency`。跨币种 P/E、P/B、EV/EBITDA 和目标价必须使用分析日附近的有效 FX；无有效汇率时禁止精确估值。
@@ -120,7 +124,7 @@ Prediction Markets 按话题独立抓取；网络失败、无效 JSON 或响应�
 
 - **Phase 1.5**：`prepare_segments.py --gen-yaml` 以长桥 `revenue-sankey?report=qf` 为唯一分部数据源，生成 `revenue_sankey.toon`、`revenue_sankey.csv` 和 ticker 级 `segments.yaml`。CSV 完整保留桑基节点，并按 `node_key` 本地计算 QoQ/YoY，补充节点分类、抵销前分部构成、合并勾稽和 Level-1 分部缺失检测；不再抓取或保存 `business_historical`。
 - **Segment Analyst**：条件触发（`multi_segment: true`），与其他 Phase 2 分析师独立并行，读取增强后的 `revenue_sankey.csv` 和 `income_stmt.csv`，识别业务线增长/衰退拐点及长桥桑基口径下的利润结构变化，判断对集团股价综合方向；不依赖 News Analyst 的中间结果。
-- **Phase 2 产物**：每个适用分析师子代理将完整结果直接写入 `reposrts/{TICKER}/reports/{DATE}/` 下的独立 `*_analyst.md` 文件，并只向主会话返回写入确认；不再生成聚合或总结文件。Step 2 归因分析师读取所有可用 Step 1 报告，Phase 3-7 再根据当前职责按需读取独立报告和原始数据。
+- **Phase 2 产物**：每个适用分析师子代理将完整结果直接写入 `reposrts/{TICKER}/reports/{DATE}/` 下的独立 `*_analyst.md` 文件，并只向主会话返回写入确认；不再生成聚合或总结文件。Step 2 归因分析师读取所有可用 Step 1 报告，并完成最后一次原始数据核验；Phase 3-7 只按职责读取独立报告和前序阶段报告，不再读取 `data/{DATE}`。
 - **CN 市场不走业务线分析**（长桥无 A 股分部数据），Step 1 为 4 个基础分析师，随后仍运行 Price Action Attribution Analyst。
 - **降级**：长桥抓取失败时生成 `segments_fetch_failed.flag`，跳过分部视角，不阻断分析。
 

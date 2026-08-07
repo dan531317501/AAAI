@@ -88,12 +88,11 @@ def test_skill_passes_conditional_evidence_as_full_paths():
     assert "{DATA_DIR}/options.txt" in step_2_section
 
 
-def test_skill_runs_deterministic_data_gate_without_llm_verifier():
+def test_phase_7_applies_phase_2_report_gate_without_reopening_data():
     skill = _read("SKILL.md")
 
-    step_2_section = skill[skill.index("### Step 2: Deterministic Data Gate"):skill.index("### Step 3: Synthesize")]
-    assert "configured `validated_metrics` artifact" in step_2_section
-    assert "validation_report.md" in step_2_section
+    step_2_section = skill[skill.index("### Step 2: Phase 2 Report Gate"):skill.index("### Step 3: Synthesize")]
+    assert "`Evidence Handoff` requirements in rule 9" in step_2_section
     assert "do not launch an agent" in step_2_section
     assert "N/A or Not Rated" in step_2_section
     assert "arithmetic_verifier.md" not in skill
@@ -115,17 +114,102 @@ def test_numeric_validation_is_implemented_in_tools():
     assert "_periods_are_contiguous_quarters" in audit_tool
 
 
-def test_current_run_data_directory_is_the_numeric_evidence_set():
+def test_phase_2_is_the_only_raw_data_reader_and_hands_off_evidence():
     skill = _read("SKILL.md")
     policy = _read("prompts/data_policy.md")
 
-    assert "DATA DIRECTORY EVIDENCE CONTRACT" in skill
-    assert "current run's non-empty artifacts listed in Phase 1" in skill
-    assert "source file, field/row or indicator, and period/as-of date" in skill
-    assert "authoritative only for the metrics it contains and for all `gates`" in skill
+    assert "EVIDENCE, GATE, AND DATA ACCESS CONTRACT — GLOBAL" in skill
+    assert "Phase 2 is the only analysis phase allowed to read" in skill
+    assert "Phases 3-7 use only persisted reports and required prior-phase artifacts" in skill
+    assert "must never receive, open, search, or cite the data directory" in skill
+    assert "gate outcome/blocking reasons" in skill
     assert "another artifact" in policy
     assert "Do not use an LLM to recompute returns, growth, TTM, margins" in policy
-    assert "An analyst report is not a substitute for the underlying data artifact" in policy
+    assert "Only Phase 2 roles may use numeric evidence" in policy
+    assert "Do not receive, open, search, or cite `{DATA_DIR}`" in policy
+
+
+def test_phases_3_to_7_receive_reports_but_no_data_directory_paths():
+    skill = _read("SKILL.md")
+    downstream = skill[skill.index("## Phase 3: Bull vs Bear Debate"):]
+
+    for forbidden_text in (
+        "configured `validated_metrics` artifact",
+        "Read `validation_report.md`",
+        "report/data directories",
+        "individual reports and raw data",
+    ):
+        assert forbidden_text not in downstream
+    assert "Do not provide the data directory or any raw-data path" not in downstream
+    assert "do not open any path beneath the data directory" not in downstream
+
+    for relative_path in (
+        "prompts/bull_researcher.md",
+        "prompts/bear_researcher.md",
+        "prompts/aggressive_debator.md",
+        "prompts/conservative_debator.md",
+        "prompts/neutral_debator.md",
+    ):
+        prompt = _read(relative_path)
+        assert "Read only the report files and prior-phase artifacts specified in your prompt." in prompt, relative_path
+
+    portfolio_manager = _read("prompts/portfolio_manager.md")
+    assert "Use only persisted Phase 2 reports and required Phase 3-6 report artifacts" in portfolio_manager
+
+
+def test_global_contracts_are_not_repeated_in_phase_specific_sections():
+    skill = _read("SKILL.md")
+    phase_sections = skill[skill.index("## Output Directory Contract"):]
+
+    for heading in (
+        "FINAL DELIVERABLE CONTRACT",
+        "REPORT DATE AND TIME MODE — GLOBAL",
+        "EVIDENCE, GATE, AND DATA ACCESS CONTRACT — GLOBAL",
+        "PORTFOLIO APPLICABILITY — GLOBAL",
+        "CONTEXT HYGIENE (main session)",
+        "ONE-RETRY POLICY — SINGLE FAILURE SOURCE OF TRUTH",
+        "LANGUAGE CONTRACT — GLOBAL",
+    ):
+        assert skill.count(heading) == 1, heading
+
+    for repeated_instruction in (
+        "Apply rule 14",
+        "apply rule 14",
+        "Do not provide the data directory or any raw-data path",
+        "Date guardrail",
+        "Proceed immediately",
+        "Context bloat",
+        "SIMPLIFIED_CHINESE",
+        "returns only a short confirmation/summary",
+        "returns ONLY a one-line status confirmation",
+    ):
+        assert repeated_instruction not in phase_sections
+
+    assert skill.count("Position Size: Not Rated — complete portfolio context was not supplied.") == 1
+
+
+def test_runtime_language_contract_is_global_and_not_repeated_per_phase():
+    skill = _read("SKILL.md")
+    contract = skill[skill.index("15. **LANGUAGE CONTRACT — GLOBAL:"):skill.index("## Output Directory Contract")]
+    phase_specific_instructions = skill[skill.index("## Output Directory Contract"):]
+
+    assert "Use English for every machine-generated data key, label, note, summary" in contract
+    assert "Preserve provider-supplied source text verbatim" in contract
+    assert "Write only the final `analysis_report.md` in Simplified Chinese" in contract
+    assert "do not repeat it in phase-specific instructions" in contract
+    for artifact in (
+        "Evidence Handoff",
+        "debate_history.md",
+        "research_plan.md",
+        "trader_plan.md",
+        "risk_debate_history.md",
+    ):
+        assert artifact in contract
+
+    assert "Simplified Chinese" not in phase_specific_instructions
+    assert " in English" not in phase_specific_instructions
+    assert "English-authored" not in phase_specific_instructions
+    assert "SIMPLIFIED_CHINESE" not in phase_specific_instructions
 
 
 def test_target_price_and_strong_rating_have_two_stage_controls():
@@ -133,7 +217,7 @@ def test_target_price_and_strong_rating_have_two_stage_controls():
     manager = _read("prompts/portfolio_manager.md")
     contract_tool = _read("tools/data_validation.py")
 
-    assert "gate_details.blocking_reasons" in skill
+    assert "gate outcome/blocking reasons" in skill
     assert "Buy/Sell are strong ratings" in skill
     assert "valid_relative_return_evidence" in contract_tool
     assert "traceable_catalyst_evidence" in contract_tool
