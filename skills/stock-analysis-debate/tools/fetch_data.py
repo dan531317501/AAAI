@@ -28,6 +28,10 @@ Output:
         options.txt         # Options flow (put/call ratios, IV skew; US only)
         macro_indicators.txt # FRED macro series (rates, inflation, labor)
         prediction_markets.txt # Polymarket event probabilities
+        official_filings.toon  # Official filing discovery evidence
+        official_companyfacts.toon # SEC raw Company Facts when available
+        official_financials.toon # Unified official facts and fail-closed status
+        validated_metrics.toon # Typed numeric contract consumed by analysts
         summary.toon        # Metadata summary
 
     With --ticker-data-dir:
@@ -62,6 +66,7 @@ from data_validation import (
     render_validation_report,
 )
 from official_filings import fetch_official_filings
+from official_financials import fetch_official_financials
 from provider_runtime import (
     RetryPolicy,
     clear_retry_events,
@@ -1647,8 +1652,9 @@ def main():
     else:
         print("  [10] Skipped (historical replay has no point-in-time segment snapshot)", flush=True)
 
-    # 10b. Official disclosure fallback. PDF contents remain evidence-only;
-    # only SEC XBRL structured facts may be used programmatically.
+    # 10b. Official disclosure evidence and unified financial facts.
+    # PDF contents remain evidence-only; only supported structured facts may
+    # enter the numeric contract. No commercial provider can overwrite them.
     print("  [10b] Fetching official filing evidence...")
     official = fetch_official_filings(ticker, market, curr_date)
     structured_facts = official.pop("structured_facts", None)
@@ -1664,8 +1670,20 @@ def main():
         )
         results["files"]["official_companyfacts"] = facts_path
 
-    # 10c. Generate the fail-closed numeric contract consumed by every LLM role.
-    print("  [10c] Building deterministic validated metrics...")
+    print("  [10c] Fetching unified official financial facts...")
+    official_financials = fetch_official_financials(
+        ticker,
+        market,
+        curr_date,
+    )
+    official_financials_path = write_structured_file(
+        os.path.join(ticker_dir, "official_financials"),
+        official_financials,
+    )
+    results["files"]["official_financials"] = official_financials_path
+
+    # 10d. Generate the fail-closed numeric contract consumed by every LLM role.
+    print("  [10d] Building deterministic validated metrics...")
     contract = build_validated_metrics(
         ticker=ticker,
         market=market,

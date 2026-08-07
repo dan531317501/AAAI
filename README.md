@@ -79,6 +79,7 @@ python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ana
 - **期权活动解释边界**：US 期权快照只描述成交/OI 构成、成交集中位置和近似 ±5% moneyness IV 相对定价。`volume > 2× prior OI` 仅标记异常活动，不能证明新开仓、资金方向、策略或参与者身份；期权证据不直接决定评级、目标价、仓位或风险上限。方法依据见 `skills/stock-analysis-debate/reference/options-volume-open-interest-and-sentiment.en.md`。
 - **组合适用性门禁**：`research_only`、`model_portfolio`、`portfolio_context_complete` 三种模式由 `prompts/portfolio_policy.md` 统一约束；任何必需字段缺失都会降级为 `research_only`。数值仓位必须展示所有约束、风险预算公式及最终绑定项，不能使用默认百分比或多 Agent 投票结果。
 - **官方披露降级**：港股发现 HKEXnews 财报公告，美股接 SEC EDGAR submissions 与 Company Facts XBRL，A 股接 CNINFO 法定披露。只有结构化字段进入数值管线；未结构化 PDF 仅作为证据链接，禁止 LLM 从中抽数。调用 SEC 时建议按其自动访问规范设置 `SEC_USER_AGENT="组织名 contact@example.com"`；未配置或被拒绝时显式降级，不伪造联系信息。
+- **官方财务统一 API**：`official_financials.toon` 输出统一的 `filings` 与 `facts` 结构。SEC 仅映射标准 `us-gaap`/`ifrs-full` XBRL 标签，并保留报告期、期间类型、申报日、币种、单位、原始标签和来源 URL；HKEX、SSE、SZSE 的普通公告或 PDF 只保存官方链接，`facts` 为空并标记 `numeric_status: unavailable`。免费官方接口取不到结构化事实时，保持缺失，不由商业 API 或 LLM 抽数覆盖。
 - **长桥口径边界**：Longbridge 桑基币种标记为 `translated_only`。没有原始报告币种和换算汇率时，只能用于分部构成背景，不能作为官方经营增长或跨币种估值依据。
 - **估值币种 fail-closed**：分析师预期表的币种不能推断财报记账币种；报价币种、财报币种或 dated FX 缺失时，P/E、P/B、市场市值、EV 和 EV/EBITDA 均输出 `N/A`，审计状态为 `partial`。
 - **TTM/股数冲突 fail-closed**：Provider 与报表 TTM 不一致，或普通股数与摊薄平均股数出现明显倍数差异时，只保留审计追溯值，不生成 Preferred TTM 估值，也不猜测 ADR/ADS 换算比例。

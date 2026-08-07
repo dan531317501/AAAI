@@ -112,14 +112,24 @@ def _hkex_filings(ticker: str, analysis_date: str) -> dict:
     )
 
 
-def _sec_filings(ticker: str, analysis_date: str) -> dict:
+def _sec_filings(
+    ticker: str,
+    analysis_date: str,
+    sec_user_agent: str | None = None,
+) -> dict:
     symbol = ticker.upper().replace(".", "-")
+    sec_headers = {
+        **SEC_HEADERS,
+        "User-Agent": sec_user_agent or os.environ.get(
+            "SEC_USER_AGENT", SEC_HEADERS["User-Agent"]
+        ),
+    }
     tickers = request_json(
         "GET",
         "https://www.sec.gov/files/company_tickers.json",
         provider="SEC EDGAR",
         operation="ticker_map",
-        headers=SEC_HEADERS,
+        headers=sec_headers,
         timeout=20,
         validator=lambda value: isinstance(value, dict) and bool(value),
     )
@@ -137,12 +147,12 @@ def _sec_filings(ticker: str, analysis_date: str) -> dict:
     facts_url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
     submissions = request_json(
         "GET", submissions_url, provider="SEC EDGAR",
-        operation="submissions", headers=SEC_HEADERS, timeout=20,
+        operation="submissions", headers=sec_headers, timeout=20,
         validator=lambda value: isinstance(value, dict) and "filings" in value,
     )
     facts = request_json(
         "GET", facts_url, provider="SEC EDGAR",
-        operation="companyfacts", headers=SEC_HEADERS, timeout=30,
+        operation="companyfacts", headers=sec_headers, timeout=30,
         validator=lambda value: isinstance(value, dict) and "facts" in value,
     )
     facts = _filter_companyfacts_as_of(facts, analysis_date)

@@ -339,6 +339,59 @@ def _sec_official_metrics(
     return result
 
 
+def _official_financial_metrics(
+    official_financials: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Expose normalized official facts without collapsing different periods."""
+    result = []
+    for index, fact in enumerate((official_financials or {}).get("facts", [])):
+        if not isinstance(fact, dict):
+            continue
+        value = _finite(fact.get("value"))
+        metric = str(fact.get("metric") or "").strip()
+        if value is None or not metric:
+            continue
+        period = fact.get("period_end") or fact.get("period_type") or "unknown"
+        metric_id = f"official_financials.{metric}.{period}.{index}"
+        normalized = _metric(
+            metric_id,
+            value,
+            unit=str(fact.get("unit") or "provider_native"),
+            currency=fact.get("currency"),
+            period=period,
+            provider=str(fact.get("provider") or fact.get("source") or "official"),
+            source_field=(
+                f"{fact.get('source', 'official')}."
+                f"{fact.get('raw_taxonomy', 'unknown')}."
+                f"{fact.get('raw_tag', metric)}."
+                f"{fact.get('raw_unit', fact.get('unit', 'unknown'))}"
+            ),
+            status="verified",
+            allowed_uses=[
+                "official_financials",
+                "official_fundamental_cross_check",
+                "historical_growth",
+            ],
+            quality_flags=[
+                f"period_type={fact.get('period_type', 'unknown')}",
+                f"filed={fact.get('filed_at')}",
+            ],
+        )
+        normalized.update({
+            "canonical_metric": metric,
+            "period_start": fact.get("period_start"),
+            "period_end": fact.get("period_end"),
+            "period_type": fact.get("period_type"),
+            "fiscal_year": fact.get("fiscal_year"),
+            "fiscal_period": fact.get("fiscal_period"),
+            "source_url": fact.get("source_url"),
+            "accession_number": fact.get("accession_number"),
+            "raw_tag": fact.get("raw_tag"),
+        })
+        result.append(normalized)
+    return result
+
+
 def build_validated_metrics(
     *,
     ticker: str,
@@ -350,6 +403,7 @@ def build_validated_metrics(
     official_filings: dict[str, Any],
     sankey_data: dict[str, Any] | None,
     official_structured_facts: dict[str, Any] | None = None,
+    official_financials: dict[str, Any] | None = None,
     temporal_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create a fail-closed, typed numeric contract for downstream agents."""
@@ -477,6 +531,7 @@ def build_validated_metrics(
                     ),
                 ))
     metrics.extend(_sec_official_metrics(official_structured_facts, analysis_date))
+    metrics.extend(_official_financial_metrics(official_financials))
 
     translated_currencies = sorted({
         str(period.get("currency"))
@@ -612,6 +667,30 @@ def build_validated_metrics(
             required_metric_ids=[],
         ),
     }
+    official_financials_contract = official_financials or {
+        "schema_version": "1.0",
+        "status": "unavailable",
+        "numeric_status": "unavailable",
+        "numeric_reason": "official_financials_not_fetched",
+        "filings": [],
+        "facts": [],
+    }
+    official_numeric_status = official_financials_contract.get(
+        "numeric_status", "unavailable"
+    )
+    quality_notes = [
+        "Official filing discovery does not authorize LLM extraction from PDFs.",
+        "Only normalized official facts with source, period, unit, and currency metadata enter the official financials layer.",
+        "Longbridge currency is a translated provider presentation unless original currency and FX are supplied.",
+    ]
+    if official_numeric_status != "available":
+        quality_notes.append(
+            "Official numeric facts are unavailable; no official value was fabricated or replaced by a commercial provider."
+        )
+    if historical_replay:
+        quality_notes.append(
+            "Historical replay excludes retrieval-time snapshots without verified point-in-time availability."
+        )
     return {
         "schema_version": "1.2",
         "ticker": ticker,
@@ -644,8 +723,10 @@ def build_validated_metrics(
             key: value for key, value in official_filings.items()
             if key != "structured_facts"
         },
+        "official_financials": official_financials_contract,
         "source_priority": [
             "official_structured_disclosure",
+            "official_disclosure_document",
             "standardized_market_or_financial_api",
             "third_party_translated_presentation",
         ],
@@ -675,14 +756,8 @@ def build_validated_metrics(
             ),
             "ttm_periods_contiguous": audit_metrics.get("ttm_periods_contiguous"),
             "conflicting_metrics": conflicts,
-            "notes": [
-                "Official filing discovery does not authorize LLM extraction from PDFs.",
-                "Longbridge currency is a translated provider presentation unless original currency and FX are supplied.",
-                *(
-                    ["Historical replay excludes retrieval-time snapshots without verified point-in-time availability."]
-                    if historical_replay else []
-                ),
-            ],
+            "official_numeric_status": official_numeric_status,
+            "notes": quality_notes,
         },
     }
 
