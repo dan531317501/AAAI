@@ -51,15 +51,16 @@ def render_news_evidence(articles: list, news_start: str, curr_date: str) -> tup
     """将最终新闻列表序列化为带稳定证据编号和内容层级的文本。
 
     当前采集链路不包含社交媒体帖子或平台情绪指标，因此在产物中显式标记
-    social_data_available=false，供下游分析师做确定性降级。
+    social posts 由独立文件 stocktwits.txt / reddit.txt 提供，news.txt 只做新闻叙事。
     """
     lines = [
         f"## News ({news_start} to {curr_date})\n",
         "Evidence Scope: company news feed",
-        "Social Data Available: false",
+        "Social Data Available: separate (stocktwits.txt, reddit.txt)",
         (
-            "Social Data Note: this file contains no first-party social-media posts "
-            "or platform sentiment metrics.\n"
+            "Social Data Note: this file contains news items only; first-party "
+            "social-media posts and platform sentiment metrics live in "
+            "stocktwits.txt and reddit.txt.\n"
         ),
     ]
     summary_count = 0
@@ -88,7 +89,7 @@ def render_news_evidence(articles: list, news_start: str, curr_date: str) -> tup
     stats = {
         "summary": summary_count,
         "title_only": title_only_count,
-        "social_data_available": False,
+        "social_data_available": "separate (stocktwits.txt, reddit.txt)",
     }
     return "\n".join(lines), stats
 

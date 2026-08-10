@@ -69,7 +69,7 @@ python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ana
 
 工作流采用产物驱动的状态机，不额外创建 manifest：`START → DATA_READY → BASE_ANALYSTS_READY → ATTRIBUTION_READY → DEBATE_READY → RESEARCH_READY → TRADER_READY → RISK_READY → REPORT_WRITTEN → COMPLETE`。每个已调度单元最多执行两次，返回成功但缺少非空产物仍算失败，第二次失败即进入终态 `FAILED` 并停止后续阶段；可选数据源在调度前不可用时则降级为 Not Rated，不计作角色执行失败。最终报告须先写入并验证，再在同一轮向用户返回摘要。
 
-最终 `analysis_report.md` 将“最终决策”章节置顶，同时单列价格行为归因章节。所有币种识别、连续季度校验、TTM/估值运算、预测表语义、重试降级和数据门禁都在工具层完成，默认输出 `validated_metrics.toon` 与 `validation_report.md`；Phase 2 将允许使用的工具派生值及其限制写入各自报告，Phase 7 只消费这些报告中的证据交接，不再读取数据目录，也不用 LLM 重算收益率、增长率、TTM、利润率、估值倍数或技术指标。
+最终 `analysis_report.md` 将“最终决策”章节置顶，同时单列价格行为归因章节；`Final Decision` 固定使用 `Rating`、`Executive Summary`、`Investment Thesis`、`Price Target`、`Time Horizon` 五个字段，其中 `Investment Thesis` 承载完整的证据链、决策逻辑、情景、风险、仓位适用性和数据限制。所有币种识别、连续季度校验、TTM/估值运算、预测表语义、重试降级和数据门禁都在工具层完成，默认输出 `validated_metrics.toon` 与 `validation_report.md`；Phase 2 将允许使用的工具派生值及其限制写入各自报告，Phase 7 只消费这些报告中的证据交接，不再读取数据目录，也不用 LLM 重算收益率、增长率、TTM、利润率、估值倍数或技术指标。
 
 ### 数据完整性、币种与官方披露降级
 

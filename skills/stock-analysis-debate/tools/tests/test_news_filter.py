@@ -91,7 +91,7 @@ def test_render_news_evidence_preserves_summary_and_marks_content_level():
     assert stats == {
         "summary": 1,
         "title_only": 1,
-        "social_data_available": False,
+        "social_data_available": "separate (stocktwits.txt, reddit.txt)",
     }
 
 
@@ -108,12 +108,12 @@ def test_render_news_evidence_ids_follow_final_article_order():
     assert first_text.index("[N001] 第一条新闻") < first_text.index("[N002] 第二条新闻")
 
 
-def test_render_news_evidence_discloses_missing_social_dataset():
+def test_render_news_evidence_delegates_social_data_to_separate_files():
     text, stats = render_news_evidence([], "2026-07-01", "2026-07-31")
 
-    assert "Social Data Available: false" in text
-    assert "no first-party social-media posts or platform sentiment metrics" in text
-    assert stats["social_data_available"] is False
+    assert "Social Data Available: separate (stocktwits.txt, reddit.txt)" in text
+    assert "social-media posts and platform sentiment metrics live in" in text
+    assert stats["social_data_available"] == "separate (stocktwits.txt, reddit.txt)"
 
 
 from fetch_data import process_and_write_news
@@ -155,7 +155,7 @@ def test_process_and_write_news_merges_evidence_and_audit_counts(tmp_path):
     assert "## News Processing Audit (2026-07-01 to 2026-07-31)" in news_text
     assert "content_level_summary: 1" in news_text
     assert "content_level_title_only: 1" in news_text
-    assert "social_data_available: false" in news_text
+    assert "social_data_available: separate (stocktwits.txt, reddit.txt)" in news_text
     assert not legacy_meta_path.exists()
 
 

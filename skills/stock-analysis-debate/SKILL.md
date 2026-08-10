@@ -26,7 +26,7 @@ Data is fetched primarily from **yfinance** (OHLCV, benchmark/sector comparators
 
 8. **REPORT DATE AND TIME MODE — GLOBAL:** Use `current_research` by default. `{DATE}` is always the actual local execution date and the only date allowed in the report title and output directory. `historical_replay` requires `--as-of-date`; disclose its market-timezone `analysis_timestamp` and label the report as a replay. Treat `data_as_of_date` only as the latest market observation, never as the report date. If `warning_no_200_sma: true`, 200 SMA is N/A.
 9. **EVIDENCE, GATE, AND DATA ACCESS CONTRACT — GLOBAL:** Phase 1 collects and validates data. Phase 2 is the only analysis phase allowed to read the current run's data directory; every Phase 2 report must carry forward each material claim's source file and field/row, period/as-of date, metric status/allowed uses, relevant gate outcome/blocking reasons, and material Not Rated gaps. Phases 3-7 use only persisted reports and required prior-phase artifacts and must never receive, open, search, or cite the data directory. Apply `temporal_context.source_statuses`, `validated_metrics`, and all gates fail-closed: unavailable, stale, conflicting, translated-only, temporally blocked, or otherwise blocked evidence remains N/A or Not Rated. Prefer tool-derived values; do not use an LLM to recompute returns, growth, TTM, margins, valuation multiples, or technical indicators, infer missing values, backfill historical snapshots, treat placeholders/flags as evidence, or numerically extract unstructured filings.
-10. **NEWS/SENTIMENT EVIDENCE:** Treat `news.txt` evidence IDs and content levels as hard boundaries. If `Social Data Available: false`, social sentiment is Not Rated and must not affect the rating, target price, position sizing, or risk limits. If `options.txt` marks options flow Not Rated, the same restriction applies to options evidence.
+10. **NEWS/SENTIMENT EVIDENCE:** Treat `news.txt` evidence IDs and content levels as hard boundaries. If `stocktwits.txt` or `reddit.txt` contains a Not Rated placeholder, the corresponding social source is Not Rated and must not affect the rating, target price, position sizing, or risk limits. If `options.txt` marks options flow Not Rated, the same restriction applies to options evidence.
 
 11. **PRICE ATTRIBUTION EVIDENCE:** The Price Action Attribution Analyst ranks competing hypotheses; it does not prove a unique cause or issue a rating, target price, position size, or trade. No pre-event expectation means the surprise/priced-in claim is Not Rated. No comparator means abnormal return is Not Rated. No stock-specific leverage/short/flow evidence means forced liquidation, short squeeze, or investor identity is not established. Oversold/overbought is a state, not a catalyst.
 
@@ -135,7 +135,9 @@ Output is saved to `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`
 | `instrument_metadata.toon` | API-reported quote currency, financial currency, estimate-currency evidence, and retrieval timestamp | yfinance explicit metadata fields |
 | `analyst_estimates.toon` | Dedicated earnings/revenue estimates, EPS trend/revisions, currency, periods, and analyst counts | yfinance estimate endpoints |
 | `indicators.txt` | 13 technical indicators | stockstats via yfinance/Longbridge OHLCV |
-| `news.txt` | Company-specific news with evidence IDs, content levels, available summaries, processing audit, and explicit social-data availability (30 days) | yfinance + fetch_data.py |
+| `news.txt` | Company-specific news with evidence IDs, content levels, available summaries, and processing audit (30 days); social data is NOT in this file (see `stocktwits.txt` / `reddit.txt`) | yfinance + fetch_data.py |
+| `stocktwits.txt` | Retail-trader cashtag posts with user-labeled Bullish/Bearish tags and a Bullish/Bearish ratio; degrades to Not Rated placeholder | StockTwits public stream (no key) |
+| `reddit.txt` | Finance-subreddit discussion (r/wallstreetbets, r/stocks, r/investing, past 7 days) via RSS; degrades to Not Rated placeholder | Reddit public RSS |
 | `global_news.txt` | Macro/global news | yfinance Search |
 | `macro_indicators.txt` | FRED macro series: fed funds rate, 10y Treasury, yield curve, CPI, core CPI, unemployment (degrades to Not Rated placeholder without `FRED_API_KEY`) | FRED API | 
 | `prediction_markets.txt` | Polymarket event probabilities: Fed rate cut, recession, US election (per-topic graceful degradation) | Polymarket Gamma API |
@@ -230,7 +232,7 @@ All analysts listed below launch IN THE SAME parallel batch: the 4 base analysts
 
 **News Analyst** — Prompt: `skills/stock-analysis-debate/prompts/news_analyst.md` — Data: `news.txt`, `global_news.txt`, `macro_indicators.txt`, `prediction_markets.txt` — Output: `news_analyst.md`
 
-**Social Media Analyst** — Prompt: `skills/stock-analysis-debate/prompts/social_media_analyst.md` — Data: `news.txt` — Output: `social_media_analyst.md`
+**Social Media Analyst** — Prompt: `skills/stock-analysis-debate/prompts/social_media_analyst.md` — Data: `news.txt`, `stocktwits.txt`, `reddit.txt` — Output: `social_media_analyst.md`
 
 **Fundamentals Analyst** — Prompt: `skills/stock-analysis-debate/prompts/fundamentals_analyst.md` — Data: configured `validated_metrics` artifact (`.toon` by default), `validation_report.md`, `fundamentals.txt`, `balance_sheet.csv`, `cashflow.csv`, `income_stmt.csv` — Output: `fundamentals_analyst.md`
 
@@ -323,27 +325,23 @@ Apply the report artifact handoff protocol:
 1. Read the relevant Phase 2 analyst reports; do not launch an agent.
 2. Confirm every numeric claim planned for the final report satisfies the `Evidence Handoff` requirements in rule 9.
 3. Obey every gate outcome and blocking reason propagated through Phase 2 reports. If a gate is false or its outcome is absent, remove the exact valuation, target price, strong rating, or segment-growth claim and replace it with N/A or Not Rated. Buy/Sell are strong ratings: even when a Phase 2 report carries `allow_strong_rating: true`, use them only after verifying every carried Phase 7 evidence requirement; otherwise cap the rating at Overweight/Underweight/Hold.
-4. For a target price, use only a Phase 2 report's authorized forecast period and valuation method, show all handed-off inputs in one currency, and include a multiple-sensitivity table. Apply `portfolio_policy.md` separately.
+4. For a target price, use only a Phase 2 report's authorized forecast period and valuation method, show all handed-off inputs in one currency, and include the arithmetic chain and multiple-sensitivity table inside `Investment Thesis`. The `Price Target` field contains only the final authorized value or `Not Rated`. Apply `portfolio_policy.md` separately.
 
 ### Step 3: Synthesize
 
-Produce the Portfolio Manager's final decision in the main session. The Final Decision is the single most important deliverable — it must be a **fully-argued conclusion**, not a summary. A Final Decision that merely restates the rating, entry points, and a one-paragraph thesis is INCOMPLETE and must be expanded. Every claim must be anchored to specific evidence: numeric values, evidence IDs (e.g., [N005]), analyst verdicts, or debate-file passages.
+Produce the Portfolio Manager's final decision in the main session. The Final Decision is the single most important deliverable — use the compact field-based format illustrated by the reference final-trade-decision report, but keep it a **fully-argued conclusion**, not an unsupported summary. Every claim must be anchored to specific evidence: numeric values, evidence IDs (e.g., [N005]), analyst verdicts, or debate-file passages.
 
 Before synthesizing, apply the report gate from Step 2.
 
-The Final Decision MUST contain, in order:
+The Final Decision MUST contain exactly these fields, in this order, using the field labels verbatim:
 
-1. **Rating** — one of Buy / Overweight / Hold / Underweight / Sell, a one-line verdict, AND one line on the key reason for choosing this rating over its nearest alternatives (e.g., why Overweight rather than Buy, or why Buy rather than Hold).
-2. **Executive Summary** — one coherent paragraph (not bullets-only): the business case in one or two sentences with figures, the best-supported recent price attribution and its confidence, entry strategy, portfolio applicability/position-sizing status, key risk levels including the thesis-level invalidation condition, a tactical reference band if computable (e.g., Bollinger/structure levels), and the time horizon.
-3. **Decision Logic Chain** — explicit reasoning for the rating vs EVERY other plausible choice: why not Sell/Underweight (hard-bottom evidence with figures), why not Hold (asymmetric payoff already priced), why not a one-shot full position (evidence-grade discount). Each justification cites data.
-4. **Core Thesis with Evidence Anchors** — 3-6 numbered arguments; each = claim + concrete evidence (figure, [Nxxx] ID, analyst report, or debate passage) + explicit rebuttal of the opposing view on that point. May be organized as grouped anchors (e.g., "facts anchoring the bullish direction" vs "facts anchoring the caution") when the debate's residual disagreement splits that way.
-5. **Debate Adjudication** — what the bull side won on (with evidence), what the bear side won on (with evidence), which arguments were dismissed and why, AND the facts neither side disputed (uncontested consensus — often the strongest basis for the rating direction), and the net ruling that leads to this rating.
-6. **Scenarios & Target Price Derivation** — base/optimistic/pessimistic scenarios with their conditions; reconcile them with the attribution report's continuation/reversal conditions. When `allow_target_price` is true, use its gate-detail forecast period and valuation method, show every input and the arithmetic chain, and include a multiple-sensitivity table. When false, set the numeric target to Not Rated and disclose the blocking reasons. Technical measured moves and debate targets are cross-checks, never substitutes for a blocked valuation gate.
-7. **Risk Levels & Verification Nodes** — two layers: (a) thesis-level invalidation (the sustained condition that would overturn the entire thesis, with its evidence threshold); (b) tactical stop/reference levels with structural derivation (ATR-calibrated, structure-based). Plus the upcoming verification event (e.g., earnings) that would confirm or invalidate the thesis.
-8. **Portfolio Applicability & Final Position Plan** — state the resolved mode and provide the result required by `portfolio_policy.md`.
-9. **Data Caveats** — Not Rated items (social, options, macro, expectation baseline, comparators, leverage/short/flow evidence), TTM/forward valuation conflicts and which anchor was used, missing statements.
+1. **Rating** — one of Buy / Overweight / Hold / Underweight / Sell, followed by a one-line verdict and the key reason for choosing this rating over its nearest alternatives.
+2. **Executive Summary** — one coherent paragraph: the business case with figures, the best-supported recent price attribution and confidence, entry strategy, portfolio applicability/position-sizing status, key risk levels including thesis-level invalidation, any computable tactical reference band, and the time horizon.
+3. **Investment Thesis** — the fully argued body of the decision. Consolidate the decision logic against the other ratings, 3-6 evidence-anchored arguments with rebuttals, Bull/Bear adjudication and uncontested facts, base/optimistic/pessimistic scenarios, authorized target-price derivation and sensitivity when permitted, risk/verification nodes, portfolio applicability and position plan, and material Not Rated/data caveats. Keep the content readable with short paragraphs or numbered arguments; do not reduce it to a generic one-paragraph thesis.
+4. **Price Target** — the final value authorized by the Phase 2 gates and `portfolio_policy.md`, or `Not Rated` when any required gate is false, missing, conflicting, or otherwise blocked. Do not invent a numeric target from technical levels or debate estimates.
+5. **Time Horizon** — the expected holding/review horizon and the next verification cadence; keep the supporting conditions in `Executive Summary` or `Investment Thesis`.
 
-Sections 2-8 must carry the specific numbers and evidence they derive from — summary prose without data is not acceptable. Prioritize readability: lead with conclusions, use tables for comparisons and evidence, keep paragraphs short (one point each), and bold key figures — avoid wall-of-text prose.
+All five fields must carry the specific numbers and evidence they derive from. Prioritize readability: lead with conclusions, keep paragraphs short, and bold key figures — avoid wall-of-text prose.
 
 ### Step 4: Write Report + Output Decision
 
@@ -355,7 +353,15 @@ Sections 2-8 must carry the specific numbers and evidence they derive from — s
 **Report Date**: {DATE} | **Analysis Mode**: {analysis_mode} | **Analysis Cutoff**: {analysis_timestamp} | **Market Data As Of**: {data_as_of_date}
 
 ## Final Decision
-{portfolio manager's full decision, structured exactly as required by Step 3}
+**Rating**: {Buy / Overweight / Hold / Underweight / Sell}
+
+**Executive Summary**: {one coherent paragraph}
+
+**Investment Thesis**: {fully argued evidence-backed conclusion, including the required decision logic, scenarios, risks, portfolio applicability, and material caveats}
+
+**Price Target**: {authorized target price or Not Rated}
+
+**Time Horizon**: {expected horizon and review cadence}
 
 ## 1. Analyst Research
 {key evidence used from the individual analyst reports — include only reports relevant to the final decision, }
@@ -425,4 +431,4 @@ Full debate: [risk_debate_history.md](./risk_debate_history.md)
 
 - **Modifying prompts**: Prompt files contain the exact prompts. Do NOT paraphrase or improve them. Pass verbatim.
 - **Defaulting to Hold**: If both sides have valid points, pick the stronger argument. Hold only for genuinely neutral situations.
-- **Anemic Final Decision**: Follow the complete structure in Phase 7 Step 3; do not replace it with a rating, entry points, and a one-paragraph thesis.
+- **Anemic Final Decision**: Use the five required fields in Phase 7 Step 3, but do not omit the evidence-backed decision logic, scenarios, risks, portfolio applicability, or material caveats from `Investment Thesis`.

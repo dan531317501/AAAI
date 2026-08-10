@@ -59,6 +59,8 @@ from options_flow import fetch_options_report
 from macro_data import fetch_macro_report
 from prediction_markets import fetch_prediction_markets
 from price_attribution_data import fetch_attribution_context
+from reddit import fetch_reddit_posts
+from stocktwits import fetch_stocktwits_messages
 from data_validation import (
     build_validated_metrics,
     fetch_fx_rate,
@@ -1098,7 +1100,7 @@ def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
         f"historical_timestamp_excluded: {temporal_excluded}",
         f"content_level_summary: {evidence_stats['summary']}",
         f"content_level_title_only: {evidence_stats['title_only']}",
-        "social_data_available: false",
+        "social_data_available: separate (stocktwits.txt, reddit.txt)",
     ])
     audit_text = "\n".join(audit)
     with open(out_path, "w") as f:
@@ -1508,6 +1510,22 @@ def main():
                            lookback_days=NEWS_LOOKBACK_DAYS, market=market,
                            temporal_excluded=temporal_excluded)
     results["files"]["news"] = news_path
+
+    # 3b. StockTwits retail sentiment (all markets; degrades to placeholder)
+    print("  [3b] Fetching StockTwits messages...")
+    stocktwits_text = fetch_stocktwits_messages(yf_ticker)
+    path = os.path.join(ticker_dir, "stocktwits.txt")
+    with open(path, "w") as f:
+        f.write(stocktwits_text)
+    results["files"]["stocktwits"] = path
+
+    # 3c. Reddit community discussion (all markets; degrades to placeholder)
+    print("  [3c] Fetching Reddit posts...")
+    reddit_text = fetch_reddit_posts(yf_ticker)
+    path = os.path.join(ticker_dir, "reddit.txt")
+    with open(path, "w") as f:
+        f.write(reddit_text)
+    results["files"]["reddit"] = path
 
     # 4. Global news (route by market)
     print("  [4/8] Fetching global news...")
