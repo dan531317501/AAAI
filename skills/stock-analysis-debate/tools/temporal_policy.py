@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -23,12 +23,21 @@ MARKET_QUOTE_CURRENCIES = {
     "CN": "CNY",
 }
 
+FINANCIAL_LOOKBACK_DAYS = 365
+
 
 def _parse_date(value: str, field: str) -> date:
     try:
         return date.fromisoformat(value)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{field} must be in YYYY-MM-DD format, got: {value}") from exc
+
+
+def financial_window_start(analysis_date: str) -> date:
+    """Return the inclusive start of the rolling financial-data window."""
+    return _parse_date(analysis_date, "analysis date") - timedelta(
+        days=FINANCIAL_LOOKBACK_DAYS
+    )
 
 
 def _source_policy(mode: str) -> dict[str, dict[str, str]]:

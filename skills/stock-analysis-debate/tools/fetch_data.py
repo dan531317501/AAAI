@@ -76,6 +76,7 @@ from provider_runtime import (
 from structured_io import write_structured_file
 from temporal_policy import (
     CURRENT_RESEARCH,
+    FINANCIAL_LOOKBACK_DAYS,
     HISTORICAL_REPLAY,
     filter_historical_news,
     historical_provider_snapshot,
@@ -86,7 +87,6 @@ from temporal_policy import (
 # Look-back windows
 PRICE_LOOKBACK_DAYS = 350  # ~230+ trading days, comfortable margin for 200 SMA
 NEWS_LOOKBACK_DAYS = 30
-FUNDAMENTALS_LOOKBACK_DAYS = 365
 
 # Supported technical indicators (matching the original catalog)
 INDICATORS = [
@@ -570,7 +570,7 @@ def fetch_fundamentals(ticker: str, market: str = None) -> str:
 
 
 def fetch_financial_stmt(ticker: str, stmt_type: str, freq: str = "quarterly",
-                          curr_date: str = None, market: str = None) -> str:
+                         curr_date: str = None, market: str = None) -> str:
     """
     Fetch financial statement (balance_sheet, cashflow, income_stmt) from yfinance.
     Filters data to avoid look-ahead bias using curr_date.
@@ -608,10 +608,14 @@ def fetch_financial_stmt(ticker: str, stmt_type: str, freq: str = "quarterly",
         if data is None or (hasattr(data, "empty") and data.empty):
             return f"# No {stmt_type} data found for {ticker}\n"
 
-        # Filter by date to avoid look-ahead bias
+        # Filter by date to avoid look-ahead bias and retain only recent data.
         if curr_date and not data.empty:
             curr_dt = pd.Timestamp(curr_date)
-            valid_cols = [c for c in data.columns if pd.Timestamp(c) <= curr_dt]
+            window_start = curr_dt - pd.Timedelta(days=FINANCIAL_LOOKBACK_DAYS)
+            valid_cols = [
+                c for c in data.columns
+                if window_start <= pd.Timestamp(c) <= curr_dt
+            ]
             data = data[valid_cols]
 
         if data.empty:
@@ -1656,14 +1660,16 @@ def main():
         print("  [10] Skipped (historical replay has no point-in-time segment snapshot)", flush=True)
 
     # 10b. Official disclosure evidence and unified financial facts.
-    # PDF contents remain evidence-only; only supported structured facts may
-    # enter the numeric contract. No commercial provider can overwrite them.
+    # Official XBRL and deterministically parsed PDF/HTML facts have priority;
+    # the existing free-provider statement artifacts only fill missing keys.
     print("  [10b] Fetching official filing evidence...")
     official = fetch_official_filings(ticker, market, curr_date)
-    structured_facts = official.pop("structured_facts", None)
+    structured_facts = official.get("structured_facts")
+    official_for_output = dict(official)
+    official_for_output.pop("structured_facts", None)
     official_path = write_structured_file(
         os.path.join(ticker_dir, "official_filings"),
-        official,
+        official_for_output,
     )
     results["files"]["official_filings"] = official_path
     if structured_facts is not None:
@@ -1678,6 +1684,16 @@ def main():
         ticker,
         market,
         curr_date,
+        official_disclosures=official,
+        api_fallback={
+            "symbol": yf_ticker,
+            "financial_currency": financial_currency,
+            "statements": {
+                "income_stmt": income_stmt,
+                "balance_sheet": balance_sheet,
+                "cashflow": cashflow,
+            },
+        },
     )
     official_financials_path = write_structured_file(
         os.path.join(ticker_dir, "official_financials"),
@@ -1694,7 +1710,7 @@ def main():
         snapshot=provider_snapshot,
         fx=fx,
         audit_metrics=audit_metrics,
-        official_filings=official,
+        official_filings=official_for_output,
         official_structured_facts=structured_facts,
         official_financials=official_financials,
         sankey_data=sankey_data,

@@ -4,6 +4,7 @@ import pytest
 
 from temporal_policy import (
     CURRENT_RESEARCH,
+    financial_window_start,
     HISTORICAL_REPLAY,
     filter_historical_news,
     historical_provider_snapshot,
@@ -12,6 +13,10 @@ from temporal_policy import (
 
 
 NOW = datetime(2026, 8, 6, 4, 30, tzinfo=timezone.utc)
+
+
+def test_financial_window_start_is_inclusive_rolling_365_days():
+    assert financial_window_start("2026-08-04").isoformat() == "2025-08-04"
 
 
 def test_current_research_requires_the_real_execution_date():

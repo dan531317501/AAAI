@@ -9,8 +9,11 @@ as a numeric fact unless a supported structured payload is available.
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+import csv
+from io import StringIO
 import math
 import os
+import re
 from typing import Any
 
 from official_filings import (
@@ -18,6 +21,11 @@ from official_filings import (
     _hkex_filings,
     _sec_filings,
 )
+from official_document_parser import (
+    canonical_metric_for_label,
+    parse_official_documents,
+)
+from temporal_policy import FINANCIAL_LOOKBACK_DAYS, financial_window_start
 
 
 SCHEMA_VERSION = "1.0"
@@ -78,6 +86,13 @@ def _empty_result(ticker: str, market: str, analysis_date: str) -> dict[str, Any
         "ticker": ticker,
         "market": market,
         "analysis_date": analysis_date,
+        "financial_window": {
+            "lookback_days": FINANCIAL_LOOKBACK_DAYS,
+            "start_date": financial_window_start(analysis_date).isoformat(),
+            "end_date": analysis_date,
+            "period_basis": "period_end",
+            "filing_basis": "filed_at",
+        },
         "retrieved_at": datetime.now(timezone.utc).isoformat(),
         "status": "unavailable",
         "selected_source": None,
@@ -86,13 +101,21 @@ def _empty_result(ticker: str, market: str, analysis_date: str) -> dict[str, Any
         "filings": [],
         "facts": [],
         "numeric_status": "unavailable",
+        "official_numeric_status": "unavailable",
         "numeric_reason": "official_source_unavailable",
         "source_metadata": {},
+        "document_parsing": [],
+        "api_fallback": {
+            "used": False,
+            "provider": None,
+            "fact_count": 0,
+        },
         "degradation": [],
         "errors": [],
         "fallback_policy": (
-            "Only free official sources are configured; missing official facts "
-            "remain absent and are not replaced by a commercial provider."
+            "Official structured facts and deterministic PDF/HTML facts have "
+            "priority; free API facts only fill missing metric-period keys and "
+            "never replace official values."
         ),
     }
 
@@ -220,6 +243,7 @@ def _normalize_sec_facts(
     payload = raw.get("structured_facts") or {}
     filing_urls = _filing_url_map(filings)
     cutoff = _parse_date(analysis_date)
+    window_start = financial_window_start(analysis_date)
     normalized: list[dict[str, Any]] = []
     seen: set[tuple[Any, ...]] = set()
 
@@ -251,6 +275,11 @@ def _normalize_sec_facts(
                         continue
                     period_start = _date_text(row.get("start"))
                     period_end = _date_text(row.get("end"))
+                    period_end_date = _parse_date(period_end)
+                    if period_end_date is None or not (
+                        window_start <= period_end_date <= cutoff
+                    ):
+                        continue
                     accession = row.get("accn")
                     source_url = filing_urls.get(str(accession)) or raw.get(
                         "companyfacts_url"
@@ -288,6 +317,8 @@ def _normalize_sec_facts(
                         "raw_taxonomy": taxonomy,
                         "raw_tag": tag,
                         "raw_unit": str(unit),
+                        "extraction_method": "sec_companyfacts_xbrl",
+                        "official": True,
                     })
     normalized.sort(
         key=lambda fact: (
@@ -300,18 +331,171 @@ def _normalize_sec_facts(
     return normalized
 
 
+def _csv_number(value: Any) -> int | float | None:
+    if value is None or str(value).strip() in {"", "-", "--", "nan", "NaN", "None"}:
+        return None
+    return _number(str(value).replace(",", "").replace("(", "-").replace(")", ""))
+
+
+def _quarter_start(period_end: str) -> str | None:
+    parsed = _parse_date(period_end)
+    if parsed is None:
+        return None
+    if parsed.month not in {3, 6, 9, 12}:
+        return None
+    start_month = parsed.month - 2
+    return f"{parsed.year}-{start_month:02d}-01"
+
+
+def _normalize_api_statement_facts(
+    statements: dict[str, str] | None,
+    *,
+    financial_currency: str | None,
+    symbol: str,
+    analysis_date: str,
+) -> list[dict[str, Any]]:
+    """Normalize existing free-provider statement artifacts for per-fact fallback."""
+    facts: list[dict[str, Any]] = []
+    source_url = f"https://finance.yahoo.com/quote/{symbol}/financials"
+    for statement_type, content in (statements or {}).items():
+        if not isinstance(content, str) or not content.strip():
+            continue
+        rows = list(csv.reader(StringIO(content)))
+        header_index = next(
+            (
+                index for index, row in enumerate(rows)
+                if len(row) > 1 and any(_parse_date(cell) for cell in row[1:])
+            ),
+            None,
+        )
+        if header_index is None:
+            continue
+        header = rows[header_index]
+        periods = [(_parse_date(cell), cell) for cell in header[1:]]
+        for row in rows[header_index + 1:]:
+            if not row:
+                continue
+            label = str(row[0]).strip()
+            metric = canonical_metric_for_label(label)
+            if metric is None:
+                continue
+            period_type = "instant" if statement_type == "balance_sheet" else "quarter"
+            for offset, (period_end, raw_period) in enumerate(periods, start=1):
+                if period_end is None or period_end.isoformat() > analysis_date:
+                    continue
+                if period_end < financial_window_start(analysis_date):
+                    continue
+                if offset >= len(row):
+                    continue
+                value = _csv_number(row[offset])
+                if value is None:
+                    continue
+                unit = financial_currency or "provider_native"
+                if metric in {"basic_eps", "diluted_eps"}:
+                    unit = f"{financial_currency}/share" if financial_currency else "provider_native/share"
+                facts.append({
+                    "metric": metric,
+                    "value": value,
+                    "unit": unit,
+                    "currency": financial_currency,
+                    "period_start": (
+                        None if period_type == "instant" else _quarter_start(period_end.isoformat())
+                    ),
+                    "period_end": period_end.isoformat(),
+                    "period_type": period_type,
+                    "filed_at": None,
+                    "fiscal_year": period_end.year,
+                    "fiscal_period": (
+                        "FY" if period_type == "instant" else f"Q{((period_end.month - 1) // 3) + 1}"
+                    ),
+                    "source": "YFINANCE_FREE_API",
+                    "provider": "yfinance",
+                    "source_url": source_url,
+                    "source_page": None,
+                    "source_excerpt": f"{statement_type},{label},{raw_period}",
+                    "extraction_method": "yfinance_statement_csv",
+                    "raw_tag": label,
+                    "raw_unit": unit,
+                    "official": False,
+                    "fallback_reason": "official_document_metric_missing_or_unparseable",
+                    "retrieved_at": analysis_date,
+                })
+    return facts
+
+
+def _fact_key(fact: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        fact.get("metric"),
+        fact.get("period_end"),
+        fact.get("period_type"),
+    )
+
+
+def _in_financial_window(value: Any, analysis_date: str) -> bool:
+    parsed = _parse_date(value)
+    if parsed is None:
+        return False
+    cutoff = _parse_date(analysis_date)
+    return financial_window_start(analysis_date) <= parsed <= cutoff
+
+
+def _filter_facts_to_window(
+    facts: list[dict[str, Any]], analysis_date: str
+) -> list[dict[str, Any]]:
+    return [
+        fact for fact in facts
+        if isinstance(fact, dict)
+        and _in_financial_window(fact.get("period_end"), analysis_date)
+    ]
+
+
+def _merge_official_and_fallback(
+    official_facts: list[dict[str, Any]],
+    fallback_facts: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], int]:
+    """Keep the first official fact for a key and fill only missing keys."""
+    merged: list[dict[str, Any]] = []
+    keys: set[tuple[Any, ...]] = set()
+    for fact in official_facts:
+        key = _fact_key(fact)
+        if key in keys:
+            continue
+        keys.add(key)
+        merged.append(fact)
+    fallback_count = 0
+    for fact in fallback_facts:
+        key = _fact_key(fact)
+        if key in keys:
+            continue
+        keys.add(key)
+        merged.append(fact)
+        fallback_count += 1
+    merged.sort(
+        key=lambda fact: (
+            fact.get("period_end") or "",
+            fact.get("metric") or "",
+            bool(fact.get("official")),
+        ),
+        reverse=True,
+    )
+    return merged, fallback_count
+
+
 def fetch_official_financials(
     ticker: str,
     market: str,
     analysis_date: str,
     *,
     sec_user_agent: str | None = None,
+    official_disclosures: dict[str, Any] | None = None,
+    api_fallback: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return a stable official-financials contract for one instrument.
+    """Return official facts plus per-metric free API supplements.
 
-    There is intentionally no commercial-provider fallback in this function.
-    The existing provider snapshots remain separate compatibility artifacts and
-    cannot overwrite facts returned here.
+    Official XBRL or deterministically parsed document facts always win. The
+    optional API fallback is intentionally accepted as already-fetched
+    statement artifacts so the main workflow does not issue duplicate provider
+    requests.
     """
     result = _empty_result(ticker, market, analysis_date)
     source, provider = _source_for(ticker, market)
@@ -327,9 +511,16 @@ def fetch_official_financials(
         "priority": 1,
         "source": source,
         "provider": provider,
-        "role": "official_structured_numeric" if market.upper() == "US" else "official_disclosure",
+        "role": "official_structured_numeric" if market.upper() == "US" else "official_document_or_structured",
     }]
     result["selected_source"] = source
+    if api_fallback:
+        result["source_priority"].append({
+            "priority": 2,
+            "source": "YFINANCE_FREE_API",
+            "provider": "yfinance",
+            "role": "free_api_fallback",
+        })
 
     if source == "SEC_EDGAR_XBRL" and not (sec_user_agent or os.environ.get("SEC_USER_AGENT")):
         result["errors"].append({
@@ -340,26 +531,34 @@ def fetch_official_financials(
         result["numeric_reason"] = "official_source_unavailable"
         return result
 
-    try:
-        if source == "SEC_EDGAR_XBRL":
-            raw = _sec_filings(
-                ticker,
-                analysis_date,
-                sec_user_agent=sec_user_agent,
-            )
-        elif source == "HKEX_OFFICIAL_DISCLOSURE":
-            raw = _hkex_filings(ticker, analysis_date)
-        else:
-            raw = _cninfo_filings(ticker, analysis_date)
-    except Exception as error:  # provider failures are explicit and fail closed
-        result["errors"].append({
-            "stage": "official_fetch",
-            "reason": f"{type(error).__name__}: {error}",
-        })
-        result["degradation"].append("official_source_unavailable")
-        return result
+    if official_disclosures is not None:
+        raw = official_disclosures
+    else:
+        try:
+            if source == "SEC_EDGAR_XBRL":
+                raw = _sec_filings(
+                    ticker,
+                    analysis_date,
+                    sec_user_agent=sec_user_agent,
+                )
+            elif source == "HKEX_OFFICIAL_DISCLOSURE":
+                raw = _hkex_filings(ticker, analysis_date)
+            else:
+                raw = _cninfo_filings(ticker, analysis_date)
+        except Exception as error:  # provider failures are explicit and fail closed
+            result["errors"].append({
+                "stage": "official_fetch",
+                "reason": f"{type(error).__name__}: {error}",
+            })
+            result["degradation"].append("official_source_unavailable")
+            raw = {}
 
     raw = raw if isinstance(raw, dict) else {}
+    recent_records = [
+        record for record in (raw.get("records") or [])
+        if isinstance(record, dict)
+        and _in_financial_window(record.get("filed_at"), analysis_date)
+    ]
     result["source_metadata"] = {
         key: raw[key]
         for key in (
@@ -371,8 +570,7 @@ def fetch_official_financials(
     }
     result["filings"] = [
         _normalize_filing(record, source, provider)
-        for record in (raw.get("records") or [])
-        if isinstance(record, dict)
+        for record in recent_records
     ]
     if raw.get("reason"):
         result["errors"].append({
@@ -380,29 +578,70 @@ def fetch_official_financials(
             "reason": str(raw["reason"]),
         })
 
+    official_facts: list[dict[str, Any]] = []
     if source == "SEC_EDGAR_XBRL":
-        result["facts"] = _normalize_sec_facts(
+        official_facts = _normalize_sec_facts(
             raw, result["filings"], analysis_date
         )
-        result["numeric_source"] = "SEC_EDGAR_XBRL" if result["facts"] else None
-        if result["facts"]:
-            result["status"] = "available"
-            result["numeric_status"] = "available"
-            result["numeric_reason"] = None
-        elif result["filings"]:
-            result["status"] = "partial"
-            result["numeric_reason"] = "no_supported_sec_xbrl_fact_found"
-            result["degradation"].append("official_filing_metadata_only")
-        else:
-            result["numeric_reason"] = "official_filing_records_unavailable"
-            result["degradation"].append("official_source_unavailable")
+
+    document_records = [
+        {**record, "source": source, "provider": provider}
+        for record in recent_records
+        if not record.get("structured_numeric_data")
+    ]
+    if document_records:
+        document_result = parse_official_documents(
+            document_records,
+            analysis_date,
+            (api_fallback or {}).get("financial_currency"),
+            provider=provider,
+        )
+        result["document_parsing"] = document_result["documents"]
+        official_facts.extend(document_result["facts"])
+        if not document_result["facts"]:
+            result["degradation"].append("official_document_parse_failed")
+    elif source != "SEC_EDGAR_XBRL" and result["filings"]:
+        result["degradation"].append("official_document_records_unavailable")
+
+    official_facts = _filter_facts_to_window(official_facts, analysis_date)
+    fallback_facts = _normalize_api_statement_facts(
+        (api_fallback or {}).get("statements"),
+        financial_currency=(api_fallback or {}).get("financial_currency"),
+        symbol=(api_fallback or {}).get("symbol") or ticker,
+        analysis_date=analysis_date,
+    )
+    fallback_facts = _filter_facts_to_window(fallback_facts, analysis_date)
+    result["facts"], fallback_count = _merge_official_and_fallback(
+        official_facts,
+        fallback_facts,
+    )
+    official_count = sum(1 for fact in result["facts"] if fact.get("official"))
+    result["official_numeric_status"] = "available" if official_count else "unavailable"
+    result["api_fallback"] = {
+        "used": fallback_count > 0,
+        "provider": "yfinance" if fallback_count > 0 else None,
+        "fact_count": fallback_count,
+        "attempted_fact_count": len(fallback_facts),
+    }
+    if fallback_count:
+        result["degradation"].append("api_fallback_used")
+    result["numeric_status"] = "available" if result["facts"] else "unavailable"
+    if official_count:
+        result["numeric_source"] = source
+        result["status"] = "available"
+        result["numeric_reason"] = None
+    elif fallback_count:
+        result["numeric_source"] = "YFINANCE_FREE_API"
+        result["status"] = "partial"
+        result["numeric_reason"] = "official_document_facts_unavailable_api_fallback_used"
     elif result["filings"]:
         result["status"] = "partial"
-        result["numeric_reason"] = "official_disclosure_is_not_structured_xbrl"
-        result["degradation"].extend([
-            "official_disclosure_document_only",
-            "numeric_facts_not_extracted_from_documents",
-        ])
+        result["numeric_reason"] = (
+            "no_supported_sec_xbrl_fact_found"
+            if source == "SEC_EDGAR_XBRL"
+            else "official_document_facts_unavailable"
+        )
+        result["degradation"].append("official_filing_metadata_only")
     else:
         result["numeric_reason"] = "official_filing_records_unavailable"
         result["degradation"].append("official_source_unavailable")

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from html import unescape
 import os
 import re
@@ -12,6 +12,7 @@ from urllib.parse import urljoin
 import requests
 
 from provider_runtime import request_json, retry_call
+from temporal_policy import financial_window_start
 
 
 HEADERS = {
@@ -71,6 +72,7 @@ def _hkex_filings(ticker: str, analysis_date: str) -> dict:
     )
     link_pattern = re.compile(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', re.I | re.S)
     cutoff = datetime.strptime(analysis_date, "%Y-%m-%d")
+    window_start = financial_window_start(analysis_date)
     records = []
     rows = re.findall(r"<tr\b[^>]*>(.*?)</tr>", html, flags=re.IGNORECASE | re.DOTALL)
     for row_html in rows:
@@ -82,14 +84,30 @@ def _hkex_filings(ticker: str, analysis_date: str) -> dict:
             continue
         date_text, time_text = released_match.groups()
         released = datetime.strptime(f"{date_text} {time_text}", "%d/%m/%Y %H:%M")
-        if released.date() > cutoff.date():
+        if not (window_start <= released.date() <= cutoff.date()):
             continue
         links = link_pattern.findall(row_html)
         if not links:
             continue
+        headline_match = re.search(
+            r'<(?:td|div)\b[^>]*class="[^"]*\bheadline\b[^"]*"[^>]*>'
+            r'(.*?)</(?:td|div)>',
+            row_html,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        headline = ""
+        if headline_match:
+            headline = re.sub(
+                r"\s+",
+                " ",
+                unescape(re.sub(r"<[^>]+>", " ", headline_match.group(1))),
+            ).strip()
         for href, title_html in links:
-            title = re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", title_html))).strip()
-            lower = title.casefold()
+            link_title = re.sub(
+                r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", title_html))
+            ).strip()
+            title = headline or link_title
+            lower = f"{headline} {link_title}".casefold()
             if not any(term in lower for term in (
                 "results announcement", "annual results", "interim results",
                 "quarterly results", "annual report", "interim report",
@@ -159,12 +177,14 @@ def _sec_filings(
     recent = submissions.get("filings", {}).get("recent", {})
     records = []
     cutoff = datetime.strptime(analysis_date, "%Y-%m-%d").date()
+    window_start = financial_window_start(analysis_date)
     forms = recent.get("form", [])
     for index, form in enumerate(forms):
         if form not in ("10-K", "10-Q", "20-F", "40-F", "6-K"):
             continue
         filing_date = recent.get("filingDate", [])[index]
-        if datetime.strptime(filing_date, "%Y-%m-%d").date() > cutoff:
+        filing_day = datetime.strptime(filing_date, "%Y-%m-%d").date()
+        if not (window_start <= filing_day <= cutoff):
             continue
         accession = recent.get("accessionNumber", [])[index]
         primary = recent.get("primaryDocument", [])[index]
@@ -194,8 +214,9 @@ def _sec_filings(
 
 
 def _filter_companyfacts_as_of(facts: dict, analysis_date: str) -> dict:
-    """Remove SEC fact rows that were filed after the analysis cutoff."""
+    """Keep SEC facts filed and reported inside the rolling financial window."""
     cutoff = datetime.strptime(analysis_date, "%Y-%m-%d").date()
+    window_start = financial_window_start(analysis_date)
     filtered = {key: value for key, value in facts.items() if key != "facts"}
     filtered_taxonomies = {}
     for taxonomy_name, concepts in facts.get("facts", {}).items():
@@ -209,7 +230,15 @@ def _filter_companyfacts_as_of(facts: dict, analysis_date: str) -> dict:
                         filed = datetime.strptime(str(row.get("filed")), "%Y-%m-%d").date()
                     except (TypeError, ValueError):
                         continue
-                    if filed <= cutoff:
+                    if filed > cutoff:
+                        continue
+                    try:
+                        period_end = datetime.strptime(
+                            str(row.get("end")), "%Y-%m-%d"
+                        ).date()
+                    except (TypeError, ValueError):
+                        continue
+                    if window_start <= period_end <= cutoff:
                         allowed_rows.append(row)
                 if allowed_rows:
                     filtered_units[unit] = allowed_rows
@@ -235,7 +264,7 @@ def _cninfo_filings(ticker: str, analysis_date: str) -> dict:
         )
     org_id = ("gssh" if is_shanghai else "gssz") + code.zfill(7)
     cutoff = datetime.strptime(analysis_date, "%Y-%m-%d")
-    begin = (cutoff - timedelta(days=550)).strftime("%Y-%m-%d")
+    begin = financial_window_start(analysis_date).strftime("%Y-%m-%d")
     market = "sse" if is_shanghai else "szse"
     payload = request_json(
         "POST",
@@ -265,7 +294,20 @@ def _cninfo_filings(ticker: str, analysis_date: str) -> dict:
         validator=lambda value: isinstance(value, dict),
     )
     records = []
+    cutoff_date = cutoff.date()
     for item in payload.get("announcements", []) or []:
+        announcement_time = item.get("announcementTime")
+        try:
+            timestamp = float(announcement_time)
+            if timestamp > 10_000_000_000:
+                timestamp /= 1000
+            announcement_date = datetime.fromtimestamp(
+                timestamp, tz=timezone.utc
+            ).date()
+        except (TypeError, ValueError, OverflowError, OSError):
+            continue
+        if not (financial_window_start(analysis_date) <= announcement_date <= cutoff_date):
+            continue
         adjunct = item.get("adjunctUrl")
         records.append({
             "filed_at": item.get("announcementTime"),

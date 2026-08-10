@@ -353,6 +353,7 @@ def _official_financial_metrics(
             continue
         period = fact.get("period_end") or fact.get("period_type") or "unknown"
         metric_id = f"official_financials.{metric}.{period}.{index}"
+        is_official = fact.get("official", True)
         normalized = _metric(
             metric_id,
             value,
@@ -366,12 +367,18 @@ def _official_financial_metrics(
                 f"{fact.get('raw_tag', metric)}."
                 f"{fact.get('raw_unit', fact.get('unit', 'unknown'))}"
             ),
-            status="verified",
-            allowed_uses=[
-                "official_financials",
-                "official_fundamental_cross_check",
-                "historical_growth",
-            ],
+            status="verified" if is_official else "single_source",
+            allowed_uses=(
+                [
+                    "official_financials",
+                    "official_fundamental_cross_check",
+                    "historical_growth",
+                ]
+                if is_official else [
+                    "financial_statement_fallback",
+                    "historical_growth",
+                ]
+            ),
             quality_flags=[
                 f"period_type={fact.get('period_type', 'unknown')}",
                 f"filed={fact.get('filed_at')}",
@@ -387,6 +394,12 @@ def _official_financial_metrics(
             "source_url": fact.get("source_url"),
             "accession_number": fact.get("accession_number"),
             "raw_tag": fact.get("raw_tag"),
+            "raw_unit": fact.get("raw_unit"),
+            "official": is_official,
+            "source_page": fact.get("source_page"),
+            "source_excerpt": fact.get("source_excerpt"),
+            "extraction_method": fact.get("extraction_method"),
+            "fallback_reason": fact.get("fallback_reason"),
         })
         result.append(normalized)
     return result
@@ -676,17 +689,23 @@ def build_validated_metrics(
         "facts": [],
     }
     official_numeric_status = official_financials_contract.get(
-        "numeric_status", "unavailable"
+        "official_numeric_status",
+        official_financials_contract.get("numeric_status", "unavailable"),
     )
     quality_notes = [
-        "Official filing discovery does not authorize LLM extraction from PDFs.",
+        "Official PDF/HTML disclosures are deterministically parsed; LLM extraction is not used.",
         "Only normalized official facts with source, period, unit, and currency metadata enter the official financials layer.",
         "Longbridge currency is a translated provider presentation unless original currency and FX are supplied.",
     ]
     if official_numeric_status != "available":
-        quality_notes.append(
-            "Official numeric facts are unavailable; no official value was fabricated or replaced by a commercial provider."
-        )
+        if official_financials_contract.get("numeric_status") == "available":
+            quality_notes.append(
+                "Official document facts are unavailable; free API facts are marked fallback and do not replace official values."
+            )
+        else:
+            quality_notes.append(
+                "Official numeric facts are unavailable; no official value was fabricated or replaced by a commercial provider."
+            )
     if historical_replay:
         quality_notes.append(
             "Historical replay excludes retrieval-time snapshots without verified point-in-time availability."
