@@ -1,4 +1,4 @@
-from news_filter import normalize_title
+from news_filter import filter_by_date_window, normalize_title
 
 
 def test_normalize_title_strips_whitespace():
@@ -17,6 +17,34 @@ def test_normalize_title_unifies_fullwidth_punct():
 def test_normalize_title_empty_returns_empty():
     assert normalize_title("") == ""
     assert normalize_title("   ") == ""
+
+
+def test_filter_by_date_window_keeps_60_day_boundary_and_drops_older_or_undated():
+    kept, out_of_window, missing_date = filter_by_date_window(
+        [
+            {"title": "boundary", "date": "2026-06-13 09:00"},
+            {"title": "too old", "date": "2026-06-12 23:59"},
+            {"title": "no timestamp", "date": ""},
+            {"title": "latest", "published_at": "2026-08-12T09:00:00+08:00"},
+        ],
+        "2026-08-12",
+        lookback_days=60,
+    )
+
+    assert [item["title"] for item in kept] == ["latest", "boundary"]
+    assert out_of_window == 1
+    assert missing_date == 1
+
+
+def test_filter_by_date_window_excludes_future_publication():
+    kept, out_of_window, missing_date = filter_by_date_window(
+        [{"title": "future", "date": "2026-08-13 00:01"}],
+        "2026-08-12",
+    )
+
+    assert kept == []
+    assert out_of_window == 1
+    assert missing_date == 0
 
 
 from news_filter import dedup_by_title
@@ -150,9 +178,12 @@ def test_process_and_write_news_merges_evidence_and_audit_counts(tmp_path):
 
     news_text = news_path.read_text()
     assert kept == 2
-    assert "[N001] 公司发布季度业绩" in news_text
+    assert "[N001] 分析师调整目标价" in news_text
+    assert "[N002] 公司发布季度业绩" in news_text
     assert "Summary: 季度收入同比增长 20%。" in news_text
     assert "## News Processing Audit (2026-07-01 to 2026-07-31)" in news_text
+    assert "date_window_kept: 2" in news_text
+    assert "missing_or_unparseable_publication_time: 0" in news_text
     assert "content_level_summary: 1" in news_text
     assert "content_level_title_only: 1" in news_text
     assert "social_data_available: separate (stocktwits.txt, reddit.txt)" in news_text
@@ -233,7 +264,7 @@ def test_split_recent_keeps_all_within_7days():
 
 
 def test_split_history_keeps_only_high_signal():
-    # 8-30天：高信号留，非高信号丢
+    # 8-60天：高信号留，非高信号丢
     articles = [
         {"title": "阿里云财报同比增长30%", "date": "2026-07-01 09:00", "provider": ""},
         {"title": "阿里参加论坛", "date": "2026-07-01 10:00", "provider": ""},
@@ -254,7 +285,7 @@ def test_split_boundary_exactly_7_days():
 
 
 def test_split_beyond_30_days_dropped():
-    # 超过30天的直接丢弃
+    # 显式传入30天时，超过30天的直接丢弃
     articles = [
         {"title": "阿里云财报同比增长30%", "date": "2026-06-10 09:00", "provider": ""},
     ]

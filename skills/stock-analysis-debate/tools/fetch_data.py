@@ -18,7 +18,7 @@ Output:
         price_context.toon  # 1/5/20-session absolute/relative returns
         expectations.txt    # Earnings surprise and analyst-expectation context
         indicators.txt      # All technical indicators
-        news.txt            # Company-specific news
+        news.txt            # Company-specific news (strict 60-day window)
         global_news.txt     # Macro/global news
         fundamentals.txt    # Company fundamentals overview
         balance_sheet.csv   # Balance sheet
@@ -41,6 +41,7 @@ Output:
 import argparse
 import os
 import sys
+import time
 from datetime import datetime, timedelta
 
 from output_layout import resolve_ticker_paths
@@ -49,8 +50,13 @@ import pandas as pd
 import yfinance as yf
 from stockstats import wrap
 
-from news_filter import (dedup_by_title, filter_noise, render_news_evidence,
-                         split_recent_and_history)
+from news_filter import (
+    dedup_by_title,
+    filter_by_date_window,
+    filter_noise,
+    render_news_evidence,
+    split_recent_and_history,
+)
 from longbridge_fetcher import (fetch_range_klines, fetch_revenue_sankey,
                                 get_revenue_sankey_metadata,
                                 parse_range_klines, parse_revenue_sankey)
@@ -75,7 +81,7 @@ from provider_runtime import (
     get_retry_events,
     retry_call,
 )
-from structured_io import write_structured_file
+from structured_io import read_structured_file, write_structured_file
 from temporal_policy import (
     CURRENT_RESEARCH,
     FINANCIAL_LOOKBACK_DAYS,
@@ -88,7 +94,7 @@ from temporal_policy import (
 
 # Look-back windows
 PRICE_LOOKBACK_DAYS = 350  # ~230+ trading days, comfortable margin for 200 SMA
-NEWS_LOOKBACK_DAYS = 30
+NEWS_LOOKBACK_DAYS = 60
 
 # Supported technical indicators (matching the original catalog)
 INDICATORS = [
@@ -1047,22 +1053,28 @@ def _yf_news_to_list(ticker: str, start_date: str, end_date: str,
 
 
 def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
-                           out_path: str, lookback_days: int = 30,
+                           out_path: str, lookback_days: int = 60,
                            market: str = "US",
                            temporal_excluded: int = 0) -> int:
     """对原始新闻跑去噪+去重，将正文和处理审计合并写入 news.txt。
 
     返回最终保留条数，并清理同目录下旧版 news_meta.txt，避免留下过期审计副本。
 
-    HK/US 市场（yfinance 新闻，质量高）：只做 filter_noise + dedup_by_title，
-    不做分层过滤（split_recent_and_history），保留全部新闻。
+    HK/US 市场（yfinance 新闻，质量高）：先做严格日期窗口过滤，再做
+    filter_noise + dedup_by_title，不做分层过滤。
 
-    CN 市场（新浪财经新闻，噪声多）：filter_noise -> split_recent_and_history
-    (近7天全留，8-30天仅留高信号) -> dedup_by_title。
+    CN 市场（新浪财经新闻，噪声多）：先做严格日期窗口过滤，再做
+    filter_noise -> split_recent_and_history (近7天全留，8-60天仅留高信号)
+    -> dedup_by_title。
     """
     raw_count = len(raw_items)
-    after_noise = filter_noise(raw_items)
-    noise_count = raw_count - len(after_noise)
+    dated_items, out_of_window_count, missing_date_count = filter_by_date_window(
+        raw_items,
+        curr_date,
+        lookback_days=lookback_days,
+    )
+    after_noise = filter_noise(dated_items)
+    noise_count = len(dated_items) - len(after_noise)
 
     if market in ("HK", "US"):
         # yfinance 新闻质量高，跳过 split_recent_and_history
@@ -1085,12 +1097,15 @@ def process_and_write_news(raw_items: list, curr_date: str, news_start: str,
         f"## News Processing Audit ({news_start} to {curr_date})",
         f"market: {market}",
         f"raw_fetched: {raw_count}",
+        f"date_window_kept: {len(dated_items)}",
+        f"date_window_excluded: {out_of_window_count}",
+        f"missing_or_unparseable_publication_time: {missing_date_count}",
         f"after_noise_filter: {len(after_noise)} (removed {noise_count})",
     ]
     if market == "CN":
         audit.extend([
             f"recent_7d_kept: {len(recent)}",
-            f"history_8_30d_kept: {len(history)}",
+            f"history_8_60d_kept: {len(history)}",
         ])
     else:
         audit.append("split_skipped: HK/US yfinance news, full retention")
@@ -1271,6 +1286,42 @@ def _compute_data_quality(ticker_dir: str, ticker: str, analysis_as_of_date: str
     return quality
 
 
+def _load_valuation_consensus(
+    input_path: str,
+    *,
+    ticker: str,
+    analysis_date: str,
+    wait_for_explicit: bool = False,
+    poll_timeout: float = 300.0,
+    poll_interval: float = 2.0,
+) -> dict:
+    """Read web valuation evidence, waiting for a parallel writer when
+    ``--valuation-consensus-file`` was passed explicitly."""
+    deadline = time.monotonic() + poll_timeout if wait_for_explicit else None
+    while True:
+        try:
+            candidate = read_structured_file(input_path)
+            if isinstance(candidate, dict):
+                return candidate
+            break  # decoded but not a dict -> unusable
+        except FileNotFoundError:
+            pass  # may not be written yet by the parallel research sub-agent
+        except (ValueError, RuntimeError):
+            break  # corrupt or unreadable -> fall back immediately
+        if deadline is None or time.monotonic() >= deadline:
+            break
+        time.sleep(poll_interval)
+    return {
+        "schema_version": "1.0",
+        "ticker": ticker,
+        "analysis_date": analysis_date,
+        "status": "unavailable",
+        "blocking_reasons": ["network_valuation_evidence_not_written"],
+        "web_consensus": [],
+        "peers": [],
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Fetch stock data for TradingAgents analysis")
     parser.add_argument("ticker", help="Ticker symbol (e.g., AAPL, 600519.SH, 00700.HK)")
@@ -1285,6 +1336,14 @@ def main():
         "--as-of-date",
         default=None,
         help="Historical replay cutoff in YYYY-MM-DD format (market-timezone end of day)",
+    )
+    parser.add_argument(
+        "--valuation-consensus-file",
+        default=None,
+        help=(
+            "Structured web valuation evidence written before data collection; "
+            "defaults to DATA_DIR/valuation_consensus when present"
+        ),
     )
     output_group = parser.add_mutually_exclusive_group()
     output_group.add_argument(
@@ -1719,6 +1778,26 @@ def main():
     )
     results["files"]["official_financials"] = official_financials_path
 
+    # Web valuation evidence is an explicit input written by the parallel
+    # market-consensus research sub-agent. It is read lazily right before
+    # validation (rather than at startup) so fetch_data can run concurrently
+    # with that sub-agent; it is never inferred from article text or silently
+    # replaced with provider target-price guesses.
+    valuation_consensus_input = args.valuation_consensus_file or os.path.join(
+        ticker_dir, "valuation_consensus"
+    )
+    valuation_consensus = _load_valuation_consensus(
+        valuation_consensus_input,
+        ticker=ticker,
+        analysis_date=curr_date,
+        wait_for_explicit=args.valuation_consensus_file is not None,
+    )
+    valuation_consensus_path = write_structured_file(
+        os.path.join(ticker_dir, "valuation_consensus"),
+        valuation_consensus,
+    )
+    results["files"]["valuation_consensus"] = str(valuation_consensus_path)
+
     # 10d. Generate the fail-closed numeric contract consumed by every LLM role.
     print("  [10d] Building deterministic validated metrics...")
     contract = build_validated_metrics(
@@ -1732,6 +1811,7 @@ def main():
         official_structured_facts=structured_facts,
         official_financials=official_financials,
         sankey_data=sankey_data,
+        valuation_consensus=valuation_consensus,
         temporal_context=temporal_context,
     )
     validated_path = write_structured_file(
@@ -1743,6 +1823,11 @@ def main():
     with open(validation_report_path, "w") as f:
         f.write(render_validation_report(contract))
     results["files"]["validation_report"] = validation_report_path
+    forward_pe_path = write_structured_file(
+        os.path.join(ticker_dir, "forward_pe_valuation"),
+        contract["forward_pe_valuation"],
+    )
+    results["files"]["forward_pe_valuation"] = str(forward_pe_path)
 
     # 11. Data quality audit
     print("  [11] Computing data quality metadata...")

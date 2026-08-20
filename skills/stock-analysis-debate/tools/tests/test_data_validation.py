@@ -11,6 +11,7 @@ from data_validation import (
 
 def _snapshot():
     return {
+        "retrieved_at": "2026-08-03T12:00:00+00:00",
         "quote_currency": "HKD",
         "financial_currency": "CNY",
         "currency_evidence": {
@@ -20,12 +21,63 @@ def _snapshot():
         "info": {"revenueGrowth": -0.109, "earningsGrowth": -0.581},
         "analyst_tables": {
             "earnings_estimate": [
-                {"period": "0y", "avg": 1.08, "numberOfAnalysts": 17, "currency": "CNY"}
+                {"period": "+1y", "avg": 1.08, "numberOfAnalysts": 17, "currency": "CNY"}
             ],
             "revenue_estimate": [],
             "eps_trend": [],
             "eps_revisions": [],
         },
+    }
+
+
+def _target_snapshot():
+    snapshot = _snapshot()
+    snapshot["quote_currency"] = "CNY"
+    snapshot["financial_currency"] = "CNY"
+    snapshot["currency_evidence"] = {
+        "info.currency": "CNY",
+        "info.financialCurrency": "CNY",
+    }
+    return snapshot
+
+
+def _valuation_consensus():
+    return {
+        "schema_version": "1.0",
+        "status": "available",
+        "instrument": {
+            "currency": "CNY",
+            "share_basis": "CNY/common_share",
+            "source_name": "Exchange filing",
+            "source_url": "https://example.com/instrument",
+            "as_of_date": "2026-08-01",
+            "basis": "The source identifies the listed share basis.",
+        },
+        "web_consensus": [{
+            "scope": "industry",
+            "target_pe": 12.0,
+            "forecast_period": "next_fiscal_year",
+            "currency": "CNY",
+            "share_basis": "CNY/industry_peer",
+            "source_name": "Industry research",
+            "source_url": "https://example.com/consensus",
+            "published_at": "2026-08-01",
+            "basis": "The report states the industry next-fiscal-year Forward P/E midpoint.",
+        }],
+        "peers": [
+            {
+                "symbol": f"PEER{index}",
+                "forward_pe": value,
+                "forecast_period": "next_fiscal_year",
+                "currency": "CNY",
+                "share_basis": "CNY/common_share",
+                "source_name": "Peer data provider",
+                "source_url": f"https://example.com/peer{index}",
+                "as_of_date": "2026-08-03",
+                "basis": "The provider labels this value next-fiscal-year Forward P/E.",
+            }
+            for index, value in enumerate((8.0, 10.0, 12.0, 14.0), start=1)
+        ],
     }
 
 
@@ -110,14 +162,15 @@ def test_llm_policy_allows_current_run_artifacts_without_gate_bypass():
     assert "Prefer tool-derived values" in policy["allowed_math"]
 
 
-def test_valid_target_price_gate_records_method_period_and_inputs():
+def test_forward_target_price_gate_records_method_period_and_inputs():
     contract = build_validated_metrics(
         ticker="01810.HK", market="HK", analysis_date="2026-08-04",
-        snapshot=_snapshot(),
+        snapshot=_target_snapshot(),
         fx={"status": "verified", "rate": 0.92},
         audit_metrics=_audit(),
         official_filings={"status": "available", "provider": "HKEXnews", "records": []},
         sankey_data=None,
+        valuation_consensus=_valuation_consensus(),
     )
 
     detail = contract["gate_details"]["allow_target_price"]
@@ -125,10 +178,15 @@ def test_valid_target_price_gate_records_method_period_and_inputs():
     assert contract["gates"]["allow_strong_rating"] is True
     assert detail["allowed"] is True
     assert detail["blocking_reasons"] == []
-    assert detail["forecast_period"] == "0y"
-    assert detail["valuation_method"] == "forward_eps_x_explicit_scenario_pe"
+    assert detail["forecast_period"] == "next_fiscal_year"
+    assert detail["valuation_method"] == "forward_eps_x_peer_forward_pe_percentiles"
+    assert detail["percentile_definition"] == {"bear": "P25", "base": "P50", "bull": "P75"}
     assert detail["sensitivity_required"] is True
-    assert "earnings_estimate.0y.avg" in detail["required_metric_ids"]
+    assert "forward_eps_next_fiscal_year" in detail["required_metric_ids"]
+    assert contract["forward_pe_valuation"]["scenarios"]["base"]["price_target"] == pytest.approx(11.88)
+    report = render_validation_report(contract)
+    assert "Forward EPS (next_fiscal_year): 1.08 CNY/common_share" in report
+    assert "Target P/E (Bear/Base/Bull): 9.5x / 11.0x / 12.5x" in report
 
 
 @pytest.mark.parametrize(
@@ -165,8 +223,9 @@ def test_invalid_pe_inputs_close_pe_target_and_strong_rating(eps, pe, expected_r
         ({"avg": None}, "forecast_eps_not_positive"),
         ({"avg": -0.5}, "forecast_eps_not_positive"),
         ({"numberOfAnalysts": 0}, "forecast_analyst_count_invalid"),
-        ({"currency": "USD"}, "forecast_currency_mismatch"),
-        ({"period": "0q"}, "annual_forecast_period_missing"),
+        ({"currency": "USD"}, "forecast_currency_not_quote_or_financial"),
+        ({"period": "0q"}, "next_fiscal_year_forecast_missing"),
+        ({"period": "0y"}, "next_fiscal_year_forecast_missing"),
     ],
 )
 def test_invalid_consensus_row_closes_target_and_strong_rating(updates, expected_reason):
@@ -203,9 +262,9 @@ def test_provider_statement_mismatch_is_disclosed_and_blocks_target_confidence()
     assert contract["gates"]["allow_target_price"] is False
     assert contract["gates"]["allow_strong_rating"] is False
     assert "provider_vs_statement_ttm_valuation" in contract["quality"]["conflicting_metrics"]
-    assert "provider_statement_ttm_conflict" in contract["gate_details"]["allow_target_price"]["blocking_reasons"]
+    assert "valuation_consensus_missing" in contract["gate_details"]["allow_target_price"]["blocking_reasons"]
     report = render_validation_report(contract)
-    assert "provider_statement_ttm_conflict" in report
+    assert "valuation_consensus_missing" in report
 
 
 def test_share_count_basis_conflict_closes_all_exact_valuation_methods():
@@ -225,6 +284,23 @@ def test_share_count_basis_conflict_closes_all_exact_valuation_methods():
     assert contract["gates"]["allow_exact_ev_to_ebitda"] is False
     assert contract["gates"]["allow_exact_valuation"] is False
     assert "share_count_basis_mismatch" in contract["quality"]["conflicting_metrics"]
+
+
+def test_explicit_forward_share_basis_does_not_inherit_ttm_share_count_conflict():
+    audit = _audit()
+    audit["share_count_basis_status"] = "potential_mismatch"
+    contract = build_validated_metrics(
+        ticker="SKHY", market="US", analysis_date="2026-08-04",
+        snapshot=_target_snapshot(),
+        fx={"status": "verified", "rate": 1.0},
+        audit_metrics=audit,
+        official_filings={"status": "partial", "provider": "SEC EDGAR", "records": []},
+        sankey_data=None,
+        valuation_consensus=_valuation_consensus(),
+    )
+
+    assert contract["gates"]["allow_target_price"] is True
+    assert contract["forward_pe_valuation"]["share_basis"] == "CNY/common_share"
 
 
 def test_missing_fx_blocks_all_exact_cross_currency_valuation_values():

@@ -10,6 +10,10 @@ import pandas as pd
 import yfinance as yf
 
 from provider_runtime import retry_call
+from forward_pe_valuation import (
+    FORECAST_PERIOD,
+    build_forward_pe_valuation,
+)
 
 
 VALID_STATUSES = {
@@ -222,9 +226,11 @@ def _positive_metric_ready(metric: dict[str, Any] | None) -> bool:
 
 
 def _select_target_consensus(
-    snapshot: dict[str, Any], financial_currency: str | None,
+    snapshot: dict[str, Any],
+    quote_currency: str | None,
+    financial_currency: str | None,
 ) -> tuple[dict[str, Any] | None, list[str]]:
-    """Select a positive annual EPS consensus row without annualizing quarterly data."""
+    """Select the next-fiscal-year EPS row without annualizing quarterly data."""
     rows = snapshot.get("analyst_tables", {}).get("earnings_estimate", [])
     candidates: list[dict[str, Any]] = []
     observed_reasons: set[str] = set()
@@ -237,8 +243,8 @@ def _select_target_consensus(
         analyst_count = _finite(record.get("numberOfAnalysts"))
         currency = str(record.get("currency") or "").strip().upper()
 
-        if period not in {"0y", "+1y"}:
-            observed_reasons.add("annual_forecast_period_missing")
+        if period != "+1y":
+            observed_reasons.add("next_fiscal_year_forecast_missing")
             continue
         if average is None or average <= 0:
             observed_reasons.add("forecast_eps_not_positive")
@@ -246,11 +252,15 @@ def _select_target_consensus(
         if analyst_count is None or analyst_count <= 0:
             observed_reasons.add("forecast_analyst_count_invalid")
             continue
-        if not financial_currency or currency != financial_currency.upper():
-            observed_reasons.add("forecast_currency_mismatch")
+        allowed_currencies = {
+            value.upper() for value in (quote_currency, financial_currency) if value
+        }
+        if not allowed_currencies or currency not in allowed_currencies:
+            observed_reasons.add("forecast_currency_not_quote_or_financial")
             continue
         candidates.append({
             "period": period,
+            "forecast_period": FORECAST_PERIOD,
             "avg": average,
             "numberOfAnalysts": analyst_count,
             "currency": currency,
@@ -274,6 +284,74 @@ def _gate_detail(
         "required_metric_ids": required_metric_ids,
         **context,
     }
+
+
+def _forward_pe_metric_records(
+    valuation: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Expose Forward P/E inputs and scenarios as typed validated metrics."""
+    records: list[dict[str, Any]] = []
+    forward_eps = valuation.get("forward_eps") or {}
+    share_basis = str(
+        forward_eps.get("share_basis") or valuation.get("share_basis") or ""
+    ).strip()
+    eps_flags = [
+        f"forecast_period={valuation.get('forecast_period', FORECAST_PERIOD)}",
+        f"share_basis={share_basis or 'unverified'}",
+        f"provider_period={forward_eps.get('provider_period', '+1y')}",
+    ]
+    records.append(_metric(
+        "forward_eps_next_fiscal_year",
+        forward_eps.get("value"),
+        unit="currency_per_share",
+        currency=forward_eps.get("currency"),
+        period=FORECAST_PERIOD,
+        provider=str(forward_eps.get("source_name") or "yfinance"),
+        source_field=str(
+            forward_eps.get("source_field")
+            or "analyst_estimates.earnings_estimate.+1y.avg"
+        ),
+        status="single_source",
+        allowed_uses=["expectation_analysis", "target_price_input"],
+        quality_flags=eps_flags,
+    ))
+
+    scenario_metric_names = {
+        "bear": ("target_pe_bear", "price_target_bear"),
+        "base": ("target_pe_base", "price_target_base"),
+        "bull": ("target_pe_bull", "price_target_bull"),
+    }
+    for scenario, (pe_metric_id, price_metric_id) in scenario_metric_names.items():
+        values = valuation.get("scenarios", {}).get(scenario, {})
+        scenario_status = "verified" if valuation.get("status") == "verified" else "unavailable"
+        records.append(_metric(
+            pe_metric_id,
+            values.get("target_pe"),
+            unit="multiple",
+            currency=None,
+            period=FORECAST_PERIOD,
+            provider="peer_forward_pe_percentile",
+            source_field=f"forward_pe_valuation.scenarios.{scenario}.target_pe",
+            status=scenario_status,
+            allowed_uses=["target_price_input"],
+            quality_flags=[
+                f"percentile={values.get('percentile', 'N/A')}",
+                f"peer_count={valuation.get('peer_count', 0)}",
+            ],
+        ))
+        records.append(_metric(
+            price_metric_id,
+            values.get("price_target"),
+            unit="currency_per_share",
+            currency=valuation.get("currency"),
+            period=FORECAST_PERIOD,
+            provider="forward_eps_x_peer_forward_pe_percentile",
+            source_field=f"forward_pe_valuation.scenarios.{scenario}.price_target",
+            status=scenario_status,
+            allowed_uses=["target_price"],
+            quality_flags=[f"share_basis={share_basis or 'unverified'}"],
+        ))
+    return records
 
 
 def _sec_official_metrics(
@@ -417,6 +495,7 @@ def build_validated_metrics(
     sankey_data: dict[str, Any] | None,
     official_structured_facts: dict[str, Any] | None = None,
     official_financials: dict[str, Any] | None = None,
+    valuation_consensus: dict[str, Any] | None = None,
     temporal_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create a fail-closed, typed numeric contract for downstream agents."""
@@ -433,8 +512,43 @@ def build_validated_metrics(
     quote_currency = snapshot.get("quote_currency")
     financial_currency = snapshot.get("financial_currency")
     target_consensus, consensus_blocking_reasons = _select_target_consensus(
-        snapshot, financial_currency
+        snapshot, quote_currency, financial_currency
     )
+    valuation_instrument = {}
+    if isinstance(valuation_consensus, dict):
+        valuation_instrument = (
+            valuation_consensus.get("instrument")
+            or valuation_consensus.get("target_instrument")
+            or {}
+        )
+    forward_eps = None
+    if target_consensus:
+        forward_eps = {
+            "value": target_consensus.get("avg"),
+            "currency": target_consensus.get("currency"),
+            "share_basis": valuation_instrument.get("share_basis"),
+            "forecast_period": FORECAST_PERIOD,
+            "provider_period": target_consensus.get("period"),
+            "analyst_count": target_consensus.get("numberOfAnalysts"),
+            "source_name": "yfinance",
+            "source_field": (
+                f"earnings_estimate.{target_consensus.get('period')}.avg"
+            ),
+            "retrieved_at": snapshot.get("retrieved_at"),
+        }
+    forward_pe_valuation = build_forward_pe_valuation(
+        forward_eps,
+        valuation_consensus,
+        analysis_date,
+        analysis_mode=temporal_context.get("analysis_mode", "current_research"),
+    )
+    if consensus_blocking_reasons:
+        forward_pe_valuation["gate"]["blocking_reasons"] = list(dict.fromkeys(
+            list(forward_pe_valuation["gate"].get("blocking_reasons", []))
+            + consensus_blocking_reasons
+        ))
+        forward_pe_valuation["gate"]["allowed"] = False
+        forward_pe_valuation["status"] = "partial"
     reconciliation_status = audit_metrics.get("ttm_valuation_reconciliation_status")
     reconciliation_conflict = reconciliation_status == "mismatch"
     share_count_conflict = (
@@ -545,6 +659,7 @@ def build_validated_metrics(
                 ))
     metrics.extend(_sec_official_metrics(official_structured_facts, analysis_date))
     metrics.extend(_official_financial_metrics(official_financials))
+    metrics.extend(_forward_pe_metric_records(forward_pe_valuation))
 
     translated_currencies = sorted({
         str(period.get("currency"))
@@ -605,26 +720,30 @@ def build_validated_metrics(
         conflicts.append("share_count_basis_mismatch")
 
     target_required_metric_ids = [
-        "current_price",
-        "statement_ttm_diluted_eps",
-        "point_in_time_pe",
+        "forward_eps_next_fiscal_year",
+        "target_pe_bear",
+        "target_pe_base",
+        "target_pe_bull",
+        "price_target_bear",
+        "price_target_base",
+        "price_target_bull",
     ]
-    if target_consensus:
-        target_required_metric_ids.extend([
-            f"earnings_estimate.{target_consensus['period']}.avg",
-            f"earnings_estimate.{target_consensus['period']}.numberOfAnalysts",
-        ])
-    target_reasons = list(exact_pe_reasons) + list(consensus_blocking_reasons)
-    if reconciliation_conflict:
-        target_reasons.append("provider_statement_ttm_conflict")
-    if share_count_conflict:
-        target_reasons.append("share_count_basis_mismatch")
+    target_reasons = list(
+        forward_pe_valuation.get("gate", {}).get("blocking_reasons", [])
+    )
     for metric_id in target_required_metric_ids:
         metric = metrics_by_id.get(metric_id)
-        if not metric or "target_price_input" not in metric.get("allowed_uses", []):
+        required_use = (
+            "target_price"
+            if metric_id.startswith("price_target_")
+            else "target_price_input"
+        )
+        if not metric or required_use not in metric.get("allowed_uses", []):
             target_reasons.append(f"target_price_use_not_allowed:{metric_id}")
     target_reasons = list(dict.fromkeys(target_reasons))
-    target_ready = not target_reasons
+    target_ready = not target_reasons and bool(
+        forward_pe_valuation.get("gate", {}).get("allowed")
+    )
 
     strong_rating_reasons = list(target_reasons)
     strong_rating_ready = not strong_rating_reasons
@@ -665,8 +784,18 @@ def build_validated_metrics(
         "allow_target_price": _gate_detail(
             blocking_reasons=target_reasons,
             required_metric_ids=target_required_metric_ids,
-            valuation_method="forward_eps_x_explicit_scenario_pe",
-            forecast_period=(target_consensus or {}).get("period"),
+            valuation_method="forward_eps_x_peer_forward_pe_percentiles",
+            forecast_period=FORECAST_PERIOD,
+            percentile_definition={
+                "bear": "P25",
+                "base": "P50",
+                "bull": "P75",
+            },
+            peer_count=forward_pe_valuation.get("peer_count", 0),
+            web_consensus_count=(
+                forward_pe_valuation.get("valuation_evidence", {})
+                .get("web_consensus_count", 0)
+            ),
             sensitivity_required=True,
         ),
         "allow_strong_rating": _gate_detail(
@@ -743,6 +872,7 @@ def build_validated_metrics(
             if key != "structured_facts"
         },
         "official_financials": official_financials_contract,
+        "forward_pe_valuation": forward_pe_valuation,
         "source_priority": [
             "official_structured_disclosure",
             "official_disclosure_document",
@@ -770,10 +900,11 @@ def build_validated_metrics(
         "quality": {
             "status": (
                 "verified"
-                if exact_pe_ready and exact_pb_ready and exact_ev_ready and target_consensus
+                if exact_pe_ready and exact_pb_ready and exact_ev_ready and target_ready
                 else "partial"
             ),
             "ttm_periods_contiguous": audit_metrics.get("ttm_periods_contiguous"),
+            "forward_pe_status": forward_pe_valuation.get("status"),
             "conflicting_metrics": conflicts,
             "official_numeric_status": official_numeric_status,
             "notes": quality_notes,
@@ -786,6 +917,28 @@ def render_validation_report(contract: dict[str, Any]) -> str:
     gate_details = contract.get("gate_details", {})
     currency = contract.get("currency", {})
     quality = contract.get("quality", {})
+    forward = contract.get("forward_pe_valuation", {})
+    forward_eps = forward.get("forward_eps") or {}
+    scenarios = forward.get("scenarios", {})
+    report_lines = forward.get("report_lines") or {}
+    target_pe_text = " / ".join(
+        f"{scenarios.get(name, {}).get('target_pe', 'N/A')}x"
+        for name in ("bear", "base", "bull")
+    )
+    price_target_text = " / ".join(
+        str(scenarios.get(name, {}).get("price_target", "N/A"))
+        for name in ("bear", "base", "bull")
+    )
+    forward_eps_display = report_lines.get("forward_eps") or (
+        f"{forward_eps.get('value', 'N/A')} "
+        f"{forward_eps.get('currency', 'N/A')}/"
+        f"{forward_eps.get('share_basis', 'unverified')}"
+    )
+    target_pe_display = report_lines.get("target_pe") or target_pe_text
+    price_target_display = report_lines.get("price_target") or (
+        f"{price_target_text} {forward.get('currency', 'N/A')}/"
+        f"{forward.get('share_basis', 'unverified')}"
+    )
     unavailable = [
         metric["metric_id"] for metric in contract.get("metrics", [])
         if metric.get("status") == "unavailable"
@@ -803,6 +956,11 @@ def render_validation_report(contract: dict[str, Any]) -> str:
         f"Financial Currency: {currency.get('financial_currency') or 'N/A'}",
         f"FX Status: {currency.get('fx', {}).get('status', 'unavailable')}",
         f"TTM Periods Contiguous: {quality.get('ttm_periods_contiguous')}",
+        f"Forward P/E Status: {forward.get('status', 'unavailable')}",
+        f"Forward EPS ({forward.get('forecast_period', FORECAST_PERIOD)}): {forward_eps_display}",
+        f"Target P/E (Bear/Base/Bull): {target_pe_display}",
+        f"Price Target (Bear/Base/Bull): {price_target_display}",
+        f"Forward P/E Evidence: {forward.get('valuation_evidence', {}).get('web_consensus_count', 0)} web source(s), {forward.get('peer_count', 0)} valid peer(s)",
         "",
         "## Gates",
         "",

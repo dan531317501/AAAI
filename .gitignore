@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 data/
 .idea/
+.vscode/
 skills/stock-analysis-debate/reposrts/
 
 # Industry research: un-ignore data dir so .gitkeep is trackable

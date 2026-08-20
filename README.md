@@ -6,6 +6,7 @@
 
 - [企业 RAG 核心技术方案：准确率与召回率优化](docs/enterprise-rag-core-technology-solution.md)：围绕 Evidence Recall、nDCG、Reranker、混合检索、模型选择、实验矩阵和上线验收门槛展开。
 - [AI 知识库全链路智能根因分析架构方案](../GolandProjects/afra-agent/AI知识库全链路智能根因分析架构方案.md)：面向线上告警驱动 RCA，覆盖代码/QA/API 知识加工、混合检索、实时证据验证、Agent 编排、安全治理、评测与渐进式落地路线。
+- [Agent 开发调研报告](docs/agent-development-research-report.zh-CN.md)：对比 AutoGen、LangChain、LangGraph 等主流框架，分析 Hermes Agent、OpenCode 与 claude-code-sourcemap，并整理 Agent 生产化所需的工具治理、记忆、编排、安全、评测和落地方案。
 
 ## 长桥 OpenAPI
 
@@ -56,11 +57,11 @@ Anthropic Engineering 中文入口页为 `outputs/anthropic-engineering-zh-CN/in
 时间模式默认是 `current_research`，其中 `{DATE}` 必须等于本地当天。历史分析必须显式使用 `historical_replay` 并通过 `--as-of-date` 提供市场时区下的日终截止日；目录仍使用真实执行日期，报告明确标记为历史回放，不能伪装成当时生成的报告。
 
 ```bash
-# 当前研究
-python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ticker-data-dir skills/stock-analysis-debate/reposrts/AAPL/data
+# 当前研究：先按 valuation_consensus_research.md 用网络搜索写入估值证据
+python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --valuation-consensus-file skills/stock-analysis-debate/reposrts/AAPL/data/valuation_consensus.toon --ticker-data-dir skills/stock-analysis-debate/reposrts/AAPL/data
 
 # 历史回放（执行目录仍是今天）
-python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --analysis-mode historical_replay --as-of-date 2024-05-01 --ticker-data-dir skills/stock-analysis-debate/reposrts/AAPL/data
+python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --analysis-mode historical_replay --as-of-date 2024-05-01 --valuation-consensus-file skills/stock-analysis-debate/reposrts/AAPL/data/valuation_consensus.toon --ticker-data-dir skills/stock-analysis-debate/reposrts/AAPL/data
 ```
 
 默认采用 `research_only`：未提供完整组合画像时只输出证券研究结论、入场/失效条件，并将仓位标记为 Not Rated，不输出任何配置百分比、资金或股数。只有用户明确提供完整真实组合上下文，或明确要求并完整定义假设模型组合时，才按风险预算、压力损失、流动性及集中度约束的最小值计算仓位；Agent 一致或投票不能提高仓位。
@@ -69,7 +70,7 @@ python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ana
 
 工作流采用产物驱动的状态机，不额外创建 manifest：`START → DATA_READY → BASE_ANALYSTS_READY → ATTRIBUTION_READY → DEBATE_READY → RESEARCH_READY → TRADER_READY → RISK_READY → REPORT_WRITTEN → COMPLETE`。每个已调度单元最多执行两次，返回成功但缺少非空产物仍算失败，第二次失败即进入终态 `FAILED` 并停止后续阶段；可选数据源在调度前不可用时则降级为 Not Rated，不计作角色执行失败。最终报告须先写入并验证，再在同一轮向用户返回摘要。
 
-最终 `analysis_report.md` 将“最终决策”章节置顶，同时单列价格行为归因章节；`Final Decision` 固定使用 `Rating`、`Executive Summary`、`Investment Thesis`、`Price Target`、`Time Horizon` 五个字段，其中 `Investment Thesis` 承载完整的证据链、决策逻辑、情景、风险、仓位适用性和数据限制。所有币种识别、连续季度校验、TTM/估值运算、预测表语义、重试降级和数据门禁都在工具层完成，默认输出 `validated_metrics.toon` 与 `validation_report.md`；Phase 2 将允许使用的工具派生值及其限制写入各自报告，Phase 7 只消费这些报告中的证据交接，不再读取数据目录，也不用 LLM 重算收益率、增长率、TTM、利润率、估值倍数或技术指标。
+最终 `analysis_report.md` 将“最终决策”章节置顶，同时单列价格行为归因章节；`Final Decision` 固定使用 `Rating`、`Executive Summary`、`Investment Thesis`、`Price Target`、`Time Horizon` 五个字段，其中 `Investment Thesis` 承载完整的证据链、决策逻辑、情景、风险、仓位适用性和数据限制。目标价获准时必须展示 `Forward EPS: value unit`、`Target P/E: Bear / Base / Bull`、`Price Target: Bear / Base / Bull unit` 三档链路，其中 `unit` 保留完整的 `USD/ADR` 或 `KRW/common_share` 口径；未获准时为 `Not Rated`。所有币种识别、连续季度校验、TTM/Forward P/E 运算、预测表语义、重试降级和数据门禁都在工具层完成，默认输出 `valuation_consensus.toon`、`forward_pe_valuation.toon`、`validated_metrics.toon` 与 `validation_report.md`；Phase 2 将允许使用的工具派生值及其限制写入各自报告，Phase 7 只消费这些报告中的证据交接，不再读取数据目录，也不用 LLM 重算收益率、增长率、TTM、利润率、估值倍数或技术指标。
 
 ### 数据完整性、币种与官方披露降级
 
@@ -80,7 +81,8 @@ python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ana
 - **双币种建模**：分别保存交易币种 `quote_currency` 和财报/预测币种 `financial_currency`。跨币种 P/E、P/B、EV/EBITDA 和目标价必须使用分析日附近的有效 FX；无有效汇率时禁止精确估值。
 - **预测语义纠正**：`info.revenueGrowth` 和 `info.earningsGrowth` 仅表示最近季度历史同比；一致预期来自专门的 earnings/revenue estimate、EPS trend/revisions 接口，并保留每行币种和分析师数量。
 - **连续季度门禁**：TTM 只接受四个连续财季。即使存在四个非空值，只要整季缺失形成时间断档，也不会用更老季度回填。
-- **目标价与强评级门禁**：P/E 型目标价要求正的 TTM EPS/P/E、连续季度、有效币种/汇率，以及期间、币种、均值和分析师数量均有效的年度一致预期；`gate_details` 记录所有阻断原因和实际采用的预期期间。Buy/Sell 除数值门禁外，还必须在最终决策阶段具备相对收益、可追溯催化剂和投资逻辑失效条件，否则降级为 Overweight/Underweight/Hold。
+- **Forward P/E 目标价门禁**：目标价只使用下一财年共识 EPS × 可比公司 Forward P/E P25/P50/P75，独立于 TTM/Trailing P/E gate。主会话必须先通过网络搜索写入 `valuation_consensus.toon`，逐条保存来源 URL、来源名称、发布日期/更新时间、预测期间、依据、币种和 ADR/ADS/普通股口径；至少 3 个有效 peer 且证据不超过 60 天才允许 `allow_target_price`。工具输出 Bear/Base/Bull 三档，缺证据时为 `Not Rated`。
+- **TTM 与 Forward 分离**：连续四个财季只用于 Trailing P/E/TTM 对账，不再作为 Forward P/E 目标价的前置条件。ADR 不从普通股数与摊薄平均股数比例猜换算关系，必须保留明确的 `USD/ADR` 或官方/交易所确认的股份口径。
 - **期权活动解释边界**：US 期权快照只描述成交/OI 构成、成交集中位置和近似 ±5% moneyness IV 相对定价。`volume > 2× prior OI` 仅标记异常活动，不能证明新开仓、资金方向、策略或参与者身份；期权证据不直接决定评级、目标价、仓位或风险上限。方法依据见 `skills/stock-analysis-debate/reference/options-volume-open-interest-and-sentiment.en.md`。
 - **组合适用性门禁**：`research_only`、`model_portfolio`、`portfolio_context_complete` 三种模式由 `prompts/portfolio_policy.md` 统一约束；任何必需字段缺失都会降级为 `research_only`。数值仓位必须展示所有约束、风险预算公式及最终绑定项，不能使用默认百分比或多 Agent 投票结果。
 - **官方披露降级**：港股发现 HKEXnews 财报公告，美股接 SEC EDGAR submissions 与 Company Facts XBRL，A 股接 CNINFO 法定披露。PDF/HTML 先由 `official_document_parser.py` 按文本层、报表行、公告标题、单位和报告期确定性转换为结构化事实；同一文件优先保留精确明细表，扫描型文档、无文本层或解析失败时才逐指标降级到免费 API。整个过程禁止 LLM 从中抽数。调用 SEC 时建议按其自动访问规范设置 `SEC_USER_AGENT="组织名 contact@example.com"`；未配置或被拒绝时显式降级，不伪造联系信息。
@@ -88,7 +90,8 @@ python skills/stock-analysis-debate/tools/fetch_data.py AAPL "$(date +%F)" --ana
 - **财务数据时间窗口**：官方披露、SEC XBRL、PDF/HTML 结构化事实和免费 API 财报表统一只保留相对于 `analysis_as_of_date` 最近 365 天的数据，起止日期均包含；事实按 `period_end` 过滤，披露记录按 `filed_at` 过滤。行情、新闻等已有更短窗口的来源不因此扩展。
 - **长桥口径边界**：Longbridge 桑基币种标记为 `translated_only`。没有原始报告币种和换算汇率时，只能用于分部构成背景，不能作为官方经营增长或跨币种估值依据。
 - **估值币种 fail-closed**：分析师预期表的币种不能推断财报记账币种；报价币种、财报币种或 dated FX 缺失时，P/E、P/B、市场市值、EV 和 EV/EBITDA 均输出 `N/A`，审计状态为 `partial`。
-- **TTM/股数冲突 fail-closed**：Provider 与报表 TTM 不一致，或普通股数与摊薄平均股数出现明显倍数差异时，只保留审计追溯值，不生成 Preferred TTM 估值，也不猜测 ADR/ADS 换算比例。
+- **TTM/股数冲突 fail-closed**：Provider 与报表 TTM 不一致，或普通股数与摊薄平均股数出现明显倍数差异时，只保留审计追溯值，不生成 Preferred TTM 估值，也不猜测 ADR/ADS 换算比例；这不会自动关闭一个已经明确证明 `share_basis` 的 Forward P/E 目标价。
+- **网络共识 P/E 证据**：股票或行业的“合理 PE”必须来自可追溯网页，写明 scope、Forward 期间、直接 URL、来源日期和数字依据；目标价文章没有 EPS/股份口径时不能反推 P/E。网络证据超过 60 天、日期不明或只给定性判断时，目标价 gate 关闭。
 
 **数据源**：yfinance（OHLCV、大盘/行业代理、历史财报预期差、评级行动、基本面/财报/港股新闻）、长桥证券 API（A/H/美股最新日 K 兜底、HK/US 分部收入）、stockstats（技术指标）、新浪财经（CN 新闻 + HK 降级备用，翻页抓全）、东方财富（CN 公告）。
 
@@ -97,21 +100,24 @@ Prediction Markets 按话题独立抓取；网络失败、无效 JSON 或响应�
 ### 价格行为归因
 
 - **两步编排**：Phase 2 Step 1 并行运行基础分析师并分别落盘；所有可用报告完成后，Step 2 顺序运行 Price Action Attribution Analyst，输出 `price_action_attribution_analyst.md`，然后才进入 Bull/Bear 辩论。
-- **归因链路**：按 `Expectation Baseline → Trigger/Surprise → Transmission/Amplifier → Observed Price Move → Fundamental Anchor → Conditional Outlook` 分析，区分事前预期、新信息、资金/市场结构放大和基本面持续性。
+- **六步输出契约**：报告正文只保留 `Step 1` 到 `Step 6` 六个编号章节；`Attribution Verdict` 为不编号摘要，`Evidence Handoff` 为唯一的 `Appendix A`。Transmission Chain、Alternative Explanations 和 Evidence Gaps 归入对应步骤，不再重复生成独立正文。
+- **归因链路**：按 `Expectation Baseline → Trigger/Surprise → Transmission/Amplifier → Observed Price Move → Fundamental Anchor → Conditional Outlook` 分析，区分事前预期、新信息、资金/市场结构放大和基本面持续性；初始冲击与后续跟随必须分开判断。
 - **相对表现**：`price_context.toon` 提供目标股票与大盘/行业代理的 1/5/20 个交易时段绝对收益、超额收益和最近 60 个交易时段对齐序列；主要同行仅在能够说明可比关系并取得同窗口行情时补充，否则标为 `Not Rated`；单个代理获取失败时独立降级。
-- **预期证据**：`expectations.txt` 保存 yfinance 财报预期差记录、近 90 日评级行动和抓取时点一致预期快照；抓取时点快照不得反向充当历史事件前预期，缺少事前一致预期时“超预期/已计价”结论必须 `Not Rated`。
+- **预期证据**：`expectations.txt` 保存 yfinance 财报预期差记录、近 90 日评级行动和抓取时点一致预期快照；抓取时点快照不得反向充当历史事件前预期，缺少事前一致预期时“超预期/已计价”结论必须 `Not Rated`，只能单独描述可观察到的事后延伸风险。
 - **证据分级**：候选原因按 Strongly Supported / Supported / Plausible / Rejected / Not Rated 排序，必须同时列支持证据、反证、缺失证据和至少一个竞争解释。
-- **因果边界**：超买/超卖只是状态；RSI、价格和成交量不能识别买卖方；强平、逼空、外资/机构流向必须有对应杠杆、借券或资金流证据。该角色不输出评级、目标价、仓位或交易建议。
+- **因果边界**：候选事件必须分别记录 `event_time` 与 `published_at`；收盘后报道不能解释此前的盘中价格；同一底层事件的媒体改写只计一个证据簇。超买/超卖只是状态；RSI、价格和成交量不能识别买卖方；强平、逼空、外资/机构流向必须有对应杠杆、借券或资金流证据。该角色不输出评级、目标价、仓位或交易建议。
+- **公司暴露校验**：板块/主题联动不等于公司业绩传导；出品、发行、院线、持股或现金流暴露未被可靠来源确认时，公司级归因保持 `Plausible` 或 `Not Rated`，不写成已验证事实。
+- **幂等落盘**：角色重试时完整替换同一路径，不允许追加第二份正文或第二个 `Evidence Handoff`；返回成功前校验标题、六个 Step、Appendix A 和角色边界各只出现一次。
 - **前瞻输出**：分别给出未来 1 周、1—2 个月、3—12 个月的延续/反转条件、验证节点、失效条件与置信等级，由后续 Bull/Bear、Research Manager 和 Portfolio Manager 挑战和裁决。
 
 ### 新闻处理流水（数据层去噪 + 分析层打分）
 
 - **数据源路由**：港股优先 yfinance（质量高、噪声少），不足时降级到新浪翻页；A 股使用新浪翻页 + 东方财富公告。
-- **分层保留**：近 7 天全量保留；8-30 天仅保留命中高信号词（财报/评级/价格战/并购/监管等）的新闻。
+- **分层保留**：近 7 天全量保留；8-60 天仅保留命中高信号词（财报/评级/价格战/并购/监管等）的新闻。所有新闻先经过 60 天窗口和可解析发布时间校验，超窗或无时间戳的条目不进入当前催化剂证据。
 - **去重**：数据层做标题归一化后完全相同去重；近似重复（媒体洗稿）交由 News Analyst LLM 识别。
 - **去噪**：关键词 + 来源黑名单过滤明显噪声（地缘无关/鸡汤/国旗等）。
 - **打分标注**：News Analyst 对每条新闻打影响力分(0-3) + 标注业务线，输出高分事件表与业务线命中表。
-- **证据可审计**：`news.txt` 为最终新闻分配稳定的 `[Nxxx]` 编号，标明 `title_only`/`summary` 内容层级并保留可用摘要；分析师只能在对应证据边界内陈述事实。
+- **证据可审计**：`news.txt` 为最终新闻分配稳定的 `[Nxxx]` 编号，标明 `title_only`/`summary` 内容层级并保留可用摘要；审计记录新闻起止日期、超窗数量、缺失/不可解析发布时间数量和最终保留数量；分析师只能在对应证据边界内陈述事实。
 - **社交数据降级**：当前抓取链路不采集社交帖子或平台情绪指标，`news.txt` 显式记录 `social_data_available: false`；Social Media Analyst 必须输出 `Not Rated`，不得生成提及量、情绪分数或社区趋势。必要时最多抓取 3 篇高价值新闻正文辅助新闻叙事分析，但不得将其视为社交情绪数据。
 - **单文件审计**：抓取、去重、去噪、内容层级和社交数据可用性统计直接追加到 `news.txt`；不再单独生成 `news_meta.txt`，重新抓取同一日期时会清理旧版审计文件。
 
@@ -134,10 +140,11 @@ Prediction Markets 按话题独立抓取；网络失败、无效 JSON 或响应�
 
 | 文件 | 职责 |
 |------|------|
-| `tools/fetch_data.py` | 主抓取流程（相对表现/预期上下文+新浪翻页+去噪流水+长桥分部+flag），并把同口径估值、TTM EPS/P/E 对账和 GAAP 营业利润审计追加到 `fundamentals.txt` |
+| `tools/fetch_data.py` | 主抓取流程（网络估值证据接入、相对表现/预期上下文+新浪翻页+60天新闻窗口+去噪流水+长桥分部+flag），并把同口径估值、TTM EPS/P/E 对账和 GAAP 营业利润审计追加到 `fundamentals.txt` |
+| `tools/forward_pe_valuation.py` | 校验网络共识/peer Forward P/E 来源、期间、时效和股份口径，计算 P25/P50/P75 及 Bear/Base/Bull 目标价 |
 | `tools/provider_runtime.py` | 统一错误分类、指数退避重试、响应校验和请求审计轨迹 |
 | `tools/official_filings.py` | HKEXnews、SEC EDGAR/XBRL、CNINFO 官方披露发现与结构化数据边界 |
-| `tools/data_validation.py` | API 币种识别、分析日汇率、预测表标准化、数值契约和决策门禁 |
+| `tools/data_validation.py` | API 币种识别、分析日汇率、下一财年预测表标准化、TTM/Forward P/E 数值契约和决策门禁 |
 | `tools/temporal_policy.py` | 当前研究/历史回放日期校验、市场时区截止点、逐来源时点许可、历史快照降级与新闻时间过滤 |
 | `tools/structured_io.py` | JSON→TOON 转换、TOON/JSON 格式开关、严格往返校验、原子写入与历史格式兼容读取 |
 | `tools/price_attribution_data.py` | 选择可解释的大盘/行业代理，计算 1/5/20 时段绝对与超额收益，序列化最近 60 时段对齐行情，并输出带点时使用边界的财报预期差和评级行动 |

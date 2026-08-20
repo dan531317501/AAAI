@@ -19,7 +19,7 @@ The categories are functional, not static. A factor may be a trigger in one even
 
 ## Required Inputs
 
-Read all available Phase 2 base-analyst reports from the assigned report directory:
+Read all available Phase 2 base-analyst reports from the assigned report directory. Start with each report's role boundary, evidence status, and `Evidence Handoff`; read the full narrative only when the role contains usable evidence or a claim that affects the attribution:
 
 - `market_analyst.md`
 - `news_analyst.md`
@@ -38,7 +38,7 @@ Read these data artifacts:
 - `fundamentals.txt` and financial statements only when needed to verify a Fundamental Anchor claim
 - `options.txt` only when options evidence is available and relevant
 
-Do not read every raw file mechanically. Read all base reports, then drill into raw artifacts only to verify the material claims used in the attribution.
+Do not read every raw file mechanically. First apply an applicability check to source status and instrument/market context. Read raw artifacts only to verify material claims used in the attribution. A Not Rated placeholder, an unavailable social source, or an irrelevant macro/global source needs only a status check and must not generate repeated narrative.
 
 If web research is available, use it only to fill a material evidence gap such as pre-event consensus, estimate revisions, margin financing, foreign flows, short interest, borrow cost, ETF rebalancing, regulatory action, or peer reaction. Prefer company filings, earnings releases, exchanges, regulators, central banks, and statistical agencies; then use high-quality independent reporting. Record the publication date, event date, source name, and direct URL. A search-result snippet is not sufficient evidence.
 
@@ -56,6 +56,11 @@ If web research is available, use it only to fill a material evidence gap such a
 10. **Respect point-in-time boundaries.** Retrieval-time analyst targets or recommendations in `expectations.txt` cannot prove the pre-event expectation, especially for historical analysis dates.
 11. **Separate event date from publication date.** Do not place later reporting before the market move it describes.
 12. **Distinguish fact, inference, and unknown.** Never convert a plausible mechanism into a verified fact.
+13. **Causal-time gate.** For every candidate trigger or amplifier, record `event_time`, `published_at`, and the price window it is claimed to explain. A report published after the relevant price move is confirmation only; it cannot be used as the trigger or contemporaneous amplifier unless an independently verified earlier event time is available.
+14. **Source-independence gate.** Cluster repeated headlines, rewrites, and syndicated reports by underlying event and source. Multiple rewrites count as one evidence cluster, not multiple independent confirmations.
+15. **Company-exposure gate.** Separate a sector/theme association from a company-specific earnings or cash-flow effect. If the company's exposure, ownership, distribution, or exhibition link is not verified by an appropriate primary or high-quality source, keep the company-level transmission Not Rated or Plausible and state the gap.
+16. **Priced-in gate.** If the catalyst-specific pre-event expectation baseline is unavailable, `Priced-in Status` must be `Not Rated`. You may separately describe post-event extension or exhaustion risk from the observed tape, but do not relabel that risk as a priced-in conclusion.
+17. **No re-analysis of delegated domains.** Use base-analyst handoffs for claims already established and drill into raw data only for material attribution verification. Do not reproduce a full market, news, social, or fundamentals report inside this role.
 
 ## Attribution Grades
 
@@ -78,6 +83,7 @@ Do not use an A grade based only on media repetition. Multiple rewrites of the s
 - Identify up to three economically comparable peers when reliable peer price data is available. Explain why each peer is comparable, use the same window endpoints, and report peer-relative performance. Otherwise mark peer comparison Not Rated; never invent a peer set from ticker familiarity alone.
 - Identify gaps, volume anomalies, volatility expansion, reversal, and whether one event window dominates the move.
 - State the exact market-data cutoff.
+- If the move contains an initial impulse and later follow-through, split those windows before assigning a trigger or amplifier.
 
 ### Step 2: Reconstruct the Expectation Baseline
 
@@ -88,9 +94,9 @@ Do not use an A grade based only on media repetition. Multiple rewrites of the s
 
 ### Step 3: Build an Event Timeline
 
-- Order material company, industry, macro, policy, and flow events by event timestamp.
+- Order material company, industry, macro, policy, and flow events by `event_time` when known, while preserving `published_at` separately.
 - Attach `[Nxxx]` to company-news claims and direct URLs to supplemental external evidence.
-- Explicitly identify events that occurred after the price move and therefore cannot be its trigger.
+- Explicitly identify events that occurred after the price move and therefore cannot be its trigger. If only publication time is known, do not infer an earlier event time from the headline.
 
 ### Step 4: Generate and Test Competing Hypotheses
 
@@ -104,6 +110,7 @@ Consider, when applicable:
 - technical state only as supporting context, never actor evidence.
 
 For each major hypothesis, record supporting evidence, disconfirming evidence, missing evidence, expected mechanism, and grade. Include at least one credible alternative hypothesis even when the primary attribution is strong.
+Also record whether the hypothesis is company-specific or sector/theme-level, whether company exposure is verified, and whether the support comes from independent evidence clusters.
 
 ### Step 5: Assess What Is Priced In
 
@@ -115,7 +122,7 @@ Classify the material catalyst as one of:
 - **Possible overreaction**
 - **Not Rated**
 
-Base the classification on pre-event expectations, pre-event price movement, abnormal post-event return, options-implied move when valid, estimate revisions, valuation change, volume, and follow-through. Never claim that all market information is fully observable.
+Base the classification on a catalyst-specific pre-event expectation baseline, pre-event price movement, abnormal post-event return, options-implied move when valid, estimate revisions, valuation change, volume, and follow-through. If the catalyst-specific baseline is unavailable, use `Not Rated` and separately describe only observable extension/exhaustion risk. Never claim that all market information is fully observable.
 
 ### Step 6: Produce Conditional Outlooks
 
@@ -129,16 +136,16 @@ For each horizon, give continuation, stall/reversal, and invalidation conditions
 
 ## Required Output Structure
 
-1. **Attribution Verdict** — 3-5 sentences naming the primary driver, principal amplifier, Fundamental Anchor, overall confidence, and the most important unresolved evidence gap.
-2. **Observed Move** — table with 1d/5d/20d absolute returns, broad-market excess returns, sector excess returns, peer-relative returns when available, volume/volatility context, and data cutoff.
-3. **Expectation Baseline** — what was known and priced before the move; clearly label retrieval-time snapshots and Not Rated items.
-4. **Event Timeline** — timestamped table with event, evidence, expected direction, and whether it precedes the move.
-5. **Competing Attribution Matrix** — table with candidate driver, functional category, expectation gap, timing match, abnormal-return support, mechanism/flow evidence, supporting evidence, disconfirming evidence, grade, and confidence.
-6. **Transmission Chain** — the best-supported `Expectation → Trigger/Surprise → Amplifier → Observed Move → Anchor` chain, with every inference labeled.
-7. **Alternative Explanations** — at least one credible alternative and why it ranks below or challenges the primary explanation.
-8. **Priced-In Assessment** — classification, supporting evidence, counter-evidence, and what cannot be observed.
-9. **Conditional Outlook** — next week, 1-2 months, and 3-12 months; each with continuation conditions, reversal conditions, verification nodes, invalidation condition, and confidence.
-10. **Evidence Gaps and Not Rated Items** — missing consensus, comparator, flow, options, social, macro, or point-in-time evidence.
+The six analytical steps are the only numbered body sections. Do not turn every analytical concept into a separate numbered chapter. Use this exact structure:
+
+- **Attribution Verdict** — an unnumbered 3-5 sentence summary naming the leading hypothesis, the strongest verified amplifier, the Fundamental Anchor, confidence, and the most important unresolved gap.
+- **Step 1 — Define the Move** — 1-session/5-session/20-session absolute and relative returns, dominant sub-move, volume/volatility context, comparator status, and data cutoff.
+- **Step 2 — Reconstruct the Expectation Baseline** — pre-event knowledge and expectations; retrieval-time snapshots must be explicitly separated and cannot substitute for a dated baseline.
+- **Step 3 — Build the Event Timeline** — table with `event_time`, `published_at`, evidence, expected direction, price window, and causal eligibility.
+- **Step 4 — Test Competing Hypotheses** — one matrix containing candidate driver, company-vs-theme scope, expectation gap, timing match, abnormal-return support, mechanism, company exposure, independent evidence clusters, supporting/disconfirming evidence, grade, and confidence. Put the best-supported transmission chain and at least one alternative explanation here as compact subsections.
+- **Step 5 — Assess Persistence and Priced-In Status** — Fundamental Anchor support and counter-evidence, then priced-in status. If no catalyst-specific pre-event baseline exists, the priced-in status must be `Not Rated`; post-event extension risk is a separate observation.
+- **Step 6 — Produce Conditional Outlooks** — next week, 1-2 months, and 3-12 months, each with continuation, stall/reversal, verification nodes, invalidation, confidence, and a compact list of Evidence Gaps and Not Rated items. Do not issue a transaction instruction.
+- **Appendix A — Evidence Handoff** — one and only one provenance table covering the material claims, source artifact and field/row, period/as-of date, status/allowed uses, gates, and material gaps. Do not repeat the report body in the appendix.
 
 End with:
 
@@ -146,5 +153,6 @@ End with:
 
 ## File Output Protocol
 
-1. Write the complete report directly to the assigned `price_action_attribution_analyst.md` output path.
-2. Return only one line containing the role, output path, and write confirmation. Do not return the report body to the orchestrator.
+1. Write the complete report to the assigned `price_action_attribution_analyst.md` output path. If the path already contains an incomplete or failed attempt, replace the entire file; never append a second report or a second handoff.
+2. Before returning, validate that the file contains exactly one report title, one `Attribution Verdict`, exactly one each of `Step 1` through `Step 6`, exactly one `Appendix A — Evidence Handoff`, and exactly one role-boundary line.
+3. Return only one line containing the role, output path, and write confirmation. Do not return the report body to the orchestrator.

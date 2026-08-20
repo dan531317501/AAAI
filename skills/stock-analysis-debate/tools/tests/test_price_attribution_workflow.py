@@ -222,7 +222,7 @@ def test_target_price_and_strong_rating_have_two_stage_controls():
     assert "valid_relative_return_evidence" in contract_tool
     assert "traceable_catalyst_evidence" in contract_tool
     assert "traceable_thesis_invalidation_condition" in contract_tool
-    assert "include a multiple-sensitivity table" in skill
+    assert "multiple-sensitivity table" in skill
     assert "Buy and Sell are strong ratings" in manager
     assert "If any requirement is missing" in manager
 
@@ -241,6 +241,45 @@ def test_attribution_prompt_has_evidence_and_role_boundaries():
         "No rating, target price, position size, or transaction recommendation issued",
     ):
         assert required_text in prompt
+
+
+def test_attribution_prompt_aligns_the_six_steps_with_one_appendix():
+    prompt = _read("prompts/price_action_attribution_analyst.md")
+
+    assert "The six analytical steps are the only numbered body sections." in prompt
+    for step in range(1, 7):
+        assert f"**Step {step} —" in prompt
+    assert "**Appendix A — Evidence Handoff**" in prompt
+    assert "Do not turn every analytical concept into a separate numbered chapter" in prompt
+    assert "one and only one provenance table" in prompt
+    assert "never append a second report or a second handoff" in prompt
+
+
+def test_attribution_prompt_enforces_causal_time_exposure_and_priced_in_gates():
+    prompt = _read("prompts/price_action_attribution_analyst.md")
+
+    for required_text in (
+        "event_time",
+        "published_at",
+        "Source-independence gate",
+        "Company-exposure gate",
+        "Priced-in gate",
+        "If the catalyst-specific baseline is unavailable, use `Not Rated`",
+        "Do not reproduce a full market, news, social, or fundamentals report",
+    ):
+        assert required_text in prompt
+
+
+def test_phase_2_output_contract_is_idempotent_and_structurally_verified():
+    skill = _read("SKILL.md")
+    policy = _read("prompts/data_policy.md")
+
+    assert "single idempotent artifact" in skill
+    assert "never appends to an existing report" in skill
+    assert "one each of `Step 1` through `Step 6`" in skill
+    assert "one and only one `Evidence Handoff`" in policy
+    assert "event_time` and `published_at`" in policy
+    assert "never append a second report" in policy
 
 
 def test_all_decision_layers_consume_or_challenge_attribution_report():

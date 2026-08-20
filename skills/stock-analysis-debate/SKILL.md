@@ -27,6 +27,7 @@ Data is fetched primarily from **yfinance** (OHLCV, benchmark/sector comparators
 8. **REPORT DATE AND TIME MODE — GLOBAL:** Use `current_research` by default. `{DATE}` is always the actual local execution date and the only date allowed in the report title and output directory. `historical_replay` requires `--as-of-date`; disclose its market-timezone `analysis_timestamp` and label the report as a replay. Treat `data_as_of_date` only as the latest market observation, never as the report date. If `warning_no_200_sma: true`, 200 SMA is N/A.
 9. **EVIDENCE, GATE, AND DATA ACCESS CONTRACT — GLOBAL:** Phase 1 collects and validates data. Phase 2 is the only analysis phase allowed to read the current run's data directory; every Phase 2 report must carry forward each material claim's source file and field/row, period/as-of date, metric status/allowed uses, relevant gate outcome/blocking reasons, and material Not Rated gaps. Phases 3-7 use only persisted reports and required prior-phase artifacts and must never receive, open, search, or cite the data directory. Apply `temporal_context.source_statuses`, `validated_metrics`, and all gates fail-closed: unavailable, stale, conflicting, translated-only, temporally blocked, or otherwise blocked evidence remains N/A or Not Rated. Prefer tool-derived values; do not use an LLM to recompute returns, growth, TTM, margins, valuation multiples, or technical indicators, infer missing values, backfill historical snapshots, treat placeholders/flags as evidence, or numerically extract unstructured filings.
 10. **NEWS/SENTIMENT EVIDENCE:** Treat `news.txt` evidence IDs and content levels as hard boundaries. If `stocktwits.txt` or `reddit.txt` contains a Not Rated placeholder, the corresponding social source is Not Rated and must not affect the rating, target price, position sizing, or risk limits. If `options.txt` marks options flow Not Rated, the same restriction applies to options evidence.
+ **FORWARD P/E TARGET-PRICE EVIDENCE:** The only authorized target-price method is `next_fiscal_year Forward EPS × peer Forward P/E P25/P50/P75`. A dedicated market-consensus research sub-agent must use web search and write `valuation_consensus.toon` with source URL, source name, publication/update date, forecast period, basis, currency, and share basis before data collection. A target-price source without explicit EPS period/share basis cannot be converted into P/E. The deterministic tool owns peer filtering, percentile calculation, ADR/ADS unit checks, and arithmetic; LLMs must not fill missing multiples. `allow_target_price: false` means `Price Target: Not Rated`. The co-occurring analyst-consensus fields in the same artifact (price target, rating distribution, consensus EPS/revenue) are expectation-analysis context only; they never determine the rating, target price, position size, or risk limits. They are collected only when `consensus_expectations` is enabled (disabled by default).
 
 11. **PRICE ATTRIBUTION EVIDENCE:** The Price Action Attribution Analyst ranks competing hypotheses; it does not prove a unique cause or issue a rating, target price, position size, or trade. No pre-event expectation means the surprise/priced-in claim is Not Rated. No comparator means abnormal return is Not Rated. No stock-specific leverage/short/flow evidence means forced liquidation, short squeeze, or investor identity is not established. Oversold/overbought is a state, not a catalyst.
 
@@ -64,6 +65,8 @@ Do not create a combined Phase 2 report, summary file, manifest, or concatenated
 
 Preserve every existing report-to-report dependency. Give each downstream role the report directory and mandatory artifact from the immediately preceding phase, then let it select only the persisted reports needed for its claims. Treat missing optional evidence as Not Rated; do not fabricate a replacement summary.
 
+Each role-specific report path is a single idempotent artifact. A retry replaces the complete file atomically and never appends to an existing report. Before accepting a Phase 2 report, verify the role-specific title, required section structure, exactly one `Evidence Handoff`, and exactly one role-boundary marker. A non-empty file that fails these structural checks is not a successful artifact.
+
 ## Workflow State Machine
 
 This table is the only phase-transition contract. State is inferred from verified artifacts; do not create a workflow manifest or separate state file.
@@ -71,7 +74,7 @@ This table is the only phase-transition contract. State is inferred from verifie
 | State | Required prior evidence | Work | Completion evidence |
 |---|---|---|---|
 | `START` | Resolved ticker, execution date, analysis mode, data directory, and report directory | Create the two output directories and resolve applicable roles | Paths and applicability are fixed for the run |
-| `DATA_READY` | `START` | Run data collection and validation; run segment preparation only when applicable | Non-empty decodable `data_quality`, `validated_metrics`, and `validation_report.md`; segment outputs or an allowed pre-scheduling degradation |
+| `DATA_READY` | `START` | Delegate the market-consensus research sub-agent and the fetch-data sub-agent, verify their artifacts, run data validation; run segment preparation only when applicable | Non-empty decodable `valuation_consensus`, `forward_pe_valuation`, `data_quality`, `validated_metrics`, and `validation_report.md`; segment outputs or an allowed pre-scheduling degradation |
 | `BASE_ANALYSTS_READY` | `DATA_READY` | Start all applicable base analyst roles concurrently | Every scheduled base role file exists and is non-empty |
 | `ATTRIBUTION_READY` | `BASE_ANALYSTS_READY` | Run Price Action Attribution Analyst | `price_action_attribution_analyst.md` exists and is non-empty |
 | `DEBATE_READY` | `ATTRIBUTION_READY` | Run Bull then Bear for every configured round | `debate_history.md` contains every scheduled role/round entry |
@@ -83,7 +86,7 @@ This table is the only phase-transition contract. State is inferred from verifie
 
 ## Workflow
 
-1. **Phase 1: Data Collection & Validation** — Run `fetch_data.py` synchronously, inspect the configured `data_quality` artifact (`.toon` by default), then perform segment setup when applicable. Wait for each required artifact before proceeding. Details are in the Phase 1 section below.
+1. **Phase 1: Data Collection & Validation** — Launch two sub-agent units in parallel: (a) a market-consensus research sub-agent that collects and writes the web valuation/consensus evidence, and (b) a fetch-data sub-agent that runs `fetch_data.py`. After both return, inspect the configured `data_quality` artifact (`.toon` by default) and perform segment setup when applicable. Wait for each required artifact before proceeding. Details are in the Phase 1 section below.
 
 2. **Phase 2: Analyst Reports** — two steps
    - Step 1: start all applicable base roles concurrently according to rules 5-7, then wait for every scheduled role.
@@ -106,18 +109,20 @@ This table is the only phase-transition contract. State is inferred from verifie
 
 ## Phase 1: Data Collection & Validation
 
-Three sequential steps, all foreground and synchronous (wait for each to return before proceeding):
+Four steps. Steps 1 and 2 are two sub-agents launched in one parallel batch and awaited together before continuing (wait for both to return before proceeding):
 
-**Step 1: Fetch data.** Run synchronously using the runtime's command-execution capability:
+**Step 1: Market-consensus research (sub-agent).** Delegate one sub-agent that reads `prompts/valuation_consensus_research.md`, uses the web search tool, and writes the artifact to the **ticker-level** path `skills/stock-analysis-debate/reposrts/{TICKER}/data/valuation_consensus.toon` (or `.json`) — the SAME path Step 2 passes via `--valuation-consensus-file`; `fetch_data.py` later re-writes a copy into the dated data directory `{TICKER}/data/{DATE}/`. The sub-agent MUST write the artifact with `tools/structured_io.py::write_structured_file` (TOON is a non-text encoding; never hand-write `.toon` as plain text). Give it the resolved instrument context (ticker, market, analysis mode, execution date, quote/financial currency, share basis) and the absolute ticker-level data-directory path. The sub-agent collects the current market consensus from one or more analyst-consensus source pages — where these figures co-occur — including the stock/industry reasonable **Forward P/E**, comparable-company **Forward P/E** observations, and instrument/ADR share-basis evidence. When `consensus_expectations` is enabled (disabled by default), it also collects the co-occurring analyst-consensus block (**price target** mean/median/high/low and analyst count, **rating distribution** plus average rating, and next-fiscal-year consensus **EPS** and **revenue**) from the same page(s). Every usable numeric source must include a direct URL, source name, publication/update or as-of date, `forecast_period: next_fiscal_year`, currency, share basis, and a short basis. If a source is missing or older than 60 calendar days, write an unavailable/partial artifact with blocking reasons; do not create replacement numbers. Historical replay must write the explicit Not Rated artifact because current web snapshots are not point-in-time. The sub-agent returns only the artifact path and status — never the full contents.
+
+**Step 2: Fetch data (sub-agent).** Delegate one sub-agent that runs the following command and returns only the exit status and the list of written files. Launch it in the same parallel batch as Step 1; `fetch_data.py` reads the valuation-consensus artifact lazily right before validation (polling the `--valuation-consensus-file` path when it is not written yet), so the two sub-agents do not need to be ordered:
 
 ```bash
-python skills/stock-analysis-debate/tools/fetch_data.py <TICKER> <DATE> --ticker-data-dir skills/stock-analysis-debate/reposrts/<TICKER>/data
+python skills/stock-analysis-debate/tools/fetch_data.py <TICKER> <DATE> --valuation-consensus-file skills/stock-analysis-debate/reposrts/<TICKER>/data/valuation_consensus.toon --ticker-data-dir skills/stock-analysis-debate/reposrts/<TICKER>/data
 ```
 
 For a historical replay, keep `<DATE>` as today's execution date and pass the separate cutoff:
 
 ```bash
-python skills/stock-analysis-debate/tools/fetch_data.py <TICKER> <DATE> --analysis-mode historical_replay --as-of-date <HISTORICAL_DATE> --ticker-data-dir skills/stock-analysis-debate/reposrts/<TICKER>/data
+python skills/stock-analysis-debate/tools/fetch_data.py <TICKER> <DATE> --analysis-mode historical_replay --as-of-date <HISTORICAL_DATE> --valuation-consensus-file skills/stock-analysis-debate/reposrts/<TICKER>/data/valuation_consensus.toon --ticker-data-dir skills/stock-analysis-debate/reposrts/<TICKER>/data
 ```
 
 **First-time setup** (install dependencies if not present):
@@ -135,7 +140,9 @@ Output is saved to `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`
 | `instrument_metadata.toon` | API-reported quote currency, financial currency, estimate-currency evidence, and retrieval timestamp | yfinance explicit metadata fields |
 | `analyst_estimates.toon` | Dedicated earnings/revenue estimates, EPS trend/revisions, currency, periods, and analyst counts | yfinance estimate endpoints |
 | `indicators.txt` | 13 technical indicators | stockstats via yfinance/Longbridge OHLCV |
-| `news.txt` | Company-specific news with evidence IDs, content levels, available summaries, and processing audit (30 days); social data is NOT in this file (see `stocktwits.txt` / `reddit.txt`) | yfinance + fetch_data.py |
+| `valuation_consensus.toon` | Market-consensus evidence collected by a dedicated sub-agent: stock/industry reasonable Forward P/E, peer Forward P/E observations, and (when `consensus_expectations` is enabled, disabled by default) the co-occurring analyst-consensus block (price target mean/median/high/low + analyst count, rating distribution + average rating, next-fiscal-year consensus EPS and revenue), with source URLs/dates/basis, forecast period, currency, and ADR/ADS share basis; unavailable when evidence is missing or stale | market-consensus research sub-agent web search |
+| `forward_pe_valuation.toon` | Deterministic next-fiscal-year EPS × peer Forward P/E P25/P50/P75 calculation, excluded peers, three scenario targets, and target-price gate | forward_pe_valuation.py + data_validation.py |
+| `news.txt` | Company-specific news with evidence IDs, content levels, and strict processing audit for the inclusive 60-day window; social data is NOT in this file (see `stocktwits.txt` / `reddit.txt`) | yfinance + fetch_data.py |
 | `stocktwits.txt` | Retail-trader cashtag posts with user-labeled Bullish/Bearish tags and a Bullish/Bearish ratio; degrades to Not Rated placeholder | StockTwits public stream (no key) |
 | `reddit.txt` | Finance-subreddit discussion (r/wallstreetbets, r/stocks, r/investing, past 7 days) via RSS; degrades to Not Rated placeholder | Reddit public RSS |
 | `global_news.txt` | Macro/global news | yfinance Search |
@@ -150,12 +157,12 @@ Output is saved to `skills/stock-analysis-debate/reposrts/{TICKER}/data/{DATE}/`
 | `official_companyfacts.toon` | SEC structured XBRL facts when available (US only) | SEC EDGAR Company Facts API |
 | `official_financials.toon` | Unified official filing/fact contract with document parsing audit, source, period, unit, currency, raw tag, source URL/page, extraction method, API fallback provenance and fail-closed numeric status | SEC EDGAR XBRL / HKEXnews / CNINFO (SSE/SZSE) / free API fallback |
 | `validated_metrics.toon` | Typed, fail-closed numeric contract with temporal context, source fields, currencies, periods, statuses, allowed uses, and decision gates | data_validation.py |
-| `validation_report.md` | Deterministic summary of currency, TTM continuity, unavailable metrics, and decision gates | data_validation.py |
+| `validation_report.md` | Deterministic summary of currency, TTM/Forward P/E evidence, unavailable metrics, and decision gates | data_validation.py |
 | `options.txt` | Options activity and implied pricing: put/call volume and prior-settlement OI mix, approximate ±5% moneyness IV difference, most-active contracts, and high-volume/prior-OI activity flags; no directional-flow inference (US only; Not Rated placeholder for HK/CN) | yfinance option chain |
 | `data_quality.toon` | Execution/as-of/retrieval time context, per-source temporal status, data freshness, trading-day counts, indicator sufficiency, validation gates, and retry events | fetch_data.py + temporal_policy.py |
 | `summary.toon` | Metadata summary | — |
 
-In `historical_replay`, the tool writes explicit Not Rated placeholders instead of retrieval-time fundamentals, statements, estimates, global/macro/prediction context, insider, options, and segment snapshots. Only date-bounded price artifacts, timestamp-filtered company news, and cutoff-filtered official disclosures remain allowed; read `temporal_context.source_statuses` for the authoritative per-source result.
+In `historical_replay`, the tool writes explicit Not Rated placeholders instead of retrieval-time fundamentals, statements, estimates, web valuation consensus, global/macro/prediction context, insider, options, and segment snapshots. Only date-bounded price artifacts, timestamp-filtered company news, and cutoff-filtered official disclosures remain allowed; read `temporal_context.source_statuses` for the authoritative per-source result.
 
 **Additional outputs (HK/US only):**
 
@@ -172,17 +179,17 @@ In `historical_replay`, the tool writes explicit Not Rated placeholders instead 
 |------|---------|--------|
 | `reposrts/{TICKER}/data/segments.yaml` | Reusable cross-run business-segment manifest | prepare_segments.py --gen-yaml |
 
-**Step 2: Data quality check.** Read the configured `data_quality` artifact (`data_quality.toon` by default) from the output directory:
+**Step 3: Data quality check.** Read the configured `data_quality` artifact (`data_quality.toon` by default) from the output directory:
 - Read `temporal_context`: record `analysis_mode`, `execution_date`, `analysis_timestamp`, and every `source_statuses` entry. Do not dispatch an analyst with a blocked source as usable evidence.
 - Check `trading_days`: note how many trading days are available for indicators.
 - Check `warning_no_200_sma`: if true, 200 SMA is NOT computable.
 - Check `indicator_sufficiency`: each indicator has a `sufficient` boolean and `min_days` threshold.
 - Record any `notes` warnings for inclusion in the final report.
 - Read the configured `validated_metrics` artifact (`validated_metrics.toon` by default) and `validation_report.md`. Stop before Phase 2 if either is missing, invalid structured data, or empty.
-- Treat `validation_gates` as hard controls and read the matching `gate_details`. A false `allow_exact_valuation`, `allow_target_price`, `allow_strong_rating`, or `allow_segment_growth` gate prohibits that output; it is not an invitation for an agent to reconstruct the missing data. A true `allow_strong_rating` confirms numeric prerequisites only: Buy/Sell additionally requires Phase 7 to verify valid relative-return evidence, a traceable catalyst, and a traceable thesis-invalidation condition. Otherwise cap the final rating at Overweight/Underweight/Hold.
+- Treat `validation_gates` as hard controls and read the matching `gate_details`. A false `allow_exact_valuation`, `allow_target_price`, `allow_strong_rating`, or `allow_segment_growth` gate prohibits that output; it is not an invitation for an agent to reconstruct the missing data. `allow_target_price` specifically requires the three deterministic Forward P/E scenarios and their evidence handoff. A true `allow_strong_rating` confirms numeric prerequisites only: Buy/Sell additionally requires Phase 7 to verify valid relative-return evidence, a traceable catalyst, and a traceable thesis-invalidation condition. Otherwise cap the final rating at Overweight/Underweight/Hold.
 - Inspect `provider_retry_events` for exhausted or non-retryable provider failures and disclose the affected domain as degraded.
 
-**Step 3: Segment Setup (HK/US only)**
+**Step 4: Segment Setup (HK/US only)**
 
 Apply the segment-setup applicability and degradation rules in rules 5-6 before running this step.
 
@@ -213,14 +220,16 @@ Each delegated role reads its own assigned files using the Read tool. The main s
 - Phase 1 quality-check findings: data_as_of_date, trading_days, warning_no_200_sma flag, indicator_sufficiency summary
 - For Segment Analyst: also mention the segment list from `segments.yaml`
 
+**The main session MUST NOT read the contents of any role prompt file under `prompts/`** (the role-specific instruction files a delegated role reads, e.g. `market_analyst.md`, `news_analyst.md`, `price_action_attribution_analyst.md`). Pass only each prompt file's absolute path verbatim; the sub-agent reads the prompt itself. Do not paraphrase, summarize, or copy prompt sections into the delegation message. This restriction does not apply to `data_policy.md` and `portfolio_policy.md`, which the main session legitimately reads in later phases.
+
 Every analyst task must end with this file protocol:
 
 Before the role-specific prompt, every analyst must read `prompts/data_policy.md`, the configured `{DATA_DIR}/validated_metrics` artifact (`.toon` by default), and `{DATA_DIR}/validation_report.md`. These three paths are mandatory in every analyst task. The role-specific current-run data artifacts listed below are authorized domain evidence; they cannot bypass a status, allowed use, or gate for a metric covered by `validated_metrics`.
 
 1. Read the assigned prompt and data files.
-2. Write the complete analysis directly to the assigned output file, including the `Evidence Handoff` required by rule 9.
+2. Write the complete analysis directly to the assigned output file, including one and only one `Evidence Handoff` required by rule 9. Replace the full file on retry; never append.
 3. Verify that the output file exists and is non-empty.
-4. Follow the return contract in rule 13.
+4. Verify the role-specific section contract and uniqueness checks before following the return contract in rule 13.
 
 The sub-agent discovers everything else by reading the files itself.
 
@@ -234,7 +243,7 @@ All analysts listed below launch IN THE SAME parallel batch: the 4 base analysts
 
 **Social Media Analyst** — Prompt: `skills/stock-analysis-debate/prompts/social_media_analyst.md` — Data: `news.txt`, `stocktwits.txt`, `reddit.txt` — Output: `social_media_analyst.md`
 
-**Fundamentals Analyst** — Prompt: `skills/stock-analysis-debate/prompts/fundamentals_analyst.md` — Data: configured `validated_metrics` artifact (`.toon` by default), `validation_report.md`, `fundamentals.txt`, `balance_sheet.csv`, `cashflow.csv`, `income_stmt.csv` — Output: `fundamentals_analyst.md`
+**Fundamentals Analyst** — Prompt: `skills/stock-analysis-debate/prompts/fundamentals_analyst.md` — Data: configured `validated_metrics` artifact (`.toon` by default), `validation_report.md`, `forward_pe_valuation.toon`, `valuation_consensus.toon`, `instrument_metadata.toon`, `analyst_estimates.toon`, `fundamentals.txt`, `balance_sheet.csv`, `cashflow.csv`, `income_stmt.csv` — Output: `fundamentals_analyst.md`
 
 **Options Flow Analyst** (conditional 5th analyst; apply rule 7) — Prompt: `skills/stock-analysis-debate/prompts/options_flow_analyst.md` — Data: `options.txt` — Output: `options_flow_analyst.md`
 
@@ -248,20 +257,9 @@ Run only after every Step 1 output has been verified.
 
 **Price Action Attribution Analyst** — Prompt: `skills/stock-analysis-debate/prompts/price_action_attribution_analyst.md` — Reports: every available Step 1 `*_analyst.md` in the report directory — Required data (pass as full absolute paths in the data directory): `{DATA_DIR}/price_context.toon`, `{DATA_DIR}/expectations.txt`, `{DATA_DIR}/ohlcv.csv`, `{DATA_DIR}/indicators.txt`, `{DATA_DIR}/news.txt` — Conditional evidence (pass every file as a FULL absolute path under the data directory, never as a bare filename): `{DATA_DIR}/global_news.txt`, `{DATA_DIR}/macro_indicators.txt`, `{DATA_DIR}/prediction_markets.txt`, `{DATA_DIR}/fundamentals.txt`, `{DATA_DIR}/balance_sheet.csv`, `{DATA_DIR}/cashflow.csv`, `{DATA_DIR}/income_stmt.csv`, `{DATA_DIR}/options.txt` — Output: `price_action_attribution_analyst.md`. In JSON mode, pass `{DATA_DIR}/price_context.json` instead.
 
-Provide the absolute prompt path, report directory, data directory, output path, instrument context, Phase 1 quality findings, and the list of failed/missing Step 1 roles. The analyst must read all available Step 1 reports, verify only its material claims against raw artifacts, preserve the required `Evidence Handoff`, rank competing hypotheses, and produce conditional outlooks without issuing a rating, target price, position size, or transaction recommendation.
+Provide the absolute prompt path, report directory, data directory, output path, instrument context, Phase 1 quality findings, and the list of failed/missing Step 1 roles. The analyst must read all available Step 1 reports, verify only its material claims against raw artifacts, preserve exactly one `Evidence Handoff`, enforce event/publication-time ordering and source independence, verify company exposure for company-specific claims, rank competing hypotheses, and produce conditional outlooks without issuing a rating, target price, position size, or transaction recommendation.
 
-After it returns, verify `price_action_attribution_analyst.md` exists and is non-empty.
-
-## Debate History File Protocol
-
-Multi-round debates use **files as shared memory**. The File I/O protocol is defined in each debate agent's prompt file (`bull_researcher.md`, `bear_researcher.md`, `aggressive_debator.md`, `conservative_debator.md`, `neutral_debator.md`); apply the ownership and return rules in rule 13.
-
-| Debate | File Path |
-|--------|-----------|
-| Bull vs Bear | `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/debate_history.md` |
-| Risk Assessment | `skills/stock-analysis-debate/reposrts/{TICKER}/reports/{DATE}/risk_debate_history.md` |
-
-The main session only tells each agent: the file path, its role, the round number, the report directory, and paths to required prior report artifacts.
+After it returns, verify `price_action_attribution_analyst.md` exists, is non-empty, and contains exactly one title, one `Attribution Verdict`, one each of `Step 1` through `Step 6`, one `Appendix A — Evidence Handoff`, and one role-boundary marker. If the artifact is structurally invalid, use the single permitted retry with full-file replacement rather than appending or launching a second completed unit.
 
 ---
 
@@ -325,7 +323,7 @@ Apply the report artifact handoff protocol:
 1. Read the relevant Phase 2 analyst reports; do not launch an agent.
 2. Confirm every numeric claim planned for the final report satisfies the `Evidence Handoff` requirements in rule 9.
 3. Obey every gate outcome and blocking reason propagated through Phase 2 reports. If a gate is false or its outcome is absent, remove the exact valuation, target price, strong rating, or segment-growth claim and replace it with N/A or Not Rated. Buy/Sell are strong ratings: even when a Phase 2 report carries `allow_strong_rating: true`, use them only after verifying every carried Phase 7 evidence requirement; otherwise cap the rating at Overweight/Underweight/Hold.
-4. For a target price, use only a Phase 2 report's authorized forecast period and valuation method, show all handed-off inputs in one currency, and include the arithmetic chain and multiple-sensitivity table inside `Investment Thesis`. The `Price Target` field contains only the final authorized value or `Not Rated`. Apply `portfolio_policy.md` separately.
+4. For a target price, use only a Phase 2 report's authorized forecast period and valuation method, show all handed-off inputs in one currency/share basis, and include the arithmetic chain and P25/P50/P75 multiple-sensitivity table inside `Investment Thesis`. The `Price Target` field must show the authorized Bear/Base/Bull values; if any gate is false, it contains only `Not Rated`. Apply `portfolio_policy.md` separately.
 
 ### Step 3: Synthesize
 
@@ -338,7 +336,7 @@ The Final Decision MUST contain exactly these fields, in this order, using the f
 1. **Rating** — one of Buy / Overweight / Hold / Underweight / Sell, followed by a one-line verdict and the key reason for choosing this rating over its nearest alternatives.
 2. **Executive Summary** — one coherent paragraph: the business case with figures, the best-supported recent price attribution and confidence, entry strategy, portfolio applicability/position-sizing status, key risk levels including thesis-level invalidation, any computable tactical reference band, and the time horizon.
 3. **Investment Thesis** — the fully argued body of the decision. Consolidate the decision logic against the other ratings, 3-6 evidence-anchored arguments with rebuttals, Bull/Bear adjudication and uncontested facts, base/optimistic/pessimistic scenarios, authorized target-price derivation and sensitivity when permitted, risk/verification nodes, portfolio applicability and position plan, and material Not Rated/data caveats. Keep the content readable with short paragraphs or numbered arguments; do not reduce it to a generic one-paragraph thesis.
-4. **Price Target** — the final value authorized by the Phase 2 gates and `portfolio_policy.md`, or `Not Rated` when any required gate is false, missing, conflicting, or otherwise blocked. Do not invent a numeric target from technical levels or debate estimates.
+4. **Price Target** — when `allow_target_price: true`, show the authorized Bear/Base/Bull values and their currency/share basis; otherwise show `Not Rated`. Do not invent a numeric target from technical levels, debate estimates, or an analyst target-price article.
 5. **Time Horizon** — the expected holding/review horizon and the next verification cadence; keep the supporting conditions in `Executive Summary` or `Investment Thesis`.
 
 All five fields must carry the specific numbers and evidence they derive from. Prioritize readability: lead with conclusions, keep paragraphs short, and bold key figures — avoid wall-of-text prose.
@@ -359,7 +357,7 @@ All five fields must carry the specific numbers and evidence they derive from. P
 
 **Investment Thesis**: {fully argued evidence-backed conclusion, including the required decision logic, scenarios, risks, portfolio applicability, and material caveats}
 
-**Price Target**: {authorized target price or Not Rated}
+**Price Target**: {Bear target / Base target / Bull target currency/share basis, or Not Rated}
 
 **Time Horizon**: {expected horizon and review cadence}
 
@@ -422,6 +420,7 @@ Full debate: [risk_debate_history.md](./risk_debate_history.md)
 | `analysis_mode` | `current_research` | `current_research` or explicit `historical_replay` |
 | `as_of_date` | current execution date | Required historical cutoff for `historical_replay`; interpreted as end of day in the instrument market timezone |
 | `portfolio_mode` | `research_only` | `research_only`, explicit `model_portfolio`, or `portfolio_context_complete`; incomplete required fields always downgrade to `research_only` |
+| `consensus_expectations` | `disabled` | Collect the co-occurring analyst-consensus expectation block (price target, rating distribution, next-fiscal-year consensus EPS/revenue) during market-consensus research. Disabled by default; enable explicitly to include it. Target-price Forward P/E evidence is always collected when the step runs. |
 
 ## Reference Material
 

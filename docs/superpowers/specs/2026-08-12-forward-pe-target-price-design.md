@@ -78,9 +78,9 @@ P25、P50、P75 分别对应低分位、中位数和高分位。示例中的 `32
 4. Phase 2 Fundamentals Analyst 只引用 gate 允许的三档结果；Final Decision 按固定字段展示：
 
 ```text
-Forward EPS: {value} {currency}/{share_basis}
+Forward EPS: {value} {unit}
 Target P/E: {bear}x / {base}x / {bull}x
-Price Target: {bear} / {base} / {bull} {currency}/{share_basis}
+Price Target: {bear} / {base} / {bull} {unit}
 ```
 
 5. 任一输入缺失、过期、期间不一致、币种/股份口径不一致或样本少于 3 条时，`Price Target` 为 `Not Rated`，并在 `Investment Thesis` 写出阻断原因。

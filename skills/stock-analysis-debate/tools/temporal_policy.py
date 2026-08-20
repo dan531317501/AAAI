@@ -64,6 +64,7 @@ def _source_policy(mode: str) -> dict[str, dict[str, str]]:
         "official_companyfacts": dict(event_bounded),
         "provider_snapshot": dict(current_snapshot),
         "analyst_estimates": dict(current_snapshot),
+        "valuation_consensus": dict(current_snapshot),
         "expectations": dict(current_snapshot),
         "fundamentals": dict(current_snapshot),
         "financial_statements": dict(current_snapshot),
@@ -79,6 +80,7 @@ def _source_policy(mode: str) -> dict[str, dict[str, str]]:
     for source in (
         "provider_snapshot",
         "analyst_estimates",
+        "valuation_consensus",
         "expectations",
         "fundamentals",
         "financial_statements",

@@ -1,5 +1,6 @@
 """新闻去重/去噪/分层保留的纯函数。"""
 import re
+from datetime import datetime, timedelta
 
 
 # 全角→半角标点映射（常见财经标题用到的）
@@ -94,6 +95,49 @@ def render_news_evidence(articles: list, news_start: str, curr_date: str) -> tup
     return "\n".join(lines), stats
 
 
+def filter_by_date_window(
+    articles: list,
+    curr_date: str,
+    *,
+    lookback_days: int = 60,
+) -> tuple[list, int, int]:
+    """Keep only dated articles inside the inclusive current-research window.
+
+    Returns ``(kept, out_of_window_count, missing_or_unparseable_count)``.
+    A date-less item cannot be used as a current catalyst and is therefore
+    excluded instead of being treated as recent by default.
+    """
+    curr_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+    start_dt = curr_dt - timedelta(days=lookback_days)
+    end_dt = curr_dt + timedelta(days=1)
+    kept = []
+    out_of_window = 0
+    missing_date = 0
+    for article in articles:
+        raw_date = article.get("published_at") or article.get("date", "")
+        parsed = None
+        if raw_date:
+            text = str(raw_date).strip()
+            try:
+                parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+                if parsed.tzinfo is not None:
+                    parsed = parsed.replace(tzinfo=None)
+            except ValueError:
+                parsed = _parse_article_date(text)
+        if parsed is None:
+            missing_date += 1
+            continue
+        if parsed < start_dt or parsed >= end_dt:
+            out_of_window += 1
+            continue
+        normalized = dict(article)
+        normalized["published_at"] = parsed.isoformat()
+        normalized["date"] = parsed.strftime("%Y-%m-%d %H:%M")
+        kept.append(normalized)
+    kept.sort(key=lambda item: item.get("published_at", ""), reverse=True)
+    return kept, out_of_window, missing_date
+
+
 # 明显与公司股价无关的关键词。保守：只放确定性的噪声。
 _NOISE_KEYWORDS = [
     # 地缘冲突（与个股无关的纯地缘新闻）
@@ -138,7 +182,7 @@ def filter_noise(articles: list) -> list:
     ]
 
 
-# 8-30天窗口保留用的高信号词（命中其一即保留）
+# 8-60天窗口保留用的高信号词（命中其一即保留）
 # 中文 + 英文双语关键词，确保港股 yfinance 英文标题也能被保留
 _CN_HIGH_SIGNAL_KEYWORDS = [
     "财报", "业绩", "营收", "净利润", "毛利率",
@@ -195,7 +239,7 @@ _EN_HIGH_SIGNAL_KEYWORDS = [
 
 
 def is_high_signal(title: str) -> bool:
-    """标题命中高信号词则返回 True（用于8-30天窗口粗筛）。
+    """标题命中高信号词则返回 True（用于8-60天窗口粗筛）。
     支持中文和英文双语关键词，不区分大小写匹配英文。
     """
     if not title:
@@ -210,9 +254,6 @@ def is_high_signal(title: str) -> bool:
     return False
 
 
-from datetime import datetime, timedelta
-
-
 def _parse_article_date(date_str: str) -> datetime:
     """解析 'YYYY-MM-DD HH:MM' 或 'YYYY-MM-DD'，失败返回 None。"""
     for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d"):
@@ -224,7 +265,7 @@ def _parse_article_date(date_str: str) -> datetime:
 
 
 def split_recent_and_history(articles: list, curr_date: str,
-                             recent_days: int = 7, lookback_days: int = 30):
+                             recent_days: int = 7, lookback_days: int = 60):
     """按日期分层：recent_days 内全留(recent)，recent+1~lookback 天只留高信号(history)，
     超出 lookback 的丢弃。返回 (recent_list, history_list)。
     """
